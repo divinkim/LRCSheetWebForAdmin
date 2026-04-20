@@ -193,10 +193,13 @@ export function Sidebar() {
                     <div className={`transition-all duration-1000 ease-in-out space-y-2 pl-8 pt-4, ${toggleAsideSections.includes(sectionIndex) ? "opacity-1" : "opacity-0 absolute z-0"}`}>
                       {aside.ItemLists.map((list, pageIndex) => (
                         <Link key={pageIndex} onClick={() => {
-                          const deleteNotificationCount = storedNotificationsArray.filter(item => item.adminPageIndex !== pageIndex.toString() && item.adminSectionIndex !== sectionIndex.toString());
-                          setStoredNotificationsArray(deleteNotificationCount);
                           if (isMobile) setIsOpen(false);
-                          localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteNotificationCount))
+                          if (sectionIndex !== 0 && pageIndex !== 0) {
+                            const deleteNotificationCount = storedNotificationsArray.filter(item => item.adminPageIndex !== pageIndex.toString() && item.adminSectionIndex !== sectionIndex.toString());
+                            setStoredNotificationsArray(deleteNotificationCount);
+
+                            localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteNotificationCount))
+                          }
                         }} href={list.href ?? "/"} className="flex flex-row space-x-3 mt-3 items-center">
                           <div className="">
                             <li className="hover:text-orange-400/90 ease duration-500 pb-2 text-gray-300">

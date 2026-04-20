@@ -93,7 +93,7 @@ export default function SidebarHook() {
             const unsubscribe = onMessage(messaging, (remoteMessage) => {
                 const EnterpriseId = localStorage.getItem("EnterpriseId");
 
-                if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId)) {
+                if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId) && !remoteMessage.data?.page) {
 
                     const notif = {
                         path: remoteMessage.data?.path,
@@ -117,6 +117,8 @@ export default function SidebarHook() {
                             window.location.href = `${notif.path}`;
                         }
                     });
+                } else if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId) && remoteMessage.data?.page) {
+                    
                 }
             });
 

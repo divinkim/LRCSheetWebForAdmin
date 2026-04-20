@@ -152,6 +152,7 @@ export function useChat() {
         if (response) {
             const notification = await providers.API.post(providers.APIUrl, "sendNotificationToAdmin", null, {
                 path: "/dashboard/NOTIF/chat",
+                
                 EnterpriseId: userData.EnterpriseId.toString(),
                 adminSectionIndex: 0,
                 adminPageIndex: 0,
@@ -160,7 +161,7 @@ export function useChat() {
             const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
                 senderEmail: "grcinfos@gmail.com",
                 subject: "Notification non lue",
-                content: "Veuillez vous connecter sur le dashboard admin pour plus d'information.",
+                content: "Veuillez vous connecter sur le dashboard web client pour plus d'information.",
                 emails: [userData.email],
             })
             console.log(notification);

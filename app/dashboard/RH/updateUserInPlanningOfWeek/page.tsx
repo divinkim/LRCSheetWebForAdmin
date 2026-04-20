@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { providers } from "@/index";
 import { ClipLoader } from "react-spinners";
 import Link from "next/link";
-import useAddUserInPlanningOfWeek from "./hook/page";
+import useAddUserInPlanningOfWeek from "./hook/index";
 
 export default function addUserInPlanningOfWeek() {
     const { handleSubmit, onSearch, usersArrayCloned, addEditUserPlanningOfWeek, weekDays, plannings, isLoading, setDatas, datas } = useAddUserInPlanningOfWeek()
