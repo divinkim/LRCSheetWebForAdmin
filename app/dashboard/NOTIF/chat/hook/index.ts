@@ -14,7 +14,7 @@ type Users = {
         firstname: string,
         lastname: string,
         photo: string | null,
-        email:string
+        email: string
     }
 }
 
@@ -35,7 +35,7 @@ export function useChat() {
     const [userData, setUserData] = useState({
         fcmToken: "",
         UserId: 0,
-        email:"",
+        email: "",
         lastname: "",
         EnterpriseId: 0,
         firstname: "",
@@ -59,8 +59,7 @@ export function useChat() {
     }
 
     function removeNotificationCount(UserId: number) {
-        const deleteItem = storedNotificationsArray.filter((item: { senderId: string }) => Number(item.senderId) !== UserId);
-        setStoredNotificationsArray(deleteItem);
+        const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: number, adminPageIndex: number }) => Number(item.senderId) !== UserId && (item.adminPageIndex === 0 && item.adminSectionIndex === 0));
         localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem))
     }
 
@@ -149,29 +148,31 @@ export function useChat() {
             role: "Super-Admin",
         });
 
-        if (response) {
-            const notification = await providers.API.post(providers.APIUrl, "sendNotificationToAdmin", null, {
-                path: "/dashboard/NOTIF/chat",
-                
-                EnterpriseId: userData.EnterpriseId.toString(),
-                adminSectionIndex: 0,
-                adminPageIndex: 0,
-                receiverId: userData.UserId
-            });
-            const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
-                senderEmail: "grcinfos@gmail.com",
-                subject: "Notification non lue",
-                content: "Veuillez vous connecter sur le dashboard web client pour plus d'information.",
-                emails: [userData.email],
-            })
-            console.log(notification);
-            console.log(sendMail)
-        }
         setData({
             ...data,
             content: "",
             files: ""
         })
+
+        if (response) {
+            const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
+                path: "/dashboard/NOTIF/chat",
+                EnterpriseId: userData.EnterpriseId.toString(),
+                adminSectionIndex: 0,
+                adminPageIndex: 0,
+                senderId: AdminId,
+                receiverId:userData.UserId
+            });
+            const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
+                senderEmail: "grcinfos@gmail.com",
+                subject: "Notification non lue",
+                content: "Veuillez vous connecter sur le dashboard web pour plus d'information.",
+                emails: [userData.email],
+            })
+            console.log(notification);
+            console.log(sendMail)
+        }
+
 
         if (response) {
             await providers.API.post(providers.APIUrl, "sendNotificationToAdmin", null, {

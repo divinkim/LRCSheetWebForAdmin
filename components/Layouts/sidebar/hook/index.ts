@@ -100,6 +100,7 @@ export default function SidebarHook() {
                         adminSectionIndex: remoteMessage.data?.adminSectionIndex,
                         adminPageIndex: remoteMessage.data?.adminPageIndex,
                         senderId: remoteMessage.data?.senderId,
+                        receiverId: remoteMessage.data?.receiverId,
                     };
 
                     setStoredNotificationsArray((prev) => [...prev, notif]);
