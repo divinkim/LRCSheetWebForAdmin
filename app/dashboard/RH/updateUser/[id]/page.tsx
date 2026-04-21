@@ -12,7 +12,7 @@ import { UpdateUserHookModal } from "../hook";
 export default function UpdateUser() {
     
 
-    const { dynamicOptions, staticsOptions, setInputs, inputs, handleSubmit, isLoading } = UpdateUserHookModal();
+    const { dynamicOptions, staticOptions, setInputs, inputs, handleSubmit, isLoading } = UpdateUserHookModal();
 
     return (
         <main className="bg-gray-100 text-gray-700  dark:text-gray-300 dark:bg-transparent">
@@ -116,7 +116,7 @@ export default function UpdateUser() {
                                                                 //         </option>
                                                                 //     ))
                                                                 // ))
-                                                                staticsOptions.find(item => item.alias === e.alias)?.arrayData.map((option) => (
+                                                                staticOptions.find(item => item.alias === e.alias)?.arrayData.map((option) => (
                                                                     <option value={option.value}>
                                                                         {option.title}
                                                                     </option>

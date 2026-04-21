@@ -147,12 +147,12 @@ export default function SidebarHook() {
                     href: "/dashboard/NOTIF/chat",
                     icon: faMessage
                 },
-                // {
-                //     index: 1,
-                //     title: "notifications",
-                //     href: "/dashboard/NOTIF/notifications",
-                //     icon: faBell
-                // },
+                {
+                    index: 1,
+                    title: "notifications groupés",
+                    href: "/dashboard/NOTIF/notifications",
+                    icon: faBell
+                },
             ]
         },
 

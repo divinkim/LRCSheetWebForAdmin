@@ -13,6 +13,7 @@ type ChatMessage = {
     content: string;
     file: string;
     createdAt: string;
+    title: string | null
 };
 
 export default function Chat() {
@@ -50,10 +51,7 @@ export default function Chat() {
     const getLatestChatMessage = (UserId: number) => {
         const message = chatMessage.filter(item => (item.senderId === UserId ||
             item.receiverId === UserId)
-            && ["Super-Admin", "Supervisor-Admin"].includes(item.role)
         ).at(-1);
-
-
 
         return {
             content: message?.content ?? "Laissez un message",
@@ -94,7 +92,7 @@ export default function Chat() {
                                     UserId: item.UserId,
                                     fcmToken: item.fcmToken,
                                     EnterpriseId: item.UserEnterpriseId,
-                                    email:item.User.email,
+                                    email: item.User.email,
                                     lastname: item.User.lastname,
                                     firstname: item.User.firstname,
                                     photo: String(item.User.photo)
@@ -178,14 +176,19 @@ export default function Chat() {
                                             {
                                                 chatMessageGrouped[date].map((chat, i) => (
                                                     <div className={`flex mb-4 ${chat.receiverId === userData.UserId && chat.role === "Super-Admin" && chat.senderId === AdminId ? "justify-end" : chat.role === "client" && chat.senderId === userData.UserId && chat.receiverId === AdminId ? "justify-start " : "hidden"}`}>
-                                                        <div className="w-9 h-9 mr-2">
-                                                            {/* <img
+                                                        {/* <div className="w-9 h-9 mr-2">
+                                                            <img
                                                                 src="/images/adminProfile.png"
                                                                 alt="User Avatar"
                                                                 className="w-8 h-8 rounded-full"
-                                                            /> */}
-                                                        </div>
+                                                            />
+                                                        </div> */}
                                                         <div className={`p-3 rounded-lg dark:bg-gray-800 ${chat.role === "client" && chat.senderId === userData.UserId ? "bg-gray-800 text-white dark:bg-gray-900 dar:border dark:border-gray-800 dark:text-gray-300 " : chat.receiverId === userData.UserId && chat.role === "Super-Admin" ? "bg-gray-200" : ""}`}>
+                                                            {
+                                                                chat.title && (
+                                                                    <p className="font-semibold mb-4">{chat.title}</p>
+                                                                )
+                                                            }
                                                             <p>{chat.content}</p>
                                                             {
                                                                 chat.file && (

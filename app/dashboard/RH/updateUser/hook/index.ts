@@ -303,7 +303,7 @@ export function UpdateUserHookModal() {
         }
     ];
 
-    const staticsOptions = [
+    const staticOptions = [
         {
             alias: "gender",
             arrayData: [{ title: "Homme", value: "Homme" }, { title: "Femme", value: "Femme" }, { title: "Aucun", value: "Aucun" }]
@@ -339,27 +339,26 @@ export function UpdateUserHookModal() {
         setIsLoading(true);
         const userId = window.location.href?.split('/').pop();
 
-        const requireFields = {
-            firstname: inputs.firstname,
-            lastname: inputs.lastname,
-            gender: inputs.gender,
-            password: inputs.password,
-            EnterpriseId: inputs.EnterpriseId,
-            birthDate: inputs.birthDate,
-            email: inputs.email,
-            role: inputs.role,
-            phone: inputs.phone,
-            CityId: inputs.CityId,
-            CountryId: inputs.CountryId
-        }
+        // const requireFields = {
+        //     firstname: inputs.firstname,
+        //     lastname: inputs.lastname,
+        //     gender: inputs.gender,
+        //     password: inputs.password,
+        //     EnterpriseId: inputs.EnterpriseId,
+        //     email: inputs.email,
+        //     role: inputs.role,
+        //     phone: inputs.phone,
+        //     CityId: inputs.CityId,
+        //     CountryId: inputs.CountryId
+        // }
 
-        for (const [key, value] of Object.entries(requireFields)) {
-            if (!value) {
-                return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", "/dashboard/addUser");
-            }
-        }
+        // for (const [key, value] of Object.entries(requireFields)) {
+        //     if (!value) {
+        //         return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", "/dashboard/addUser");
+        //     }
+        // }
 
-        console.log(requireFields);
+        // console.log(requireFields);
         const response = await providers.API.update(providers.APIUrl, "updateUser", null, inputs, Number(userId));
 
         providers.alertMessage(
@@ -373,5 +372,5 @@ export function UpdateUserHookModal() {
     };
 
 
-    return { dynamicOptions, staticsOptions, setInputs, inputs, handleSubmit, isLoading, setIsLoading }
+    return { dynamicOptions, staticOptions, setInputs, inputs, handleSubmit, isLoading, setIsLoading }
 }

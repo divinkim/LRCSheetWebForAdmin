@@ -25,6 +25,7 @@ type ChatMessage = {
     content: string;
     file: string;
     createdAt: string;
+    title: string | null
 };
 
 export function useChat() {
@@ -127,6 +128,7 @@ export function useChat() {
                 "Veuillez saisir un contenu!",
                 "/dashboard/NOTIF/chat"
             );
+        
         setChatMessage(prevMessage => [
             ...prevMessage,
             {
@@ -136,6 +138,7 @@ export function useChat() {
                 content: data.content,
                 file: data.files,
                 createdAt: new Date().toISOString(),
+                title: ""
             }
         ]);
 
@@ -161,7 +164,7 @@ export function useChat() {
                 adminSectionIndex: 0,
                 adminPageIndex: 0,
                 senderId: AdminId,
-                receiverId:userData.UserId
+                receiverId: userData.UserId
             });
             const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
                 senderEmail: "grcinfos@gmail.com",

@@ -91,8 +91,33 @@ export default function Repports() {
                                                     setItemIndexOnWriting(index)
                                                 }} name="" id="" placeholder="Laissez un commentaire!" className="w-full bg-transparent  border border-gray-400 my-4 rounded-md dark:text-gray-300 placeholder-gray-600 dark:placeholder-gray-300  h-[100px] p-4 outline-none">
                                                 </textarea>
-                                                <button onClick={() => {
-                                                    adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId)
+                                                <button onClick={async () => {
+                                                    // adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId);
+                                                    const mail = await providers.API.post(providers.APIUrl, "sendMail", null, {
+                                                        senderEmail: "grcinfos@gmail.com",
+                                                        subject: "Notification non lue",
+                                                        content: "Veuillez vous connecter sur votre espace web LRCSheet.",
+                                                        emails: [repport.User.email],
+                                                    });
+                                                    const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
+                                                        path: "/dashboard/NOTIF/chat",
+                                                        EnterpriseId: repport.EnterpriseId,
+                                                        adminSectionIndex: 0,
+                                                        adminPageIndex: 0,
+                                                        senderId: 40,
+                                                        receiverId: repport.UserId
+                                                    })
+                                                    const chat = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
+                                                        content: adminResponse,
+                                                        receiverId: repport.UserId,
+                                                        senderId: 40,
+                                                        EnterpriseId: 1,
+                                                        file: "",
+                                                        role: "Super-Admin",
+                                                    })
+                                                    console.log(mail)
+                                                    console.log(notification)
+                                                    console.log(chat)
                                                 }} type="button" className="text-white bg-blue-600 rounded-md hover:bg-blue-600 w-[100px] py-2">
                                                     {isLoading ? <ClipLoader size={16} color="#fff" /> : "Envoyer"}
                                                 </button>

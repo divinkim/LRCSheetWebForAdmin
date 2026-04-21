@@ -37,7 +37,7 @@ export default function Notifications() {
                                             {item.photo ? <img src={`${providers.APIUrl}/images/${item.photo}`} className="w-[50px] h-[50px] rounded-full object-cover" /> : <p className="text-[40px]">🧑‍💼</p>}
                                             <p className="font-semibold">{item.lastname} {item.firstname}</p>
                                             <input type="checkbox" onChange={() => {
-                                                onCheck(item.email)
+                                                onCheck(item.email, item.id)
                                             }} checked={inputs.emails.includes(item.email)} />
                                         </div>
                                         {/* <hr /> */}
@@ -95,7 +95,7 @@ export default function Notifications() {
                                                         {item.photo ? <img src={`${providers.APIUrl}/images/${item.photo}`} className="w-[50px] h-[50px] rounded-full object-cover" /> : <p className="text-[40px]">🧑‍💼</p>}
                                                         <p className="font-semibold">{item.lastname} {item.firstname}</p>
                                                         <input type="checkbox" onChange={() => {
-                                                            onCheck(item.email)
+                                                            onCheck(item.email, item.id)
                                                         }} checked={inputs.emails.includes(item.email)} />
                                                     </div>
                                                     {/* <hr /> */}
@@ -145,7 +145,7 @@ export default function Notifications() {
                                                 className="hidden"
                                                 onChange={async (e) => {
                                                     const file = e.target.files?.[0];
-                                                    const result = await providers.API.post(providers.APIUrl, "sendFile", null, { file });
+                                                    const result = await providers.API.post(providers.APIUrl, "sendFiles", null, { file });
                                                     setFiles(result.filename);
                                                 }}
                                             />

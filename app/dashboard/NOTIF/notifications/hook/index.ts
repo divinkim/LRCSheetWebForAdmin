@@ -19,9 +19,10 @@ export default function useNotifications() {
     const [inputs, setInputs] = useState({
         title: "",
         content: "",
+        usersIds: [1],
         EnterpriseId: "",
         UserId: "",
-        emails: ["murphykimbatsa@gmail.com",]
+        emails: ["murphykimbatsa@gmail.com"]
     });
     const [files, setFiles] = useState<any>(null)
     const [showModal, setShowModal] = useState(false);
@@ -79,13 +80,42 @@ export default function useNotifications() {
         };
 
         console.log("les inputs", inputs)
-
+        
         const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
             subject: inputs.title,
             content: inputs.content,
-            emails: inputs.emails,
+            emails: ["contact@lrcgroup-app.com"],
             senderEmail: "grcinfos@gmail.com",
         });
+
+        for (const UserId of inputs.usersIds) {
+            const mail = await providers.API.post(providers.APIUrl, "sendMail", null, {
+                subject:"Notification non lue",
+                content: "Veuillez vous connecter sur votre espace web pour en savoir plus.",
+                emails: inputs.emails,
+                senderEmail: "grcinfos@gmail.com",
+            });
+            const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
+                path: "/dashboard/NOTIF/chat",
+                EnterpriseId: Number(EnterpriseId),
+                adminSectionIndex: 0,
+                adminPageIndex: 0,
+                senderId: 40,
+                receiverId: UserId
+            })
+            const chat = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
+                content: inputs.content,
+                title: inputs.title,
+                receiverId: UserId,
+                senderId: 40,
+                EnterpriseId: 1,
+                file: data.files,
+                role: "Super-Admin",
+            })
+            console.log(notification);
+            console.log(chat);
+            console.log(mail);
+        }
 
         console.log(sendMail)
 
@@ -103,7 +133,8 @@ export default function useNotifications() {
                 content: "",
                 EnterpriseId: "",
                 UserId: "",
-                emails: [""]
+                emails: [""],
+                usersIds: []
             });
             setFiles(null);
         }
@@ -115,9 +146,11 @@ export default function useNotifications() {
         })
     }
 
-    const onCheck = (email: string) => {
+    const onCheck = (email: string, UserId: number) => {
         const checkEmailInEmailsArray = inputs.emails.includes(email) ?
             inputs.emails.filter(item => item !== email) : [...inputs.emails, email];
+        const checkIsInUsersIdsArray = inputs.usersIds.includes(UserId) ?
+            inputs.usersIds.filter(item => item !== UserId) : [...inputs.usersIds, UserId];
         setInputs({
             ...inputs,
             emails: checkEmailInEmailsArray,

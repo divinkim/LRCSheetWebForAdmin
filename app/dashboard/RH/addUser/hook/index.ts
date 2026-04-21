@@ -317,7 +317,6 @@ export default function AddUserHookModal() {
             EnterpriseId: inputs.EnterpriseId,
             email: inputs.email,
             role: inputs.role,
-            phone: inputs.phone,
             CountryId: inputs.CountryId,
             CityId: inputs.CityId,
         }
