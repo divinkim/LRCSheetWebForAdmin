@@ -7,7 +7,11 @@ import {
     faMapMarkedAlt,
     faMapPin, faFileContract, faSuitcaseRolling, faIdBadge,
     faMoneyCheckAlt,
-    faContactCard
+    faContactCard,
+    faBuildingUser,
+    faMap,
+    faMapLocation,
+    faMapLocationDot
 } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { title } from "process";
@@ -25,6 +29,11 @@ export const formElements = [
                     title: "Ajouter un poste",
                     href: "/dashboard/ADMIN/addPost",
                     icon: faPlusCircle
+                },
+                {
+                    title: "Ajouter une entreprise",
+                    href: "/dashboard/OTHERS/addEnterprise",
+                    icon: faBuildingUser
                 },
                 {
                     title: "Ajouter un département",
@@ -45,7 +54,13 @@ export const formElements = [
                     title: "Ajouter un quartier",
                     href: "/dashboard/OTHERS/addQuarter",
                     icon: faMapPin
+                },
+                {
+                    title: "Ajouter une ville",
+                    href: "/dashboard/OTHERS/addCity",
+                    icon: faMapLocation
                 }
+
             ],
 
             navigateLinks: [
@@ -327,6 +342,7 @@ export const formElements = [
                     label: "Description de l'entreprise",
                     placeholder: "Saisissez une description",
                     requireField: true,
+                    textarea: true,
                     type: "text",
                     selectedInput: false,
                     alias: "description"
@@ -334,6 +350,7 @@ export const formElements = [
                 {
                     label: "Domaine d'activité",
                     placeholder: "Saisissez un domaine...",
+                    textarea: true,
                     requireField: true,
                     type: "text",
                     selectedInput: false,
@@ -655,32 +672,20 @@ export const formElements = [
         },
 
         //Formulaire département
-        addDepartmentUser: {
+        addOrEditDepartment: {
 
-            navigationDeptLinks: [
-                {
-                    title: "Ajouter un département",
-                    href: "/dashboard/ADMIN/addDepartment",
-                    icon: faBuilding
-                },
+            navigationLinks: [
                 {
                     title: "Liste de départements",
                     href: "/dashboard/ADMIN/departmentsList",
                     icon: faBuilding
                 },
-
-                {
-                    title: "Modifier un départements",
-                    href: "/dashboard/ADMIN/UpdateDept",
-                    icon: faBuilding
-                },
             ],
 
-            titleDept: "Formulaire d'enregistrement d'un département",
-            titleUpdate: "Formulaire de modification d'un département",
-            titleformDept: "Ajouter un département",
-
-            inputDept: [
+            addDepartmentTitleForm: "Formulaire d'enregistrement d'un département",
+            updateDepartmentTitleForm: "Formulaire de modification d'un département",
+            addDepartmentTitle: "Formulaire d'ajout d'un département",
+            inputs: [
                 {
                     label: "Nom",
                     placeholder: "Saisissez un nom",
@@ -696,7 +701,7 @@ export const formElements = [
                     placeholder: "Séléctionnez une entreprise",
                     requireField: true,
                     type: "number",
-                    textarea: true,
+                    textarea: false,
                     selectedInput: true,
                     dynamicOptions: {
                         status: true
@@ -862,7 +867,18 @@ export const formElements = [
         addQuarter: {
 
             titleForm: "Formulaire d'enregistrement d'un quartier",
-
+            navigationLinks: [
+                {
+                    title: "Ajouter un arrondissement",
+                    href: "/dashboard/OTHERS/addDistrict",
+                    icon: faMap
+                },
+                {
+                    title: "Ajouter une ville",
+                    href: "/dashboard/OTHERS/addCity",
+                    icon: faMapLocationDot
+                },
+            ],
             inputs: [
                 // ---- Inputs classiques ----
                 {
@@ -918,6 +934,18 @@ export const formElements = [
         },
 
         addDistrict: {
+            navigationLinks: [
+                {
+                    title: "Ajouter un pays",
+                    href: "/dashboard/OTHERS/addCountry",
+                    icon: faMap
+                },
+                {
+                    title: "Ajouter une ville",
+                    href: "/dashboard/OTHERS/addCity",
+                    icon: faMapLocation
+                },
+            ],
             titleForm: "Formulaire d'enregistrement d'un arrondissement",
             inputs: [
                 // ---- Inputs classiques ----

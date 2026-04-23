@@ -55,7 +55,7 @@ export function useChat() {
     const [chatMessage, setChatMessage] = useState<ChatMessage[]>([]);
 
     function getNotificationCount(UserId: number) {
-        const count = storedNotificationsArray.filter((item: { senderId: string }) => Number(item.senderId) === UserId);
+        const count = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: number, adminPageIndex: number }) => Number(item.senderId) === UserId && (item.adminPageIndex === 0 && item.adminSectionIndex === 0));
         return count.length;
     }
 
@@ -67,11 +67,19 @@ export function useChat() {
     function sortUsersByFrequency(users: Users[], messages: ChatMessage[]) {
         const map = new Map();
         messages.forEach((msg) => {
+            const time = new Date(msg.createdAt).getTime();
             if (msg.senderId) {
-                map.set(msg.senderId, (map.get(msg.senderId) || 0) + 1);
+                const prev = map.get(msg.senderId) || 0
+                if (time > prev) {
+                    map.set(msg.senderId, time)
+                }
             }
             if (msg.receiverId) {
-                map.set(msg.receiverId, (map.get(msg.receiverId) || 0) + 1);
+                const prev = map.get(msg.receiverId) || 0
+                if (time > prev) {
+                    map.set(msg.receiverId, time);
+                }
+                
             }
         });
         return [...users].sort((a, b) => {
@@ -128,7 +136,7 @@ export function useChat() {
                 "Veuillez saisir un contenu!",
                 "/dashboard/NOTIF/chat"
             );
-        
+
         setChatMessage(prevMessage => [
             ...prevMessage,
             {

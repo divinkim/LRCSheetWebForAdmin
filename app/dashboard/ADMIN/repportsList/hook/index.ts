@@ -81,13 +81,6 @@ export function RepportsListHook() {
         if (!content) {
             return providers.alertMessage(false, "Champ invalide", "Veuillez saisir un commentaire", "/dashboard/ADMIN/repportsList")
         }
-        const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
-            senderEmail: "grcinfos@gmail.com",
-            emails: [email],
-            subject: "Retour suite à votre rapport",
-            content,
-        });
-        console.log(sendMail);
 
         const response = await providers.API.post(providers.APIUrl, "addAdminReportComment", null, {
             UserId,

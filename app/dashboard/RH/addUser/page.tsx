@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import AddUserHookModal from "./hook";
 
 export default function AddUser() {
-    const { dynamicArrayData, staticArrayData, inputs, setInputs, isLoading, handleSubmit } = AddUserHookModal();
+    const { dynamicArrayData, staticArrayData, inputs, setInputs, isLoading, handleSubmit, adminRole } = AddUserHookModal();
     return (
         <main className="bg-gray-100 dark:bg-transparent">
             <div className="flex">
@@ -25,7 +25,7 @@ export default function AddUser() {
                                 <div className="flex flex-wrap py-4 lg:space-x-4 space-y-4 items-center">
                                     {
                                         element.addOrUpdateUser.navigationLinks.map((element, index) => (
-                                            <Link href={element.href} className={index === 0 ? "bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 px-4 relative top-2.5" : index === 5 ? "bg-blue-800 2xl:right-4 hover:bg-blue-900 ease duration-500 py-3 px-4 relative 2xl:top-2.5 " : "bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 px-4"}>
+                                            <Link href={element.href} className={`bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 px-4 relative top-2.5 rounded-md ${index === 0 ? "lg:top-[18px]" : index === 4 ? "lg:right-0" : index === 2 && adminRole !== "Super-Admin" ? "hidden" : ""}`}>
                                                 <FontAwesomeIcon icon={element.icon} className="text-white" /> <span className='text-white'>{element.title}</span>
                                             </Link>
                                         ))
@@ -54,8 +54,8 @@ export default function AddUser() {
                                 formElements.map((element) => (
 
                                     element.addOrUpdateUser.inputs.map((e, index) => (
-                                        <div className={cn('w-full mb-4', e.alias === "adminService" && inputs.role === null ? "hidden" : "block", e.alias === "status" ? "hidden" : "block")}>
-                                            <label htmlFor="" className={cn("mb-3 font-semibold dark:text-gray-300 text-gray-700", e.alias === "adminService" && inputs.role === null ? "hidden" : "block")}><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
+                                        <div className={`w-full mb-4 ${e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin, client"].includes(String(inputs.role)) ? "hidden" : "block"} ${e.alias === "status" ? "hidden" : "block"}`}>
+                                            <label htmlFor="" className={`mb-3 font-semibold dark:text-gray-300 text-gray-700" ${e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin, client"].includes(String(inputs.role)) ? "hidden" : "block"}`}><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
                                             {!e.selectedInput ?
                                                 <input value={inputs[e.alias] ?? ""} onChange={async (v) => {
                                                     let field = e.alias;

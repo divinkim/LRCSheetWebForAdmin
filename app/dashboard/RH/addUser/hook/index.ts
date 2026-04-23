@@ -271,16 +271,16 @@ export default function AddUserHookModal() {
                     value: "Super-Admin"
                 },
                 {
-                    title: "Administrateur de gestion",
+                    title: "Administrateur générale",
                     value: "Supervisor-Admin"
                 },
                 {
-                    title: "Administrateur de contrôle",
+                    title: "Administrateur d contôle",
                     value: "Controllor-Admin"
                 },
                 {
                     title: "Utilisateur client",
-                    value: "Client-User"
+                    value: "client"
                 }
             ]
         },
@@ -343,5 +343,5 @@ export default function AddUserHookModal() {
 
     console.log("les datas", inputs);
 
-    return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading }
+    return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading, adminRole }
 }
