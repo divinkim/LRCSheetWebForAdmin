@@ -49,8 +49,8 @@ export default function Chat() {
     }, {} as Record<string, ChatMessage[]>)
 
     const getLatestChatMessage = (UserId: number) => {
-        const message = chatMessage.filter(item => (item.senderId === UserId ||
-            item.receiverId === UserId)
+        const message = chatMessage.filter(item => (item.senderId === UserId &&
+            item.receiverId === AdminId) || (item.senderId===AdminId && item.receiverId===UserId)
         ).at(-1);
 
         return {
@@ -189,7 +189,7 @@ export default function Chat() {
                                                                     <p className="font-semibold mb-4">{chat.title}</p>
                                                                 )
                                                             }
-                                                            <p>{chat.content}</p>
+                                                            <p className="whitespace-pre-line">{chat.content}</p>
                                                             {
                                                                 chat.file && (
                                                                     <div className="flex justify-end mt-4">

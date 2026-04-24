@@ -55,12 +55,13 @@ export function useChat() {
     const [chatMessage, setChatMessage] = useState<ChatMessage[]>([]);
 
     function getNotificationCount(UserId: number) {
-        const count = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: number, adminPageIndex: number }) => Number(item.senderId) === UserId && (item.adminPageIndex === 0 && item.adminSectionIndex === 0));
+        const count = storedNotificationsArray.filter((item: { senderId: string }) => Number(item.senderId) === UserId);
         return count.length;
     }
 
     function removeNotificationCount(UserId: number) {
-        const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: number, adminPageIndex: number }) => Number(item.senderId) !== UserId && (item.adminPageIndex === 0 && item.adminSectionIndex === 0));
+        const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: string, adminPageIndex: string }) => Number(item.senderId) !== UserId && (Number(item.adminPageIndex) === 0 && Number(item.adminSectionIndex) === 0));
+        setStoredNotificationsArray(deleteItem);
         localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem))
     }
 
@@ -79,7 +80,7 @@ export function useChat() {
                 if (time > prev) {
                     map.set(msg.receiverId, time);
                 }
-                
+
             }
         });
         return [...users].sort((a, b) => {
@@ -175,9 +176,9 @@ export function useChat() {
                 receiverId: userData.UserId
             });
             const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
-                senderEmail: "grcinfos@gmail.com",
-                subject: "Notification non lue",
-                content: "Veuillez vous connecter sur le dashboard web pour plus d'information.",
+                senderEmail: "lrcsheet@gmail.com",
+                subject: "Notification entrante!",
+                content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
                 emails: [userData.email],
             })
             console.log(notification);
@@ -186,7 +187,7 @@ export function useChat() {
 
 
         if (response) {
-            await providers.API.post(providers.APIUrl, "sendNotificationToAdmin", null, {
+            await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
                 path: "/dashboard/NOTIF/chat",
                 EnterpriseId: userData.EnterpriseId.toString(),
                 adminSectionIndex: 0,

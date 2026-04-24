@@ -32,7 +32,7 @@ export default function Repports() {
                                 const decrementMonthIndex = monthIndice - 1;
                                 setMonthIndice(decrementMonthIndex);
                                 navigateBetweenMonths(RepportsArray, decrementMonthIndex, parseInt(EnterpriseId ?? ""))
-                            }} className="bg-orange-500/90 over:scale-105 ease duration-500 px-6 py-2"><span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span>Précédent</button>
+                            }} className="bg-orange-500/90 hover:scale-105 ease duration-500 px-6 py-2"><span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span>Précédent</button>
                             <button type="button" onClick={() => {
                                 const incrementedMonthIndex = monthIndice + 1;
                                 setMonthIndice(incrementedMonthIndex)
@@ -47,9 +47,7 @@ export default function Repports() {
                                     <div className="flex justify-start items-center lg:justify-between flex-col lg:flex-row space-y-5 lg:space-y-0">
                                         <div className="flex items-center space-x-4">
                                             {
-                                                repport.User?.photo ? <img src={`${providers.APIUrl}/images/${repport.User.photo}`} alt="" className="rounded-full w-[50px] h-[50px] object-cover" /> : <p className="text-[40px]">
-                                                    🧑‍💼
-                                                </p>
+                                                <img src={repport.User.photo ? `${providers.APIUrl}/images/${repport.User.photo}` : "/images/clientProfile.png"} alt="" className="rounded-full w-[50px] h-[50px] object-cover" />
                                             }
 
                                             <h1 className="font-bold">{repport.User?.lastname} {repport.User?.firstname}</h1>
@@ -73,7 +71,7 @@ export default function Repports() {
                                         })}</h1>
                                         <hr className='bg-gray-400 border-0 h-[1px]' />
                                         <div className="flex flex-col space-y-5 pt-4">
-                                            <p className="font-normal leading-loose  dark:text-gray-300  whitespace-pre-wrap">{itemIndex === index && isVisible ? repport.content : repport.content?.length > 255 ? repport.content.slice(0, 254) + "..." : repport.content}
+                                            <p className="font-normal leading-loose  dark:text-gray-300  whitespace-pre-wrap">{itemIndex === index && isVisible ? repport.content : providers.reduceLengthOfText(repport.content, 255)}
                                             </p>
 
                                             <div className={itemIndex === index && isVisible ? "relative -top-2" : "hidden"}>
@@ -92,13 +90,15 @@ export default function Repports() {
                                                 }} name="" id="" placeholder="Laissez un commentaire!" className="w-full bg-transparent  border border-gray-400 my-4 rounded-md dark:text-gray-300 placeholder-gray-600 dark:placeholder-gray-300  h-[100px] p-4 outline-none">
                                                 </textarea>
                                                 <button onClick={async () => {
-                                                    // adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId);
+                                                    const comment = adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId);
+
                                                     const mail = await providers.API.post(providers.APIUrl, "sendMail", null, {
-                                                        senderEmail: "grcinfos@gmail.com",
-                                                        subject: "Notification non lue",
-                                                        content: "Veuillez vous connecter sur votre espace web LRCSheet.",
+                                                        senderEmail: "lrcsheet@gmail.com",
+                                                        subject: "Notification entrante",
+                                                        content: "Veuillez consulter votre message au niveau de l'espace web LRCSheet.",
                                                         emails: [repport.User.email],
                                                     });
+
                                                     const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
                                                         path: "/dashboard/NOTIF/chat",
                                                         EnterpriseId: repport.EnterpriseId,
@@ -107,6 +107,7 @@ export default function Repports() {
                                                         senderId: 40,
                                                         receiverId: repport.UserId
                                                     })
+
                                                     const chat = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
                                                         content: adminResponse,
                                                         receiverId: repport.UserId,
@@ -114,10 +115,16 @@ export default function Repports() {
                                                         EnterpriseId: 1,
                                                         file: "",
                                                         role: "Super-Admin",
-                                                    })
-                                                    console.log(mail)
-                                                    console.log(notification)
-                                                    console.log(chat)
+                                                    });
+
+                                                    setIsLoading(false);
+
+                                                    console.log(mail);
+                                                    console.log(notification);
+                                                    console.log(chat);
+                                                    console.log(comment);
+
+                                                    providers.alertMessage(chat.status, chat.title, chat.message, chat.status ? "/dashboard/ADMIN/repportsList" : null);
                                                 }} type="button" className="text-white bg-blue-600 rounded-md hover:bg-blue-600 w-[100px] py-2">
                                                     {isLoading ? <ClipLoader size={16} color="#fff" /> : "Envoyer"}
                                                 </button>

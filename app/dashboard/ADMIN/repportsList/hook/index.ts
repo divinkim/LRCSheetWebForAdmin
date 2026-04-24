@@ -79,7 +79,7 @@ export function RepportsListHook() {
     async function adminReportComment(content: string, RepportId: number, email: string, UserId: number) {
         setIsLoading(true);
         if (!content) {
-            return providers.alertMessage(false, "Champ invalide", "Veuillez saisir un commentaire", "/dashboard/ADMIN/repportsList")
+            return providers.alertMessage(false, "Champ invalide", "Veuillez saisir un commentaire", null)
         }
 
         const response = await providers.API.post(providers.APIUrl, "addAdminReportComment", null, {
@@ -88,8 +88,8 @@ export function RepportsListHook() {
             RepportId
         });
         console.log(response);
-
-        providers.alertMessage(response.status, response.title, response.message, "/dashboard/ADMIN/repportsList")
+        if(response.status) setAdminResponse("")
+       
     }
 
     return { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray}
