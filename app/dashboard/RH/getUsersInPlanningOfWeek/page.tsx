@@ -197,19 +197,6 @@ export default function WeekDaysPlanningsList() {
                                         
                                         <td className="text-center font-semibold border border-gray-400 dark:border-gray-300">
                                             <div className="relative top-0 items-center justify-center px-2 space-x-3 flex ">
-                                                <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
-                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                        return Swal.fire({
-                                                            icon: "warning",
-                                                            title: "Vioalation d'accès!",
-                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                        });
-                                                    }
-                                                }}>
-                                                    <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUserInPlanningOfWeek` : ""} >
-                                                        <p className="text-center">🖊️</p>
-                                                    </Link>
-                                                </button>
                                                 <button type="button" onClick={() => {
                                                     if (!requireAdminRoles.includes(getAdminRole ?? "")) {
                                                         return Swal.fire({
