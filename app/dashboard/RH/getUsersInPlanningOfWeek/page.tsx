@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { providers } from "@/index";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { tablesModal } from "@/components/Tables/tablesModal";
 import Swal from "sweetalert2";
@@ -26,6 +26,7 @@ type UsersDatas = {
 }
 
 type WeekDaysPlannings = {
+    id: number,
     WeekDaysId: number,
     PlanningTypeId: number,
     PlanningId: number,
@@ -64,12 +65,14 @@ export default function WeekDaysPlanningsList() {
 
     const [getAdminRole, setAdminRole] = useState<string | null>(null);
     const [loading, setIsLoading] = useState(false);
-    const requireRoles = ['Super-Admin', 'Supervisor-Admin'];
+    const requireAdminRoles = ['Super-Admin', 'Supervisor-Admin'];
 
-    const [page, setPage] = useState(0);             // page courante
-    const limit = 5;
+    const [page, setPage] = useState(1);
+    const limit = 5;                                 // items par page
     const [maxPage, setMaxPage] = useState(0);
     const [start, setStart] = useState(1);
+
+
     useEffect(() => {
         (() => {
             const maxPage = Math.ceil(weekDaysPlannings?.length / limit);
@@ -115,19 +118,22 @@ export default function WeekDaysPlanningsList() {
 
     // 📑 Pagination
 
-
     const arrayUsersRefactory = weekDaysPlanningsSaved
 
     return (
         <div>
             <div className="flex justify-center w-full mx-auto">
-                <main className='m-4 w-full bg-gray-100 text-gray-700 dark:text-gray-300 dark:bg-transparent'>
-                    <div className="flex justify-between items-center">
-                        <h1 className="text-[20px] my-4 font-bold dark:text-gray-300">{tablesModal[0].weekDaysPlanningList.pageTitle}  </h1>
-                        <p className='text-blue-700 font-semibold dark:text-blue-600 hidden xl:block'>{tablesModal[0].weekDaysPlanningList.path}</p>
-                    </div>
+                <main className='m-4  w-full text-gray-700 dark:text-gray-300 dark:bg-transparent'>
+                    {
+                        tablesModal.map((e) => (
+                            <div className="flex font-semibold justify-between items-center">
+                                <h1 className="text-[20px] my-4 font-bold dark:text-gray-300">{tablesModal[0].weekDaysPlanningList.pageTitle}  </h1>
+                                <p className='text-blue-700 dark:text-blue-600 hidden xl:block'>{tablesModal[0].weekDaysPlanningList.pageTitle}</p>
+                            </div>
+                        ))
+                    }
                     <hr className='' />
-                    <div className="flex flex-col space-y-4 xl:space-y-0  2xl:flex-row 2xl:items-center 2xl:justify-between mb-5 2xl:mb-0 justify-start space-x-5">
+                    <div className="flex flex-col space-y-4 xl:space-y-0  lg:flex-row items-center justify-between">
                         <div className="relative w-[250px]">
                             <input
                                 type="text"
@@ -137,24 +143,22 @@ export default function WeekDaysPlanningsList() {
                                 onChange={(e) => {
                                     setSearch(e.target.value)
                                     onSearch(e.target.value)
+                                    setPage(1); // reset page quand on tape
                                 }}
                             />
                             <FontAwesomeIcon icon={faSearch} className="absolute text-gray-400 right-3 top-[38px]" />
                         </div>
-                        <div className='flex space-x-4'>
-                            {
-                                tablesModal.map((e) => (
-                                    e.weekDaysPlanningList.links.map((item) => (
-                                        <Link href={item.href} className="bg-blue-800 rounded-md hover:bg-blue-900  ease duration-500 py-3 px-4">
-                                            <FontAwesomeIcon icon={item.icon} className="text-white" />
-                                            <span className='text-white font-semibold'> {item.title}</span>
-                                        </Link>
-                                    ))
-
+                        {
+                            tablesModal.map((e) => (
+                                e.weekDaysPlanningList.links.map((item) => (
+                                    <Link href={item.href} className="bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 px-4">
+                                        <FontAwesomeIcon icon={item.icon} className="text-white" />
+                                        <span className='text-white font-semibold'> {item.title}</span>
+                                    </Link>
                                 ))
-                            }
-                        </div>
 
+                            ))
+                        }
                     </div>
 
                     {/* 🧾 Tableau */}
@@ -173,14 +177,14 @@ export default function WeekDaysPlanningsList() {
 
                         <tbody className="w-full">
                             {
-                                weekDaysPlanningsSaved.length > 0 ? weekDaysPlanningsSaved.map((u) => (
-                                    <tr className="">
 
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300">
-                                            {u.User?.photo ? <img src={`${providers.APIUrl}/images/${u.User?.photo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p className="text-center text-[40px]">
-                                                🧑‍💼
-                                            </p>}
+                                weekDaysPlanningsSaved.length > 0 ? weekDaysPlanningsSaved.slice(start, start + limit).map((u) => (
+                                    <tr className="">
+                                        <td className="p-2 border-b flex justify-center items-center h-[120px] border-gray-400 dark:border-gray-300">
+
+                                            <img src={u.User?.photo ? `${providers.APIUrl}/images/${u.User?.photo}` : "/images/clientProfile.png"} alt="" className="rounded-full w-[50px] h-[50px] object-cover" />
                                         </td>
+
 
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.User?.firstname} {u.User?.lastname}</td>
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.WeekDays.name}</td>
@@ -190,46 +194,46 @@ export default function WeekDaysPlanningsList() {
                                         </td>
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.Enterprise?.logo ? <img src={`${providers.APIUrl}/images/${u.Enterprise?.logo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : u.Enterprise?.name}
                                         </td>
-                                        <td className="text-center py-5 font-semibold border-b border-r  space-x-3 flex justify-center h-auto p-2 border-gray-400 dark:border-gray-300">
-                                            {/* <Link href={`/RH/getUserProfil/${u.id}`} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                                <p className="text-center">👁️</p>
-                                            </Link> */}
-                                            <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
-                                                if (!requireRoles.includes(getAdminRole ?? "")) {
-                                                    return Swal.fire({
-                                                        icon: "warning",
-                                                        title: "Vioaltion d'accès!",
-                                                        text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                    })
-                                                }
-                                            }}>
-                                                <Link href={`/dashboard/RH/updateUserInPlanningOfWeek`} >
-                                                    <p className="text-center">🖊️</p>
-                                                </Link>
-                                            </button>
-                                            <button type="button" onClick={() => {
-                                                if (!requireRoles.includes(getAdminRole ?? "")) {
-                                                    return Swal.fire({
-                                                        icon: "warning",
-                                                        title: "Vioaltion d'accès!",
-                                                        text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                    })
-                                                }
-                                                Swal.fire({
-                                                    icon: "warning",
-                                                    title: "Voulez-vous supprimer ce collaborateur? ",
-                                                    showCancelButton: true,
-                                                    cancelButtonText: "Annuler",
-                                                    confirmButtonText: "Oui"
-                                                }).then(async (confirmed) => {
-                                                    if (confirmed.isConfirmed) {
-                                                        const response = await providers.API.delete(providers.APIUrl, "deleteUser", u.UserId, {});
-                                                        providers.alertMessage(response.status, response.title, response.message, "/dashboard/dashboard/RH/weekDaysPlanningsList")
+                                        
+                                        <td className="text-center font-semibold border border-gray-400 dark:border-gray-300">
+                                            <div className="relative top-0 items-center justify-center px-2 space-x-3 flex ">
+                                                <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
+                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
+                                                        return Swal.fire({
+                                                            icon: "warning",
+                                                            title: "Vioalation d'accès!",
+                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
+                                                        });
                                                     }
-                                                })
-                                            }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                                <p className="text-center">🗑️</p>
-                                            </button>
+                                                }}>
+                                                    <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUserInPlanningOfWeek/${u.id}` : ""} >
+                                                        <p className="text-center">🖊️</p>
+                                                    </Link>
+                                                </button>
+                                                <button type="button" onClick={() => {
+                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
+                                                        return Swal.fire({
+                                                            icon: "warning",
+                                                            title: "Violation d'accès!",
+                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
+                                                        })
+                                                    }
+                                                    Swal.fire({
+                                                        icon: "warning",
+                                                        title: "Voulez-vous supprimer ce collaborateur du planning? ",
+                                                        showCancelButton: true,
+                                                        cancelButtonText: "Annuler",
+                                                        confirmButtonText: "Oui"
+                                                    }).then(async (confirmed) => {
+                                                        if (confirmed.isConfirmed) {
+                                                            const response = await providers.API.delete(providers.APIUrl, "deleteUserInPlanningOfWeek", u.id, {});
+                                                            providers.alertMessage(response.status, response.title, response.message, "/dashboard/RH/getUsersInPlanningOfWeek")
+                                                        }
+                                                    })
+                                                }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
+                                                    <p className="text-center">🗑️</p>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
 
@@ -248,30 +252,32 @@ export default function WeekDaysPlanningsList() {
                     </table>
 
                     {/* 🔄 Pagination */}
-                    <div className="flex items-center justify-center space-x-4 mt-14">
-                        <button
-                            className="px-4 py-2 bg-green-500 ease duration-500 hover:bg-green-600 text-white font-semibold rounded disabled:opacity-40"
-                            onClick={() => {
-                                setPage(page - 1);
-                                setStart(start + 1)
-                            }}
-                            disabled={page === 1}
-                        >
-                            Précédent
-                        </button>
-
-                        <span>Page {page} / {maxPage}</span>
-
-                        <button
-                            className="px-4 py-2  font-semibold text-white ease duration-500 hover:bg-red-600 bg-red-500 rounded disabled:opacity-40"
-                             onClick={() => {
-                                            setPage(page - 1);
-                                            setStart(start + 1)
-                                        }}
-                                        disabled={page === maxPage}
-                        >
-                            Suivant
-                        </button>
+                    <div className="flex items-center justify-center  gap-4 mt-10">
+                        <div className="flex flex-col">
+                            <p className="text-center">Page {page} / {maxPage}</p>
+                            <div className="flex flex-row mt-4 space-x-4">
+                                <button
+                                    className="px-4 py-3  font-semibold text-white ease duration-500 hover:bg-red-600 bg-red-500 rounded disabled:opacity-40"
+                                    onClick={() => {
+                                        setPage(page - 1);
+                                        setStart(start + 1)
+                                    }}
+                                    disabled={page === 1}
+                                >
+                                    <span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span> Précédent
+                                </button>
+                                <button
+                                    className="px-4 py-3 bg-green-500 ease duration-500 hover:bg-green-600 text-white font-semibold rounded disabled:opacity-40"
+                                    onClick={() => {
+                                        setPage(nextPage => nextPage + 1);
+                                        setStart(start - 1)
+                                    }}
+                                    disabled={page === maxPage}
+                                >
+                                    Suivant<span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronRight} /></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </main>
             </div>

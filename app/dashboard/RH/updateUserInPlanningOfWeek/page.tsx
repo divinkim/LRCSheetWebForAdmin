@@ -75,7 +75,8 @@ export default function addUserInPlanningOfWeek() {
                                                 onChange={() => {
                                                     setDatas({
                                                         ...datas,
-                                                        usersId: datas.usersId.includes(user.id) ? datas.usersId.filter(item => item !== user.id) : [...datas.usersId, user.id]
+                                                        usersId: datas.usersId.includes(user.id) ? datas.usersId.filter(item => item !== user.id) : [...datas.usersId, user.id],
+                                                        EnterpriseId: datas.EnterpriseId
                                                     })
                                                 }}
                                             />
@@ -86,7 +87,7 @@ export default function addUserInPlanningOfWeek() {
                         </div>
                         <div className="border h-[500px] rounded-xl border-gray-300 dark:border-gray-800dark:bg-gray-900 bg-white p-4">
                             <div className="mb-5">
-                                <select value={datas.PlanningId} onChange={(e) => {
+                                <select value={datas.PlanningId ?? ""} onChange={(e) => {
                                     setDatas({
                                         ...datas,
                                         PlanningId: Number(e.target.value)
@@ -124,7 +125,8 @@ export default function addUserInPlanningOfWeek() {
                                                 onChange={() => {
                                                     setDatas({
                                                         ...datas,
-                                                        weekDaysId: datas.weekDaysId.includes(weekDay.id) ? datas.weekDaysId.filter(item => item !== weekDay.id) : [...datas.weekDaysId, weekDay.id]
+                                                        weekDaysId: datas.weekDaysId.includes(weekDay.id) ? datas.weekDaysId.filter(item => item !== weekDay.id) : [...datas.weekDaysId, weekDay.id],
+
                                                     })
                                                 }}
                                             />

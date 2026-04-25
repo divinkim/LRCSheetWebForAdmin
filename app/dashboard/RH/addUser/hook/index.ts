@@ -25,7 +25,8 @@ type InputsValue = {
     DepartmentPostId: number | null,
     maritalStatus: string | null,
     adminService: string | null,
-    [key: string]: string | number | null,
+    status: boolean | null,
+    [key: string]: string | number | null | any,
 }
 
 export default function AddUserHookModal() {
@@ -66,6 +67,7 @@ export default function AddUserHookModal() {
         DepartmentPostId: null,
         maritalStatus: null,
         adminService: null,
+        status: null,
     });
 
     const [isLoading, setIsLoading] = useState(false);
@@ -262,6 +264,14 @@ export default function AddUserHookModal() {
             ]
 
         },
+        {
+            alias: "status",
+            arrayData: [
+                { title: "Actif", value: true },
+                { title: "Inactif", value: false },
+            ]
+
+        },
 
         {
             alias: "role",
@@ -306,12 +316,8 @@ export default function AddUserHookModal() {
     console.log("le tableau des données statiques", dynamicArrayData)
 
     const handleSubmit = async () => {
-
-        setIsLoading(true);
-
         const requireFields = {
             firstname: inputs.firstname,
-            lastname: inputs.lastname,
             gender: inputs.gender,
             password: inputs.password,
             EnterpriseId: inputs.EnterpriseId,
@@ -323,11 +329,15 @@ export default function AddUserHookModal() {
 
         for (const [key, value] of Object.entries(requireFields)) {
             if (!value) {
-                return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", "/dashboard/addUser");
+                return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", null);
             }
         }
 
+        setIsLoading(true);
+
         const response = await providers.API.post(providers.APIUrl, "createUser", null, inputs);
+
+        setIsLoading(false);
 
         if (response.status) localStorage.removeItem("inputMemoryOfAddUserPage");
 
@@ -338,7 +348,6 @@ export default function AddUserHookModal() {
             response.status ? "/dashboard/RH/addUser" : null
         );
 
-        setIsLoading(false);
     };
 
     console.log("les datas", inputs);

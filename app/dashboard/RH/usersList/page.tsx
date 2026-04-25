@@ -147,10 +147,10 @@ export default function UsersList() {
                                 savedUsersList.length > 0 ? savedUsersList.slice(start, start + limit).map((u) => (
                                     <tr className="">
 
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300">
-                                            {u.photo ? <img src={`${providers.APIUrl}/images/${u.photo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p className="text-center text-[40px]">
-                                                🧑‍💼
-                                            </p>}
+                                        <td className="p-2 border-b flex justify-center items-center h-[120px] border-gray-400 dark:border-gray-300">
+
+                                            <img src={u.photo ? `${providers.APIUrl}/images/${u.photo}` : "/images/clientProfile.png"} alt="" className="rounded-full w-[50px] h-[50px] object-cover" />
+
                                         </td>
 
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{(u?.lastname ?? "")?.length > 7 ? u?.lastname?.slice(0, 6) + "..." : u?.lastname} {(u?.firstname ?? "")?.length > 7 ? u?.firstname?.slice(0, 6) + "..." : u?.firstname}</td>
@@ -162,54 +162,56 @@ export default function UsersList() {
                                             {u.Enterprise?.logo ? <img src={`${providers.APIUrl}/images/${u.Enterprise.logo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p>{u.Enterprise?.name}</p>}
                                         </td>
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.status ? <p className="bg-green-500 rounded-full py-2 text-white">Actif</p> : <p className='bg-red-500 rounded-full py-2 text-white'>Inactif</p>}</td>
-                                        <td className="text-center py-5 font-semibold border-b border-r  space-x-3 flex  h-auto p-2 border-gray-400 dark:border-gray-300">
-                                            <Link onClick={() => {
-                                                if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                    Swal.fire({
-                                                        icon: 'warning',
-                                                        title: "Violation d'accès!",
-                                                        text: "Vous n'avez aucun droit d'effectuer cette action. Contacter votre administrateur de gestion",
-                                                    });
-                                                }
-                                            }} href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/getUserProfil/${u.id}` : ""} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                                <p className="text-center">👁️</p>
-                                            </Link>
-                                            <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
-                                                if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                    return Swal.fire({
-                                                        icon: "warning",
-                                                        title: "Vioaltion d'accès!",
-                                                        text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                    });
-                                                }
-                                            }}>
-                                                <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUser/${u.id}` : ""} >
-                                                    <p className="text-center">🖊️</p>
-                                                </Link>
-                                            </button>
-                                            <button type="button" onClick={() => {
-                                                if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                    return Swal.fire({
-                                                        icon: "warning",
-                                                        title: "Vioaltion d'accès!",
-                                                        text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                    })
-                                                }
-                                                Swal.fire({
-                                                    icon: "warning",
-                                                    title: "Voulez-vous supprimer ce collaborateur? ",
-                                                    showCancelButton: true,
-                                                    cancelButtonText: "Annuler",
-                                                    confirmButtonText: "Oui"
-                                                }).then(async (confirmed) => {
-                                                    if (confirmed.isConfirmed) {
-                                                        const response = await providers.API.delete(providers.APIUrl, "deleteUser", u.id, {});
-                                                        providers.alertMessage(response.status, response.title, response.message, "/dashboard/RH/usersList")
+                                        <td className="text-center font-semibold border-b border-r   h-auto  border-gray-400 dark:border-gray-300">
+                                            <div className="relative top-0 text-center px-2 space-x-3 flex ">
+                                                <Link onClick={() => {
+                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
+                                                        Swal.fire({
+                                                            icon: 'warning',
+                                                            title: "Violation d'accès!",
+                                                            text: "Vous n'avez aucun droit d'effectuer cette action. Contacter votre administrateur de gestion",
+                                                        });
                                                     }
-                                                })
-                                            }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                                <p className="text-center">🗑️</p>
-                                            </button>
+                                                }} href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/getUserProfil/${u.id}` : ""} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
+                                                    <p className="text-center">👁️</p>
+                                                </Link>
+                                                <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
+                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
+                                                        return Swal.fire({
+                                                            icon: "warning",
+                                                            title: "Vioaltion d'accès!",
+                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
+                                                        });
+                                                    }
+                                                }}>
+                                                    <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUser/${u.id}` : ""} >
+                                                        <p className="text-center">🖊️</p>
+                                                    </Link>
+                                                </button>
+                                                <button type="button" onClick={() => {
+                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
+                                                        return Swal.fire({
+                                                            icon: "warning",
+                                                            title: "Vioaltion d'accès!",
+                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
+                                                        })
+                                                    }
+                                                    Swal.fire({
+                                                        icon: "warning",
+                                                        title: "Voulez-vous supprimer ce collaborateur? ",
+                                                        showCancelButton: true,
+                                                        cancelButtonText: "Annuler",
+                                                        confirmButtonText: "Oui"
+                                                    }).then(async (confirmed) => {
+                                                        if (confirmed.isConfirmed) {
+                                                            const response = await providers.API.delete(providers.APIUrl, "deleteUser", u.id, {});
+                                                            providers.alertMessage(response.status, response.title, response.message, "/dashboard/RH/usersList")
+                                                        }
+                                                    })
+                                                }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
+                                                    <p className="text-center">🗑️</p>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
 

@@ -24,8 +24,10 @@ type Plannings = {
 type Datas = {
     usersId: number[],
     weekDaysId: number[],
-    PlanningId: number
+    PlanningId: number | null,
+    EnterpriseId: null
 }
+
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
 import AddOrEditUserPlanningOfWeek from "@/components/addEditUserPlanningOfWeek";
@@ -39,6 +41,7 @@ export default function useAddUserInPlanningOfWeek() {
         usersId: [],
         weekDaysId: [],
         PlanningId: 0,
+        EnterpriseId: null
     });
 
     useEffect(() => {
@@ -55,6 +58,7 @@ export default function useAddUserInPlanningOfWeek() {
 
     async function handleSubmit() {
         setIsLoading(true);
+        console.log(datas)
 
         if (datas.usersId.length <= 0 || datas.weekDaysId.length <= 0 || datas.PlanningId === 0) {
             return setTimeout(() => {
@@ -62,8 +66,19 @@ export default function useAddUserInPlanningOfWeek() {
                 setIsLoading(false)
             }, 1000)
         }
+
         const response = await providers.API.update(providers.APIUrl, "updateUsersPlanningsOfWeek", null, datas, null);
-        providers.alertMessage(response.status, response.title, response.message, response.status ? "/dashboard/RH/addUserInPlanningOfWeek" : null);
+
+        if (response.status) {
+            setDatas({
+                usersId: [],
+                weekDaysId: [],
+                PlanningId: 0,
+                EnterpriseId:null
+            })
+        }
+
+        providers.alertMessage(response.status, response.title, response.message, response.status ? "/dashboard/RH/updateUserInPlanningOfWeek" : null);
         setIsLoading(false);
     }
 

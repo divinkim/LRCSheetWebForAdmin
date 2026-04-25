@@ -10,9 +10,9 @@ import { providers } from "@/index";
 import { UpdateUserHookModal } from "../hook";
 
 export default function UpdateUser() {
-    
 
-    const { dynamicOptions, staticOptions, setInputs, inputs, handleSubmit, isLoading } = UpdateUserHookModal();
+
+    const { dynamicOptions, staticOptions, setInputs, inputs, handleSubmit, isLoading, adminRole } = UpdateUserHookModal();
 
     return (
         <main className="bg-gray-100 text-gray-700  dark:text-gray-300 dark:bg-transparent">
@@ -29,7 +29,7 @@ export default function UpdateUser() {
                                 <div className="flex flex-wrap py-4 font-normal space-x-4 space-y-4 items-center">
                                     {
                                         element.addOrUpdateUser.navigationLinks.map((element, index) => (
-                                            <Link href={element.href} className={index === 0 ? "bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 font-semibold px-4 relative top-2.5" : index === 5 ? "bg-blue-800 2xl:right-4 hover:bg-blue-900 ease duration-500 py-3 font-semibold px-4 relative 2xl:top-2.5 " : "bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 font-semibold px-4"}>
+                                            <Link href={element.href} className={`bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 font-semibold px-4 relative top-2.5 ${index === 2 && adminRole !== "Super-Admin" ? "hidden" : ""}`}>
                                                 <FontAwesomeIcon icon={element.icon} className="text-white" /> <span className='text-white'>{element.title}</span>
                                             </Link>
                                         ))
@@ -59,11 +59,11 @@ export default function UpdateUser() {
                                 formElements.map((element) => (
                                     element.addOrUpdateUser.inputs.map((e, index) => (
                                         <div key={index} className="w-full">
-                                            <div className='w-full'>
-
-                                                <label htmlFor="" className="mb-4 font-semibold dark:text-gray-300 text-gray-700"><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
+                                            <div className={`w-full ${e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin", "client"].includes(inputs.role ?? "") ? "hidden" : "block"}`}>
+                                                <label htmlFor="" className="mb-4 font-semibold dark:text-gray-300 text-gray-700"><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}
+                                                </label>
                                                 {!e.selectedInput ?
-                                                    <input value={e.type !== "file" ? inputs[e.alias] ?? "" : ""} onChange={async (v) => {
+                                                    <input value={e.type !== "file" ? (inputs[e.alias] ?? "") : ""} onChange={async (v) => {
                                                         for (const [key, _] of Object.entries(inputs)) {
                                                             if (key === e.alias) {
                                                                 if (e.type === "file") {
@@ -86,12 +86,18 @@ export default function UpdateUser() {
 
                                                     }} type={e.type} maxLength={e.type === "tel" ? 9 : undefined} placeholder={e.placeholder} className="w-full mt-1 outline-none rounded-md font-semibold dark:shadow-none p-2.5 bg-transparent border border-gray-400 dark:border-gray-300  dark:placeholder-gray-300  dark:text-gray-300 text-gray-700" />
                                                     :
-                                                    <select value={inputs[e.alias] ?? ""} onChange={(v) => {
+                                                    <select value={e.type !== "file" ? (inputs[e.alias] ?? "") : ""} onChange={(v) => {
                                                         for (const [key, _] of Object.entries(inputs)) {
                                                             if (key === e.alias) {
                                                                 setInputs({
                                                                     ...inputs,
                                                                     [e.alias]: e.type === "number" ? parseInt(v.target.value) : v.target.value
+                                                                })
+                                                            } else if (e.alias === "status") {
+                                                                const value = v.target.value
+                                                                setInputs({
+                                                                    ...inputs,
+                                                                    [e.alias]: value === "Actif" ? true : value === "Inactif" ? false : null
                                                                 })
                                                             }
                                                         }
@@ -109,13 +115,6 @@ export default function UpdateUser() {
                                                                         {option.title}
                                                                     </option>
                                                                 )) :
-                                                                // staticsOptions.map((v) => (
-                                                                //     v.value.map((item) => (
-                                                                //         <option value={item.value} className={e.alias !== v.alias ? "hidden" : "block"}>
-                                                                //             {item.value}
-                                                                //         </option>
-                                                                //     ))
-                                                                // ))
                                                                 staticOptions.find(item => item.alias === e.alias)?.arrayData.map((option) => (
                                                                     <option value={option.value}>
                                                                         {option.title}

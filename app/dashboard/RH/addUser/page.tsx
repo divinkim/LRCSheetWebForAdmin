@@ -54,8 +54,8 @@ export default function AddUser() {
                                 formElements.map((element) => (
 
                                     element.addOrUpdateUser.inputs.map((e, index) => (
-                                        <div className={`w-full mb-4 ${e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin, client"].includes(String(inputs.role)) ? "hidden" : "block"} ${e.alias === "status" ? "hidden" : "block"}`}>
-                                            <label htmlFor="" className={`mb-3 font-semibold dark:text-gray-300 text-gray-700" ${e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin, client"].includes(String(inputs.role)) ? "hidden" : "block"}`}><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
+                                        <div className={`w-full mb-4 ${e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin", "client", null].includes(inputs.role) ? "hidden" : "block"}`}>
+                                            <label htmlFor="" className={`mb-3 font-semibold dark:text-gray-300 text-gray-700 block"}`}><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
                                             {!e.selectedInput ?
                                                 <input value={inputs[e.alias] ?? ""} onChange={async (v) => {
                                                     let field = e.alias;
@@ -79,6 +79,15 @@ export default function AddUser() {
                                                 :
                                                 <select value={inputs[e.alias] ?? ""} onChange={(v) => {
                                                     let field = e.alias;
+                                                    if (e.alias === "status") {
+                                                        const value = v.target.value
+                                                        const fieldValue = {
+                                                            ...inputs,
+                                                            [e.alias]: value === "Actif" ? true : value === "Inactif" ? false : null
+                                                        }
+                                                        setInputs(fieldValue)
+                                                        localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify(fieldValue))
+                                                    }
                                                     const fieldValue = {
                                                         ...inputs,
                                                         [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value

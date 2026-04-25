@@ -17,7 +17,7 @@ type InputsValue = {
     ContractId: number | null,
     CountryId: number | null,
     CityId: number | null,
-    PlanningId:number|null,
+    PlanningId: number | null,
     DistrictId: number | null,
     QuarterId: number | null,
     photo: string | null,
@@ -25,8 +25,8 @@ type InputsValue = {
     DepartmentPostId: number | null,
     maritalStatus: string | null,
     adminService: string | null,
-    status: any,
-    [key: string]: string | number | null | undefined,
+    status: boolean | null,
+    [key: string]: string | number | null | undefined | any,
 }
 
 export function UpdateUserHookModal() {
@@ -60,14 +60,14 @@ export function UpdateUserHookModal() {
         CountryId: null,
         CityId: null,
         DistrictId: null,
-        PlanningId:null,
+        PlanningId: null,
         QuarterId: null,
         photo: null,
         role: null,
         DepartmentPostId: null,
         maritalStatus: null,
         adminService: null,
-        status: ""
+        status: null,
     });
 
     const requireRoles = ['Super-Admin', 'Supervisor-Admin', 'Moderator-Admin'];
@@ -143,7 +143,7 @@ export function UpdateUserHookModal() {
                 ContractTypeId: getUser.ContractTypeId ?? null,
                 ContractId: getUser.ContractId ?? null,
                 CountryId: getUser.CountryId ?? null,
-                PlanningId:getUser.PlanningId ?? null,
+                PlanningId: getUser.PlanningId ?? null,
                 CityId: getUser.CityId ?? null,
                 DistrictId: getUser.DistrictId ?? null,
                 QuarterId: getUser.QuarterId ?? null,
@@ -152,7 +152,7 @@ export function UpdateUserHookModal() {
                 DepartmentPostId: getUser.DepartmentPostId ?? null,
                 maritalStatus: getUser.marialStatus ?? null,
                 adminService: getUser.adminService ?? null,
-                status: getUser.status ? "Actif" : "Inactif"
+                status: getUser.status
             })
         })()
     }, [adminRole])
@@ -314,7 +314,7 @@ export function UpdateUserHookModal() {
         },
         {
             alias: "role",
-            arrayData: [{ title: "Super-Admin", value: "Super-Admin" }, { title: "Administrateur de contrôle", value: "Moderator-Admin" }, { title: "Supervisor-Admin", value: "Administrateur de supervision" }, { title: "Client-User", value: "Utilisateur client" }]
+            arrayData: [{ title: "Super-Admin", value: "Super administrateur" }, { title: "Administrateur de contrôle", value: "Moderator-Admin" }, { title: "Supervisor-Admin", value: "Administrateur de gestion" }, { title: "Utilisateur client", value: "client" }]
         },
         {
             alias: "adminService",
@@ -339,24 +339,23 @@ export function UpdateUserHookModal() {
         setIsLoading(true);
         const userId = window.location.href?.split('/').pop();
 
-        // const requireFields = {
-        //     firstname: inputs.firstname,
-        //     lastname: inputs.lastname,
-        //     gender: inputs.gender,
-        //     password: inputs.password,
-        //     EnterpriseId: inputs.EnterpriseId,
-        //     email: inputs.email,
-        //     role: inputs.role,
-        //     phone: inputs.phone,
-        //     CityId: inputs.CityId,
-        //     CountryId: inputs.CountryId
-        // }
+        const requireFields = {
+            firstname: inputs.firstname,
+            gender: inputs.gender,
+            password: inputs.password,
+            EnterpriseId: inputs.EnterpriseId,
+            email: inputs.email,
+            role: inputs.role,
+            phone: inputs.phone,
+            CityId: inputs.CityId,
+            CountryId: inputs.CountryId
+        }
 
-        // for (const [key, value] of Object.entries(requireFields)) {
-        //     if (!value) {
-        //         return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", "/dashboard/addUser");
-        //     }
-        // }
+        for (const [key, value] of Object.entries(requireFields)) {
+            if (!value) {
+                return providers.alertMessage(false, "Champs invalides", "Veuillez renseigner tous les champs obligatoires", null);
+            }
+        }
 
         // console.log(requireFields);
         const response = await providers.API.update(providers.APIUrl, "updateUser", null, inputs, Number(userId));
@@ -372,5 +371,5 @@ export function UpdateUserHookModal() {
     };
 
 
-    return { dynamicOptions, staticOptions, setInputs, inputs, handleSubmit, isLoading, setIsLoading }
+    return { dynamicOptions, staticOptions, setInputs, inputs, handleSubmit, isLoading, setIsLoading, adminRole }
 }

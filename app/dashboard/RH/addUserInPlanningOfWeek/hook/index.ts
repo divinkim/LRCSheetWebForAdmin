@@ -24,7 +24,7 @@ type Plannings = {
 type Datas = {
     usersId: number[],
     weekDaysId: number[],
-    PlanningId: number
+    PlanningId: number | null
 }
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
@@ -38,7 +38,7 @@ export default function useAddUserInPlanningOfWeek() {
     const [datas, setDatas] = useState<Datas>({
         usersId: [],
         weekDaysId: [],
-        PlanningId: 0,
+        PlanningId: null,
     });
 
     useEffect(() => {
@@ -63,6 +63,11 @@ export default function useAddUserInPlanningOfWeek() {
             }, 1000)
         }
         const response = await providers.API.post(providers.APIUrl, "joinUsersInPlanning", null, datas);
+        setDatas({
+            usersId: [],
+            weekDaysId: [],
+            PlanningId: null,
+        })
         providers.alertMessage(response.status, response.title, response.message, response.status ? "/dashboard/RH/addUserInPlanningOfWeek" : null);
         setIsLoading(false);
     }

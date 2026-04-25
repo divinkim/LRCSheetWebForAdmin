@@ -60,7 +60,7 @@ export function useChat() {
     }
 
     function removeNotificationCount(UserId: number) {
-        const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: string, adminPageIndex: string }) => Number(item.senderId) !== UserId && (Number(item.adminPageIndex) === 0 && Number(item.adminSectionIndex) === 0));
+          const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: string, adminPageIndex: string }) => Number(item.senderId) !== UserId && (Number(item.adminPageIndex) === 0 && Number(item.adminSectionIndex) === 0));
         setStoredNotificationsArray(deleteItem);
         localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem))
     }
@@ -167,7 +167,7 @@ export function useChat() {
         })
 
         if (response) {
-            const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
+            const notification = await providers.API.post(providers.APIUrl, "sendNotificationToAdmin", null, {
                 path: "/dashboard/NOTIF/chat",
                 EnterpriseId: userData.EnterpriseId.toString(),
                 adminSectionIndex: 0,

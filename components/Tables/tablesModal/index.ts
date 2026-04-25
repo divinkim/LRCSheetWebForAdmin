@@ -87,12 +87,12 @@ export const tablesModal = [
             path: "Dashboard/RH/Liste des collaborateus associés au planning",
             links: [
                 {
-                    title: "Ajouter un collaborateur au planning de la semaine",
+                    title: "Ajouter un collaborateur au planning",
                     href: "/dashboard/RH/addUserInPlanningOfWeek",
                     icon: faCalendarPlus
                 },
                 {
-                    title: "Modifier le planning de la semaine d'un collaborateur",
+                    title: "Modifier le planning d'un collaborateur",
                     href: "/dashboard/RH/updateUserInPlanningOfWeek",
                     icon: faCalendarPlus
                 },

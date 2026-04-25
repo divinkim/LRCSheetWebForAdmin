@@ -125,7 +125,7 @@ export const formElements = [
                 {
                     label: "Prénoms",
                     placeholder: "Saisissez un prénom...",
-                    requireField: true,
+                    requireField: false,
                     type: "text",
                     selectedInput: false,
                     alias: "lastname"
@@ -133,7 +133,7 @@ export const formElements = [
                 {
                     label: "Date de naissance",
                     placeholder: "Sélectionnez une date...",
-                    requireField: true,
+                    requireField: false,
                     type: "date",
                     selectedInput: false,
                     alias: "birthDate"
@@ -197,7 +197,7 @@ export const formElements = [
                 {
                     label: "Département",
                     placeholder: "Sélectionnez un département...",
-                    requireField: true,
+                    requireField: false,
                     type: "number",
                     selectedInput: true,
                     dynamicOptions: {
@@ -208,7 +208,7 @@ export const formElements = [
                 {
                     label: "Poste",
                     placeholder: "Sélectionnez un poste...",
-                    requireField: true,
+                    requireField: false,
                     type: "number",
                     selectedInput: true,
                     dynamicOptions: {
@@ -219,7 +219,7 @@ export const formElements = [
                 {
                     label: "Planning",
                     placeholder: "Sélectionnez un planning...",
-                    requireField: true,
+                    requireField: false,
                     type: "number",
                     selectedInput: true,
                     dynamicOptions: {
@@ -230,7 +230,7 @@ export const formElements = [
                 {
                     label: "Type de contrat",
                     placeholder: "Sélectionnez un type de contrat...",
-                    requireField: true,
+                    requireField: false,
                     type: "number",
                     selectedInput: true,
                     dynamicOptions: {
