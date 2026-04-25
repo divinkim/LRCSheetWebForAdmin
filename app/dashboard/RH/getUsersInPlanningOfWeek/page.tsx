@@ -206,7 +206,7 @@ export default function WeekDaysPlanningsList() {
                                                         });
                                                     }
                                                 }}>
-                                                    <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUserInPlanningOfWeek/${u.id}` : ""} >
+                                                    <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUserInPlanningOfWeek` : ""} >
                                                         <p className="text-center">🖊️</p>
                                                     </Link>
                                                 </button>

@@ -86,7 +86,7 @@ export default function addUserInPlanningOfWeek() {
                         </div>
                         <div className="border h-[500px] rounded-xl border-gray-300 dark:border-gray-800 dark:bg-gray-900 bg-white p-4">
                             <div className="mb-5">
-                                <select value={datas.PlanningId} onChange={(e) => {
+                                <select value={datas.PlanningId ?? ""} onChange={(e) => {
                                     setDatas({
                                         ...datas,
                                         PlanningId: Number(e.target.value)
