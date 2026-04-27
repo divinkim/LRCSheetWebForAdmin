@@ -23,7 +23,7 @@ type InputsValue = {
     photo: string | null,
     role: string | null,
     DepartmentPostId: number | null,
-    maritalStatus: string | null,
+    marialStatus: string | null,
     adminService: string | null,
     status: boolean | null,
     [key: string]: string | number | null | undefined | any,
@@ -65,7 +65,7 @@ export function UpdateUserHookModal() {
         photo: null,
         role: null,
         DepartmentPostId: null,
-        maritalStatus: null,
+        marialStatus: null,
         adminService: null,
         status: null,
     });
@@ -150,7 +150,7 @@ export function UpdateUserHookModal() {
                 photo: getUser.photo ?? null,
                 role: getUser.role ?? null,
                 DepartmentPostId: getUser.DepartmentPostId ?? null,
-                maritalStatus: getUser.marialStatus ?? null,
+                marialStatus: getUser.marialStatus ?? null,
                 adminService: getUser.adminService ?? null,
                 status: getUser.status
             })
@@ -325,7 +325,7 @@ export function UpdateUserHookModal() {
             ]
         },
         {
-            alias: "maritalStatus",
+            alias: "marialStatus",
             arrayData: [
                 { title: "Célibataire", value: "Célibataire" },
                 { title: "Fiancé", value: "Fiancé" },

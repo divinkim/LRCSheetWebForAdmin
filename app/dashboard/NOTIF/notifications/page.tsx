@@ -34,7 +34,7 @@ export default function Notifications() {
                                 item.id !== 66 && (
                                     <div key={index} className="hover:cursor-pointer hover:duration-500 border-b border-gray-300 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
                                         <div className="flex p-3 border-gray-400 items-center space-x-4">
-                                            {item.photo ? <img src={`${providers.APIUrl}/images/${item.photo}`} className="w-[50px] h-[50px] rounded-full object-cover" /> : <p className="text-[40px]">🧑‍💼</p>}
+                                            {<img src={item.photo ? `${providers.APIUrl}/images/${item.photo}` : "/images/clientProfile.png"} className="w-[50px] h-[50px] rounded-full object-cover" />}
                                             <p className="font-semibold">{item.lastname} {item.firstname}</p>
                                             <input type="checkbox" onChange={() => {
                                                 onCheck(item.email, item.id)
@@ -92,7 +92,7 @@ export default function Notifications() {
                                             item.id !== 66 && (
                                                 <div key={index} className="hover:cursor-pointer hover:duration-500 border-b border-gray-300 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
                                                     <div className="flex p-3 border-gray-400 items-center space-x-4">
-                                                        {item.photo ? <img src={`${providers.APIUrl}/images/${item.photo}`} className="w-[50px] h-[50px] rounded-full object-cover" /> : <p className="text-[40px]">🧑‍💼</p>}
+                                                        {<img src={item.photo ? `${providers.APIUrl}/images/${item.photo}` : "/images/clientProfile.png"} className="w-[50px] h-[50px] rounded-full object-cover" />}
                                                         <p className="font-semibold">{item.lastname} {item.firstname}</p>
                                                         <input type="checkbox" onChange={() => {
                                                             onCheck(item.email, item.id)

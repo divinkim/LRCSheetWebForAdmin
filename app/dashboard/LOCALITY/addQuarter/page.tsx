@@ -17,8 +17,8 @@ export default function AddDistrict() {
                         formElements.map((element) => (
                             <div className="text-gray-700 w-full space-y-4 md:space-y-0 items-center">
                                 <div className="flex justify-between flex-wrap">
-                                    <h1 className="font-bold mb-3 text-[20px] dark:text-gray-300 text-gray-700">Ajouter un arraondissement</h1>
-                                    <p className="text-blue-700 dark:text-blue-600">Dashboard/Autres/Ajouter un arrondissement</p>
+                                    <h1 className="font-bold mb-3 text-[20px] dark:text-gray-300 text-gray-700">Ajouter un quartier</h1>
+                                    <p className="text-blue-700 dark:text-blue-600">Dashboard/Localités/Ajouter un quartier</p>
                                 </div>
                                 <hr className='bg-gray-400' />
                                 <div className="flex flex-wrap py-4 lg:space-x-4 space-y-4 items-center">

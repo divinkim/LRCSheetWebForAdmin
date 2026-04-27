@@ -23,7 +23,7 @@ type InputsValue = {
     photo: string | null,
     role: string | null,
     DepartmentPostId: number | null,
-    maritalStatus: string | null,
+    marialStatus: string | null,
     adminService: string | null,
     status: boolean | null,
     [key: string]: string | number | null | any,
@@ -65,7 +65,7 @@ export default function AddUserHookModal() {
         photo: null,
         role: null,
         DepartmentPostId: null,
-        maritalStatus: null,
+        marialStatus: null,
         adminService: null,
         status: null,
     });
@@ -137,7 +137,7 @@ export default function AddUserHookModal() {
     useEffect(() => {
         (async () => {
             const getContractTypes = await providers.API.getAll(providers.APIUrl, "getContractTypes", null);
-            const filterContractTypes = getContractTypes.filter((contractType: { EnterpriseId: number, ContractTypeId: number }) => contractType.EnterpriseId === inputs.EnterpriseId)
+            const filterContractTypes = getContractTypes.filter((contractType: { EnterpriseId: number }) => contractType.EnterpriseId === inputs.EnterpriseId)
             setContractTypes(filterContractTypes)
             console.log(filterContractTypes);
         })()
@@ -303,7 +303,7 @@ export default function AddUserHookModal() {
             ]
         },
         {
-            alias: "maritalStatus",
+            alias: "marialStatus",
             arrayData: [
                 { title: "Célibataire", value: "Célibataire" },
                 { title: "Fiancé", value: "Fiancé" },
@@ -325,10 +325,11 @@ export default function AddUserHookModal() {
             role: inputs.role,
             CountryId: inputs.CountryId,
             CityId: inputs.CityId,
+            status: inputs.status
         }
 
         for (const [key, value] of Object.entries(requireFields)) {
-            if (!value) {
+            if (value === null || value === "" || value === undefined) {
                 return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", null);
             }
         }

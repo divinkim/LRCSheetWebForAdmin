@@ -67,13 +67,15 @@ export default function AddUser() {
                                                                 ...inputs,
                                                                 [field]: response.filename
                                                             })
+                                                            localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify({ ...inputs, [field]: response.filename }));
+                                                            return;
                                                         }
                                                     }
                                                     setInputs({
                                                         ...inputs,
                                                         [field]: v.target.value
                                                     });
-                                                    window?.localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify({ ...inputs, [field]: v.target.value }));
+                                                    localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify({ ...inputs, [field]: v.target.value }));
 
                                                 }} type={e.type} maxLength={e.type === "tel" ? 9 : undefined} placeholder={e.placeholder} className="w-full outline-none rounded-md  dark:shadow-none p-2.5 bg-transparent border border-gray-400 dark:border-gray-300  dark:placeholder-gray-300 f dark:text-gray-300 text-gray-700 placeholder-gray-600" />
                                                 :
@@ -87,6 +89,7 @@ export default function AddUser() {
                                                         }
                                                         setInputs(fieldValue)
                                                         localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify(fieldValue))
+                                                        return
                                                     }
                                                     const fieldValue = {
                                                         ...inputs,

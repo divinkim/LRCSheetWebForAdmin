@@ -29,7 +29,7 @@ export default function UpdateUser() {
                                 <div className="flex flex-wrap py-4 font-normal space-x-4 space-y-4 items-center">
                                     {
                                         element.addOrUpdateUser.navigationLinks.map((element, index) => (
-                                            <Link href={element.href} className={`bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 font-semibold px-4 relative top-2.5 ${index === 2 && adminRole !== "Super-Admin" ? "hidden" : ""}`}>
+                                            <Link href={element.href} className={`bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 font-semibold px-4 relative top-2.5 ${index === 0 ? "lg:top-[18px]" : index === 2 && adminRole !== "Super-Admin" ? "hidden" : ""}`}>
                                                 <FontAwesomeIcon icon={element.icon} className="text-white" /> <span className='text-white'>{element.title}</span>
                                             </Link>
                                         ))
@@ -69,13 +69,13 @@ export default function UpdateUser() {
                                                                 if (e.type === "file") {
                                                                     const files = v.target.files?.[0];
                                                                     const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                                                                    console.log("L efichier image", response)
                                                                     if (response.status) {
                                                                         setInputs({
                                                                             ...inputs,
                                                                             [e.alias]: response.filename
                                                                         })
                                                                     }
+                                                                    return;
                                                                 }
                                                                 setInputs({
                                                                     ...inputs,

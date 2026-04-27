@@ -9,7 +9,7 @@ export default function Repports() {
     const { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray } = RepportsListHook();
 
     return (
-        <main className="bg-gray-100 dark:bg-transparent">
+        <main className="bg-white dark:bg-transparent">
             <div className="flex">
                 <div className="mx-4 dark:text-gray-300 text-gray-700 mt-6 mb-4 w-full">
                     <div className="flex justify-between font-semibold mb-4 items-center">
@@ -32,12 +32,12 @@ export default function Repports() {
                                 const decrementMonthIndex = monthIndice - 1;
                                 setMonthIndice(decrementMonthIndex);
                                 navigateBetweenMonths(RepportsArray, decrementMonthIndex, parseInt(EnterpriseId ?? ""))
-                            }} className="bg-orange-500/90 hover:scale-105 ease duration-500 px-6 py-2"><span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span>Précédent</button>
+                            }} className="bg-orange-500/90 hover:scale-105 ease duration-500 rounded-md px-6 py-2"><span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span>Précédent</button>
                             <button type="button" onClick={() => {
                                 const incrementedMonthIndex = monthIndice + 1;
                                 setMonthIndice(incrementedMonthIndex)
                                 navigateBetweenMonths(RepportsArray, incrementedMonthIndex, parseInt(EnterpriseId ?? ""))
-                            }} className="bg-blue-600 px-6 py-3 hover:scale-105 ease duration-500">Suivant<span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronRight} /></span></button>
+                            }} className="bg-blue-600 px-6 py-3 hover:scale-105 ease duration-500 rounded-md">Suivant<span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronRight} /></span></button>
                         </div>
                     </div>
                     <div className="mx-auto mt-8 w-full">

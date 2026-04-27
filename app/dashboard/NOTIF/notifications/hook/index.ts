@@ -80,7 +80,7 @@ export default function useNotifications() {
         };
 
         console.log("les inputs", inputs)
-        
+
         const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
             subject: inputs.title,
             content: inputs.content,
@@ -90,13 +90,14 @@ export default function useNotifications() {
 
         for (const UserId of inputs.usersIds) {
             const mail = await providers.API.post(providers.APIUrl, "sendMail", null, {
-                subject:"Notification non lue",
-                content: "Veuillez vous connecter sur votre espace web pour en savoir plus.",
+                subject: "Notification entrante!",
+                content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet.",
                 emails: inputs.emails,
-                senderEmail: "grcinfos@gmail.com",
+                senderEmail: "lrcsheet@gmail.com",
             });
             const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
                 path: "/dashboard/NOTIF/chat",
+                messagingType: "notification", //Niveau app mobile
                 EnterpriseId: Number(EnterpriseId),
                 adminSectionIndex: 0,
                 adminPageIndex: 0,

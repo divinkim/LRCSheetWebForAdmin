@@ -119,7 +119,7 @@ export default function SidebarHook() {
                         }
                     });
                 } else if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId) && remoteMessage.data?.page) {
-                    
+
                 }
             });
 
@@ -200,67 +200,67 @@ export default function SidebarHook() {
             title: "🗂️ Administration",
             adminService: "ADMINISTRATION",
             ItemLists: [
+                // {
+                //     index: 0,
+                //     title: "Permissions",
+                //     href: "/dashboard/ADMIN/permission",
+                //     icon: faUserShield
+                // },
                 {
                     index: 0,
-                    title: "Permissions",
-                    href: "/dashboard/ADMIN/permission",
-                    icon: faUserShield
-                },
-                {
-                    index: 1,
-                    title: "Rapports",
+                    title: "Liste des rapports",
                     href: "/dashboard/ADMIN/repportsList",
                     icon: faFileLines
                 },
 
                 {
-                    index: 2,
+                    index: 1,
                     title: "Ajouter un contrat",
                     href: "/dashboard/ADMIN/addContract",
                     icon: faFileSignature
                 },
+                // {
+                //     index: 3,
+                //     title: "Liste de contrat",
+                //     href: "/dashboard/ADMIN/listContrat",
+                //     icon: faFileContract
+                // },
                 {
-                    index: 3,
-                    title: "Liste de contrat",
-                    href: "/dashboard/ADMIN/listContrat",
-                    icon: faFileContract
-                },
-                {
-                    index: 4,
+                    index: 2,
                     title: "Type de contrat",
                     href: "/dashboard/ADMIN/typeContrat",
                     icon: faFileContract
                 },
+                // {
+                //     index: 5,
+                //     title: "Liste de Type de contrat",
+                //     href: "/dashboard/ADMIN/listTypeContrat",
+                //     icon: faFileContract
+                // },
                 {
-                    index: 5,
-                    title: "Liste de Type de contrat",
-                    href: "/dashboard/ADMIN/listTypeContrat",
-                    icon: faFileContract
-                },
-                {
-                    index: 6,
+                    index: 3,
                     title: "Ajouter un poste",
                     href: "/dashboard/ADMIN/addPost",
                     icon: faIdBadge
                 },
+                // {
+                //     index: 7,
+                //     title: "Liste de poste",
+                //     href: "/dashboard/ADMIN/postesList",
+                //     icon: faSuitcaseRolling
+                // },
                 {
-                    index: 7,
-                    title: "Liste de poste",
-                    href: "/dashboard/ADMIN/postesList",
-                    icon: faSuitcaseRolling
-                },
-                {
-                    index: 8,
+                    index: 4,
                     title: "Ajouter un département",
                     href: "/dashboard/ADMIN/addDepartment",
                     icon: faBuilding
                 },
-                {
-                    index: 9,
-                    title: "Liste de départements",
-                    href: "/dashboard/ADMIN/departmentsList",
-                    icon: faSuitcaseRolling
-                }
+                // {
+                //     index: 9,
+                //     title: "Liste de départements",
+                //     href: "/dashboard/ADMIN/departmentsList",
+                //     icon: faSuitcaseRolling
+                // }
             ]
         },
 
@@ -275,44 +275,44 @@ export default function SidebarHook() {
                     href: "/dashboard/COMPTA/addSalary",
                     icon: faMoneyBill1Wave  // salaire / paie
                 },
-                {
-                    index: 1,
-                    title: "Liste des salaires",
-                    href: "/dashboard/COMPTA/salaryList",
-                    icon: faFileInvoiceDollar  // récapitulatif des paies
-                },
+                // {
+                //     index: 1,
+                //     title: "Liste des salaires",
+                //     href: "/dashboard/COMPTA/salaryList",
+                //     icon: faFileInvoiceDollar  // récapitulatif des paies
+                // },
+                // {
+                //     index: 2,
+                //     title: "Factures clients",
+                //     href: "/home",
+                //     icon: faFileInvoice  // suivi des factures émises
+                // },
+                // {
+                //     index: 3,
+                //     title: "Factures fournisseurs",
+                //     href: "/home",
+                //     icon: faFileCircleCheck  // suivi des paiements fournisseurs
+                // },
+                // {
+                //     index: 4,
+                //     title: "Dépenses",
+                //     href: "/home",
+                //     icon: faMoneyCheckDollar  // gestion des dépenses courantes
+                // },
+                // {
+                //     index: 5,
+                //     title: "Rapports financiers",
+                //     href: "/home",
+                //     icon: faChartLine  // bilans, comptes de résultat, cash flow
+                // },
+                // {
+                //     index: 6,
+                //     title: "Taxes & TVA",
+                //     href: "/home",
+                //     icon: faReceipt  // déclarations fiscales, TVA, impôts
+                // },
                 {
                     index: 2,
-                    title: "Factures clients",
-                    href: "/home",
-                    icon: faFileInvoice  // suivi des factures émises
-                },
-                {
-                    index: 3,
-                    title: "Factures fournisseurs",
-                    href: "/home",
-                    icon: faFileCircleCheck  // suivi des paiements fournisseurs
-                },
-                {
-                    index: 4,
-                    title: "Dépenses",
-                    href: "/home",
-                    icon: faMoneyCheckDollar  // gestion des dépenses courantes
-                },
-                {
-                    index: 5,
-                    title: "Rapports financiers",
-                    href: "/home",
-                    icon: faChartLine  // bilans, comptes de résultat, cash flow
-                },
-                {
-                    index: 6,
-                    title: "Taxes & TVA",
-                    href: "/home",
-                    icon: faReceipt  // déclarations fiscales, TVA, impôts
-                },
-                {
-                    index: 7,
                     title: "Bilan annuel",
                     href: "/home",
                     icon: faBalanceScale  // bilan comptable
@@ -330,18 +330,18 @@ export default function SidebarHook() {
                     href: "/home",
                     icon: faChartLine   // graphique linéaire pour gains/performances
                 },
-                {
-                    index: 1,
-                    title: "Gain sur abonnement",
-                    href: "/home",
-                    icon: faCreditCard  // abonnement/revenu, carte de paiement
-                },
-                {
-                    index: 2,
-                    title: "Bilan général",
-                    href: "/dashboard/STATS/generalPlan",
-                    icon: faFileAlt      // bilan/rapport général
-                },
+                // {
+                //     index: 1,
+                //     title: "Gain sur abonnement",
+                //     href: "/home",
+                //     icon: faCreditCard  // abonnement/revenu, carte de paiement
+                // },
+                // {
+                //     index: 2,
+                //     title: "Bilan général",
+                //     href: "/dashboard/STATS/generalPlan",
+                //     icon: faFileAlt      // bilan/rapport général
+                // },
             ]
         },
         {
@@ -350,20 +350,26 @@ export default function SidebarHook() {
             ItemLists: [
                 {
                     index: 0,
-                    title: "Villes enregistrées",
-                    href: "/dashboard/LOCALITY/citiesList",
+                    title: "Ajouter une pays",
+                    href: "/dashboard/LOCALITY/addCountry",
                     icon: faCity
                 },
                 {
                     index: 1,
-                    title: "Arrondissements enregistrées",
-                    href: "/dashboard/LOCALITY/districtsList",
-                    icon: faBuildingColumns
+                    title: "Ajouter une ville",
+                    href: "/dashboard/LOCALITY/addCity",
+                    icon: faCity
                 },
                 {
                     index: 2,
-                    title: "Quartiers enregistrées",
-                    href: "/dashboard/LOCALITY/quartersList",
+                    title: "Ajouter un arrondissement",
+                    href: "/dashboard/LOCALITY/addDistrict",
+                    icon: faBuildingColumns
+                },
+                {
+                    index: 3,
+                    title: "Ajouter un quartier",
+                    href: "/dashboard/LOCALITY/addQuarter",
                     icon: faHouseChimney
                 },
             ]

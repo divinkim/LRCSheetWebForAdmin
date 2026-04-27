@@ -11,7 +11,8 @@ import {
     faBuildingUser,
     faMap,
     faMapLocation,
-    faMapLocationDot
+    faMapLocationDot,
+    faFileSignature
 } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { title } from "process";
@@ -46,18 +47,28 @@ export const formElements = [
                     icon: faMoneyBillWave
                 },
                 {
+                    title: "Ajouter un type de contrat",
+                    href: "/dashboard/ADMIN/addContractType",
+                    icon: faFileContract
+                },
+                {
+                    title: "Ajouter un contrat",
+                    href: "/dashboard/ADMIN/addContract",
+                    icon: faFileSignature
+                },
+                {
                     title: "Ajouter un arrondissement",
-                    href: "/dashboard/OTHERS/addDistrict",
+                    href: "/dashboard/LOCALITY/addDistrict",
                     icon: faMapMarkedAlt
                 },
                 {
                     title: "Ajouter un quartier",
-                    href: "/dashboard/OTHERS/addQuarter",
+                    href: "/dashboard/LOCALITY/addQuarter",
                     icon: faMapPin
                 },
                 {
                     title: "Ajouter une ville",
-                    href: "/dashboard/OTHERS/addCity",
+                    href: "/dashboard/LOCALITY/addCity",
                     icon: faMapLocation
                 }
 
@@ -79,7 +90,7 @@ export const formElements = [
                 {
                     label: "Statut du collaborateur",
                     placeholder: "Sélectionnez un statut...",
-                    requireField: false,
+                    requireField: true,
                     type: "text",
                     selectedInput: true,
                     alias: "status"
@@ -179,7 +190,7 @@ export const formElements = [
                     requireField: false,
                     type: "text",
                     selectedInput: true,
-                    alias: "maritalStatus"
+                    alias: "marialStatus"
                 },
 
                 // ---- Select Inputs ----
@@ -217,6 +228,17 @@ export const formElements = [
                     alias: "PostId"
                 },
                 {
+                    label: "Salaire",
+                    placeholder: "Sélectionnez un salaire...",
+                    requireField: false,
+                    type: "number",
+                    selectedInput: true,
+                    alias: "SalaryId",
+                    dynamicOptions: {
+                        status: true
+                    },
+                },
+                {
                     label: "Planning",
                     placeholder: "Sélectionnez un planning...",
                     requireField: false,
@@ -239,16 +261,17 @@ export const formElements = [
                     alias: "ContractTypeId"
                 },
                 {
-                    label: "Salaire",
-                    placeholder: "Sélectionnez un salaire...",
+                    label: "Durée du contrat",
+                    placeholder: "Sélectionnez un contrat...",
                     requireField: false,
                     type: "number",
                     selectedInput: true,
-                    alias: "SalaryId",
                     dynamicOptions: {
-                        status: true
+                        status: true,
                     },
+                    alias: "ContractId"
                 },
+
                 {
                     label: "Pays",
                     placeholder: "Sélectionnez un pays...",
@@ -294,8 +317,6 @@ export const formElements = [
                     alias: "QuarterId"
                 },
             ],
-
-
         },
 
         addOrUpdateEnterprise: {
@@ -545,11 +566,12 @@ export const formElements = [
             titleTypeContract: "Formulaire de création d'un type de contract",
 
 
-            inputTypeConract: [
+            inputs: [
                 {
-                    label: "Nom du titre",
+                    label: "Titre du contrat",
                     placeholder: "Saisissez un titre",
                     requireField: true,
+                    textarea: false,
                     type: "text",
                     selectedInput: false,
                     alias: "title"
@@ -560,18 +582,20 @@ export const formElements = [
                     placeholder: "Saisissez la description",
                     requireField: true,
                     type: "text",
+                    textarea: true,
                     selectedInput: false,
                     alias: "description"
                 },
 
                 {
-                    lable: "Entreprise",
+                    label: "Entreprise",
                     placeholder: "Sélectionnez une entreprise",
                     requireField: true,
-                    type: "text",
+                    textarea: false,
+                    type: "number",
                     selectedInput: true,
                     dynamicOptions: {
-                        status: false
+                        status: true
                     },
                     alias: "EnterpriseId"
                 }
@@ -602,59 +626,17 @@ export const formElements = [
             tilteContract: "Formulaire de création de contrat",
             titleFormContract: "Ajouter un contrat",
 
-            inputContrat: [
+            inputs: [
                 {
-                    label: "Nom contrat",
+                    label: "Titre du contrat",
                     placeholder: "Saisissez le nom du contrat ",
+                    texarea: false,
                     requireField: false,
                     type: "text",
                     selectedInput: false,
                     alias: "ContractType"
 
                 },
-                {
-                    label: "Type de contrat",
-                    placeholder: "Sélectionnez un type de contrat...",
-                    requireField: true,
-                    type: "text",
-                    selectedInput: true,
-                    dynamicOptions: {
-                        status: true
-                    },
-                    alias: "ContractTypeId"
-
-                },
-                {
-                    label: "Date de début",
-                    placeholder: "Sélectionnez la date de début",
-                    requireField: true,
-                    type: "date",
-                    selectedInput: false,
-                    alias: "startDate"
-
-                },
-                {
-                    label: "Date de fin",
-                    placeholder: "Sélectionnez la date de fin",
-                    requireField: true,
-                    type: "date",
-                    selectedInput: false,
-                    alias: "endDate"
-
-                },
-                {
-                    label: "Durée",
-                    placeholder: "Sélectionnez la durée",
-                    requireField: true,
-                    type: "text",
-                    selectedInput: true,
-                    dynamicOptions: {
-                        status: true
-                    },
-                    alias: "delay"
-
-                },
-
                 {
                     label: "Entreprise",
                     placeholder: "Sélectionnez une entreprise",
@@ -667,7 +649,48 @@ export const formElements = [
                     alias: "EnterpriseId"
 
                 },
+                {
+                    label: "Type de contrat",
+                    placeholder: "Sélectionnez un type de contrat...",
+                    requireField: true,
+                    type: "number",
+                    textarea: false,
+                    selectedInput: true,
+                    dynamicOptions: {
+                        status: true
+                    },
+                    alias: "ContractTypeId"
 
+                },
+                {
+                    label: "Date de début",
+                    placeholder: "Sélectionnez la date de début",
+                    textarea: false,
+                    requireField: true,
+                    type: "date",
+                    selectedInput: false,
+                    alias: "startDate"
+
+                },
+                {
+                    label: "Date de fin",
+                    placeholder: "Sélectionnez la date de fin",
+                    requireField: true,
+                    type: "date",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "endDate"
+
+                },
+                {
+                    label: "Durée",
+                    placeholder: "Entrez la durée ex:3 mois...",
+                    textarea: false,
+                    requireField: true,
+                    type: "text",
+                    selectedInput: false,
+                    alias: "delay"
+                },
             ],
         },
 
