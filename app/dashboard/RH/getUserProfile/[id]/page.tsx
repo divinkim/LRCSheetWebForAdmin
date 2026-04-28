@@ -1,20 +1,20 @@
 "use client";
 import { faBuilding, faCity, faCoins, faEnvelope, faGlobe, faMoneyBill1Wave, faPhone, faWallet } from "@fortawesome/free-solid-svg-icons";
-import useUserProfile from "../hook";
+import useUserProfile from "./hook";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { providers } from "@/index";
 
 export default function getUserPofile() {
     const { user } = useUserProfile()
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-transparent p-6 flex justify-center">
+        <div className="min-h-screen w-full bg-gray-100 dark:bg-transparent pt-4 lg:p-6 flex justify-center">
             <div>
                 <div className="mb-10">
                     <h1 className="mb-3 text-xl font-bold text-gray-700 dark:text-gray-300">Profil du collaborateur</h1>
                     <hr className="bg-gray-300 dark:bg-gray-800" />
                 </div>
 
-                <div className="max-w-5xl w-full bg-white shadow-xl rounded-2xl grid grid-cols-3 overflow-hidden">
+                <div className="lg:w-[1000px] w-full  bg-white shadow-xl rounded-2xl flex flex-col lg:flex-row overflow-hidden">
 
                     {/* Sidebar */}
                     <aside className="col-span-1 bg-slate-900 text-white p-6">
@@ -52,7 +52,7 @@ export default function getUserPofile() {
                     </aside>
 
                     {/* Main */}
-                    <main className="col-span-2 p-8 dark:bg-gray-900 dark:text-gray-300">
+                    <main className="p-8 dark:bg-gray-900 dark:text-gray-300">
 
                         {/* Profil */}
                         <section className="mb-8">
@@ -62,7 +62,7 @@ export default function getUserPofile() {
 
                             <div className="mb-5">
                                 <h4 className="font-semibold">{user?.Post?.title}</h4>
-                               
+
                                 <p className="text-sm text-gray-600 mt-2">
                                     {user?.Post?.description}
                                 </p>
