@@ -42,6 +42,7 @@ export default function HomeComponent() {
     subscriptionStatus: "",
     subscriptionType: ""
   })
+  const [loader, setLoader] = useState(true);
   const monthValue = new Date().getMonth();
 
   const [data, setData] = useState({
@@ -147,6 +148,14 @@ export default function HomeComponent() {
   }, [data.enterprisesArray]);
 
   useEffect(() => {
+    (() => {
+      setTimeout(() => {
+        setLoader(false);
+      }, 1500)
+    })()
+  }, [attendances])
+
+  useEffect(() => {
     (async () => {
       const EnterpriseId = localStorage.getItem("EnterpriseId");
       const enterprise = await providers.API.getOne(providers.APIUrl, 'getEnterprise', Number(EnterpriseId));
@@ -182,5 +191,5 @@ export default function HomeComponent() {
     }
   ];
 
-  return { cardComponent, enterprise }
+  return { cardComponent, enterprise, loader }
 }

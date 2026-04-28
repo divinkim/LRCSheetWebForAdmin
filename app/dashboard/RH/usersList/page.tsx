@@ -172,7 +172,7 @@ export default function UsersList() {
                                                             text: "Vous n'avez aucun droit d'effectuer cette action. Contacter votre administrateur de gestion",
                                                         });
                                                     }
-                                                }} href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/getUserProfil/${u.id}` : ""} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
+                                                }} href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/getUserProfile/${u.id}` : ""} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
                                                     <p className="text-center">👁️</p>
                                                 </Link>
                                                 <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {

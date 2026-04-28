@@ -32,11 +32,12 @@ export function RepportsListHook() {
     const [repportsArrayCloned, setRepportsArrayCloned] = useState<RepportsValue[]>([]);
     const [EnterpriseId, setEnterpriseId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [adminReportCommentArray, setAdminReportCommentArray] =useState<any[]>([])
+    const [adminReportCommentArray, setAdminReportCommentArray] = useState<any[]>([])
     const { setStoredNotificationsArray } = SidebarHook();
+    const [loader, setLoader] = useState(true);
 
     useEffect(() => {
-        (async() => {
+        (async () => {
             if (typeof (window) === "undefined") return;
             if (ComponentModal) {
                 let EnterpriseId = localStorage.getItem("EnterpriseId");
@@ -50,6 +51,12 @@ export function RepportsListHook() {
             localStorage.removeItem("storedNotificationsArray");
         })()
     }, [ComponentModal?.at(0)?.Repport?.repportsArray]);
+
+    useEffect(() => {
+        (() => {
+            setLoader(false);
+        })()
+    }, [RepportsArray])
 
     const monthsOfYear = [
         "Janvier",
@@ -88,9 +95,9 @@ export function RepportsListHook() {
             RepportId
         });
         console.log(response);
-        if(response.status) setAdminResponse("")
-       
+        if (response.status) setAdminResponse("")
+
     }
 
-    return { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray}
+    return { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader }
 }

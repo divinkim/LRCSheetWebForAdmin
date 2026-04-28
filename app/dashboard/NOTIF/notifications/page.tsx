@@ -8,10 +8,10 @@ import useNotifications from "./hook";
 import Link from "next/link";
 
 export default function Notifications() {
-    const { isLoading, handleSubmit, inputs, setInputs, showModal, setShowModal, users, filterUsersByFullName, onCheck, files, setFiles, filterUsersByDepartment } = useNotifications()
+    const { isLoading, handleSubmit, inputs, setInputs, showModal, setShowModal, users, filterUsersByFullName, onCheck, files, setFiles, filterUsersByDepartment, loader } = useNotifications()
     return (
         <div className="bg-gray-100  dark:bg-transparent w-full">
-            <div className={showModal ? "fixed w-full h-screen overflow-x-hidden bg-black/70 z-50 flex items-center justify-center" : "hidden"}>
+            <div className={showModal ? "fixed top-0 w-full h-screen overflow-x-hidden bg-black/70 z-50 flex items-center justify-center" : "hidden"}>
                 <div>
                     <button onClick={() => {
                         setShowModal(false)
@@ -76,36 +76,56 @@ export default function Notifications() {
                             </div>
                         </div>
                         <hr className='w-full lg:mt-0 dark:border-gray-500' />
+                        <div className="flex w-full flex-wrap space-x-2 relative top-6 font-semibold items-center">
+                            {inputs.emails.length>0 && (<p>A: </p>)}
+                            {
+                                inputs.emails.length > 0 ?
+                                    inputs.emails.map((email) => (
+                                        <p>
+                                            {email + ", "}
+                                        </p>
+                                    )) : ""
+                            }
+                        </div>
                         <div className="flex w-full justify-center mt-10 flex-col space-y-4 lg:space-x-4 lg:flex-row lg:space-y-0">
                             <div className="bg-white  dark:bg-gray-900 overflow-auto w-1/2 h-[650px] hidden lg:block rounded-lg shadow-xl border dark:border-gray-500">
-                                <h1 className="font-bold dark:text-gray-300 text-[16px] text-gray-700 py-5 px-4">Ajouter en copie d'autres collaborateurs</h1>
+                                {
+                                    !loader ? <div>
+                                        <h1 className="font-bold dark:text-gray-300 text-[16px] text-gray-700 py-5 px-4">Ajouter en copie d'autres collaborateurs</h1>
 
-                                <div className="relative border-t border-gray-300 dark:border-gray-500 px-3 pt-2 mb-1">
-                                    <input onChange={(e) => {
-                                        filterUsersByFullName(e.target.value)
-                                    }} type="text" placeholder="Recherche sur les collaborateurs" className="border border-gray-300 dark:border-gray-500 outline-none bg-white mt-2  dark:bg-transparent p-3 w-full rounded-md" />
-                                    <FontAwesomeIcon icon={faSearch} className="text-[20px] absolute text-gray-600 top-[30px] right-5" />
-                                </div>
-                                <div className="">
-                                    {
-                                        users.map((item, index) => (
-                                            item.id !== 66 && (
-                                                <div key={index} className="hover:cursor-pointer hover:duration-500 border-b border-gray-300 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                                    <div className="flex p-3 border-gray-400 items-center space-x-4">
-                                                        {<img src={item.photo ? `${providers.APIUrl}/images/${item.photo}` : "/images/clientProfile.png"} className="w-[50px] h-[50px] rounded-full object-cover" />}
-                                                        <p className="font-semibold">{item.lastname} {item.firstname}</p>
-                                                        <input type="checkbox" onChange={() => {
-                                                            onCheck(item.email, item.id)
-                                                        }} checked={inputs.emails.includes(item.email)} />
-                                                    </div>
-                                                    {/* <hr /> */}
-                                                </div>
-                                            )
+                                        <div className="relative border-t border-gray-300 dark:border-gray-500 px-3 pt-2 mb-1">
+                                            <input onChange={(e) => {
+                                                filterUsersByFullName(e.target.value)
+                                            }} type="text" placeholder="Recherche sur les collaborateurs" className="border border-gray-300 dark:border-gray-500 outline-none bg-white mt-2  dark:bg-transparent p-3 w-full rounded-md" />
+                                            <FontAwesomeIcon icon={faSearch} className="text-[20px] absolute text-gray-600 top-[30px] right-5" />
+                                        </div>
+                                        <div className="">
+                                            {
+                                                users.map((item, index) => (
+                                                    item.id !== 66 && (
+                                                        <div key={index} className="hover:cursor-pointer hover:duration-500 border-b border-gray-300 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                                            <div className="flex p-3 border-gray-400 items-center space-x-4">
+                                                                {<img src={item.photo ? `${providers.APIUrl}/images/${item.photo}` : "/images/clientProfile.png"} className="w-[50px] h-[50px] rounded-full object-cover" />}
+                                                                <p className="font-semibold">{item.lastname} {item.firstname}</p>
+                                                                <input type="checkbox" onChange={() => {
+                                                                    onCheck(item.email, item.id)
+                                                                }} checked={inputs.emails.includes(item.email)} />
+                                                            </div>
+                                                            {/* <hr /> */}
+                                                        </div>
+                                                    )
 
-                                        ))
-                                    }
-                                </div>
+                                                ))
+                                            }
+                                        </div>
+                                    </div> :
+                                        <div className="w-full h-[600px] items-center justify-center flex">
+                                            <ClipLoader size={30} color="#1d4ed8" />
+                                        </div>
+                                }
+
                             </div>
+
                             <div className="w-full sm:w-[95%] relative  lg:w-2/3 mx-auto p-5  lg:h-[650px] border shadow-xl dark:bg-gray-900 bg-white  dark:border-gray-500 rounded-xl flex flex-col space-y-4">
                                 <div>
                                     <label htmlFor="" className="font-semibold">Objet</label>

@@ -22,7 +22,7 @@ export default function useNotifications() {
         usersIds: [1],
         EnterpriseId: "",
         UserId: "",
-        emails: ["murphykimbatsa@gmail.com"]
+        emails: [""]
     });
     const [files, setFiles] = useState<any>(null)
     const [showModal, setShowModal] = useState(false);
@@ -31,6 +31,7 @@ export default function useNotifications() {
     const [UserId, setUserId] = useState<number | null>(null);
     const [email, setEmail] = useState<string | null>(null);
     const [EnterpriseId, setEnterpriseId] = useState<number | null>(null);
+    const [loader, setLoader] = useState(true);
 
     useEffect(() => {
         (async () => {
@@ -49,7 +50,13 @@ export default function useNotifications() {
             setEnterpriseId(Number(EnterpriseId));
             setEmail(email);
         })()
-    }, [])
+    }, []);
+
+    useEffect(() => {
+        (() => {
+           setLoader(false) 
+        })()
+    },[users])
 
     async function handleSubmit() {
         if (typeof (window) === "undefined") return;
@@ -172,6 +179,6 @@ export default function useNotifications() {
 
 
     return {
-        isLoading, setIsLoading, inputs, handleSubmit, setInputs, showModal, setShowModal, users, onCheck, filterUsersByFullName, files, setFiles, filterUsersByDepartment
+        isLoading, setIsLoading, inputs, handleSubmit, setInputs, showModal, setShowModal, users, onCheck, filterUsersByFullName, files, setFiles, filterUsersByDepartment, loader
     }
 }

@@ -92,8 +92,8 @@ export default function UsersList() {
     const startPage = (start - 1) * limit;
 
     return (
-        <div className="flex justify-center w-full  mx-auto">
-            <main className='m-4  w-full text-gray-700 dark:text-gray-300 dark:bg-transparent'>
+        <div className="flex justify-center   mx-auto">
+            <main className='m-4  text-gray-700 dark:text-gray-300 dark:bg-transparent'>
                 {
                     tablesModal.map((e) => (
                         <div className="flex font-semibold justify-between items-center">

@@ -42,6 +42,8 @@ export function useChat() {
         firstname: "",
         photo: "",
     });
+    const [loader, setLoader] = useState(true);
+
     const ref = useRef<HTMLDivElement | null>(null);
     const [data, setData] = useState({
         content: "",
@@ -131,6 +133,12 @@ export function useChat() {
         })()
     }, [userData.fcmToken])
 
+    useEffect(() => {
+        (() => {
+           setLoader(false) 
+        })()
+    },[users])
+
     async function sendChatMessage() {
         if (!data.content)
             return providers.alertMessage(false, "Champs incorrecte",
@@ -205,5 +213,5 @@ export function useChat() {
 
     console.log("le tableau", storedNotificationsArray)
 
-    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId }
+    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader }
 }

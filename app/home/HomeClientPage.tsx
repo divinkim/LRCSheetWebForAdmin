@@ -15,6 +15,7 @@ import Loader from "@/components/loader/loader";
 import GetAnnualGain from "../dashboard/STATS/page";
 import { providers } from "@/index";
 import SubscriptionEpiredComponent from "@/components/subscriptionExpiredComponent/page";
+import { ClipLoader } from "react-spinners";
 // import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
 
 export default function HomePage() {
@@ -22,7 +23,7 @@ export default function HomePage() {
     const [EnterpriseId, setEnterpriseId] = useState<string | null>(null);
     const [adminRole, setAdminRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { cardComponent, enterprise } = HomeComponent();
+    const { cardComponent, enterprise, loader } = HomeComponent();
     // const { isMobile, setIsOpen } = useSidebarContext()
     //Mise à jour ou ajout fcmToken administrateur
     useEffect(() => {
@@ -70,41 +71,45 @@ export default function HomePage() {
     }
     console.log("entreprise", enterprise)
     return (
-        <div>
-            <Loader isLoading={isLoading} />
+        <div className="">
+            {/* <Loader isLoading={isLoading} /> */}
             {
                 enterprise.subscriptionStatus === "expired" && <SubscriptionEpiredComponent />
             }
-
-            <div className={isLoading ? "hidden" : "block"}>
-                <div className="flex">
-                    <div className="mx-auto w-full py-4">
-                        {/* <Suspense fallback={<OverviewCardsSkeleton />}>
+            {
+                loader ?
+                    <div className="w-full h-[600px] items-center justify-center flex">
+                        <ClipLoader size={30} color="#1d4ed8" />
+                    </div>
+                    : <div className="">
+                        <div className="flex">
+                            <div className="mx-auto w-full py-4">
+                                {/* <Suspense fallback={<OverviewCardsSkeleton />}>
                        
                     </Suspense> */}
-                        {/* <OverviewCardsGroup /> */}
-                        <div className="grid grid-cols-1  md:grid-cols-2 xl:grid-cols-3 gap-8 px-3">
-                            {
-                                cardComponent.map((element, index) => (
-                                    <Link href={element.path} className={cn("rounded-xl p-4 h-[200px] dark:bg-gray-900 border border-gray-300 hover:scale-105 dark:border-gray-800 ease  cursor-pointer shadow-xl dark:shadow-none  ease duration-500 bg-white", index === 2 && !requireAdminRoles.includes(adminRole ?? "") ? "hidden" : "")}>
-                                        <div style={{ background: element.backgroundColor }} className={cn("w-[55px] rounded-full p-4 ")}>
-                                            <FontAwesomeIcon icon={element.icon} className='text-white' />
-                                        </div>
-                                        <div className="mt-5 relative top-5  font-semibold text-gray-600 dark:text-gray-300">
-                                            <p className="text-[25px]">{formatNumber(index, element.value)}</p>
-                                            <div className="flex justify-between w-full">
-                                                <p className='text-gray-500'>{element.title}</p>
-                                                <Link onClick={() => {
-                                                    // if (isMobile) setIsOpen(false);
-                                                }} href={element.path} className={cn("rounded-full  ease duration-500", index === 2 ? "hidden" : "")}><FontAwesomeIcon icon={faEye} style={{ background: element.backgroundColor }} className={"hover:scale-90 ease duration-500 rounded-full px-3.5 py-4   text-white relative left-1 -top-4"} />
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))
-                            }
-                        </div>
-                        {/* <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-9 2xl:gap-7.5">
+                                {/* <OverviewCardsGroup /> */}
+                                <div className="grid grid-cols-1  md:grid-cols-2 xl:grid-cols-3 gap-8 px-3">
+                                    {
+                                        cardComponent.map((element, index) => (
+                                            <Link href={element.path} className={cn("rounded-xl p-4 h-[200px] dark:bg-gray-900 border border-gray-300 hover:scale-105 dark:border-gray-800 ease  cursor-pointer shadow-xl dark:shadow-none  ease duration-500 bg-white", index === 2 && !requireAdminRoles.includes(adminRole ?? "") ? "hidden" : "")}>
+                                                <div style={{ background: element.backgroundColor }} className={cn("w-[55px] rounded-full p-4 ")}>
+                                                    <FontAwesomeIcon icon={element.icon} className='text-white' />
+                                                </div>
+                                                <div className="mt-5 relative top-5  font-semibold text-gray-600 dark:text-gray-300">
+                                                    <p className="text-[25px]">{formatNumber(index, element.value)}</p>
+                                                    <div className="flex justify-between w-full">
+                                                        <p className='text-gray-500'>{element.title}</p>
+                                                        <Link onClick={() => {
+                                                            // if (isMobile) setIsOpen(false);
+                                                        }} href={element.path} className={cn("rounded-full  ease duration-500", index === 2 ? "hidden" : "")}><FontAwesomeIcon icon={faEye} style={{ background: element.backgroundColor }} className={"hover:scale-90 ease duration-500 rounded-full px-3.5 py-4   text-white relative left-1 -top-4"} />
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))
+                                    }
+                                </div>
+                                {/* <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-9 2xl:gap-7.5">
                             <PaymentsOverview
                             className="col-span-12 xl:col-span-7"
                             key={extractTimeFrame("payments_overview")}
@@ -135,12 +140,14 @@ export default function HomePage() {
                             <ChatsCard />
                         </Suspense>
                         </div> */}
-                        <div className={!requireAdminRoles.includes(adminRole ?? "") ? "hidden" : "block"}>
-                            <GetAnnualGain />
+                                <div className={!requireAdminRoles.includes(adminRole ?? "") ? "hidden" : "block"}>
+                                    <GetAnnualGain />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+            }
+
         </div>
     )
 }

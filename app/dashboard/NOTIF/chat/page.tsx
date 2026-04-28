@@ -6,6 +6,7 @@ import { faMessage, faPaperclip, faSearch, faTimes } from "@fortawesome/free-sol
 import Link from "next/link";
 import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
 import { useState } from "react";
+import { ClipLoader } from "react-spinners";
 type ChatMessage = {
     role: string;
     receiverId: number;
@@ -50,7 +51,7 @@ export default function Chat() {
 
     const getLatestChatMessage = (UserId: number) => {
         const message = chatMessage.filter(item => (item.senderId === UserId &&
-            item.receiverId === AdminId) || (item.senderId===AdminId && item.receiverId===UserId)
+            item.receiverId === AdminId) || (item.senderId === AdminId && item.receiverId === UserId)
         ).at(-1);
 
         return {
@@ -86,44 +87,48 @@ export default function Chat() {
                     </div>
 
                     {
-                        usersCloned.map((item, index) => (
-                            <div key={index} onClick={() => {
-                                setUserData({
-                                    UserId: item.UserId,
-                                    fcmToken: item.fcmToken,
-                                    EnterpriseId: item.UserEnterpriseId,
-                                    email: item.User.email,
-                                    lastname: item.User.lastname,
-                                    firstname: item.User.firstname,
-                                    photo: String(item.User.photo)
-                                })
-                                setData({
-                                    ...data,
-                                    receiverId: item.UserId
-                                })
-                                setShowChat(true);
-                                removeNotificationCount(item.UserId)
-                            }} className={item.UserId !== AdminId ? "flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover dark:hover:bg-gray-800/50 ease duration-500   border-b border-gray-300 dark:border-gray-800" : "hidden"}>
+                        users.length > 0 ?
+                            usersCloned.map((item, index) => (
+                                <div key={index} onClick={() => {
+                                    setUserData({
+                                        UserId: item.UserId,
+                                        fcmToken: item.fcmToken,
+                                        EnterpriseId: item.UserEnterpriseId,
+                                        email: item.User.email,
+                                        lastname: item.User.lastname,
+                                        firstname: item.User.firstname,
+                                        photo: String(item.User.photo)
+                                    })
+                                    setData({
+                                        ...data,
+                                        receiverId: item.UserId
+                                    })
+                                    setShowChat(true);
+                                    removeNotificationCount(item.UserId)
+                                }} className={item.UserId !== AdminId ? "flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover dark:hover:bg-gray-800/50 ease duration-500   border-b border-gray-300 dark:border-gray-800" : "hidden"}>
 
-                                <div className="w-12 h-12 bg-gray-300 rounded-full mr-3">
-                                    <img
-                                        src={item?.User?.photo ? `${providers.APIUrl}/images/${item?.User?.photo}` : "/images/clientProfile.png"}
-                                        alt="User Avatar"
-                                        className="w-12 h-12 rounded-full object-cover"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <h2 className="text-md font-semibold">{item?.User?.firstname} {providers.reduceLengthOfText(item?.User?.lastname, 7)}</h2>
-                                    <div className="flex flex-row justify-between items-center">
-                                        <p className="text-gray-600 text-[14px]">{providers.reduceLengthOfText(getLatestChatMessage(item?.UserId).content, 10)}</p>
-                                        <p className={getNotificationCount(item?.UserId) === 0 ? "hidden" : "bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full"}>
-                                            {getNotificationCount(item?.UserId)}
-                                        </p>
-                                        <p className="text-gray-600 text-[12px]">{getLatestChatMessage(item?.UserId).date}</p>
+                                    <div className="w-12 h-12 bg-gray-300 rounded-full mr-3">
+                                        <img
+                                            src={item?.User?.photo ? `${providers.APIUrl}/images/${item?.User?.photo}` : "/images/clientProfile.png"}
+                                            alt="User Avatar"
+                                            className="w-12 h-12 rounded-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h2 className="text-md font-semibold">{item?.User?.firstname} {providers.reduceLengthOfText(item?.User?.lastname, 7)}</h2>
+                                        <div className="flex flex-row justify-between items-center">
+                                            <p className="text-gray-600 text-[14px]">{providers.reduceLengthOfText(getLatestChatMessage(item?.UserId).content, 10)}</p>
+                                            <p className={getNotificationCount(item?.UserId) === 0 ? "hidden" : "bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full"}>
+                                                {getNotificationCount(item?.UserId)}
+                                            </p>
+                                            <p className="text-gray-600 text-[12px]">{getLatestChatMessage(item?.UserId).date}</p>
+                                        </div>
                                     </div>
                                 </div>
+                            )) :
+                            <div className="w-full h-[500px] items-center flex justify-center">
+                                <ClipLoader size={30} color="#1d4ed8" />
                             </div>
-                        ))
                     }
                 </div>
             </div>
