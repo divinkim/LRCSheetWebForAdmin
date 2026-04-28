@@ -1,6 +1,6 @@
 "use client";
 import { faBuilding, faCity, faCoins, faEnvelope, faGlobe, faMoneyBill1Wave, faPhone, faWallet } from "@fortawesome/free-solid-svg-icons";
-import useUserProfile from "./hook";
+import useUserProfile from "../hook";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { providers } from "@/index";
 
