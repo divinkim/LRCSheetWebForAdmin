@@ -115,7 +115,7 @@ export default function HomeComponent() {
         ...data,
         usersArray: users
       })
-      const fcmTokenResponse = await providers.API.post(providers.APIUrl, "sendFcmToken", null, {
+      const fcmTokenResponse = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendFcmToken", null, {
         id: Number(UserId),
         UserEnterpriseId: Number(EnterpriseId),
         fcmToken
@@ -127,7 +127,7 @@ export default function HomeComponent() {
 
   useEffect(() => {
     (async () => {
-      const enterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
+      const enterprises = await providers.API.getAll("https://vps118934.serveur-vps.net:4000", "getEnterprises", null);
       setData({
         ...data,
         enterprisesArray: enterprises
