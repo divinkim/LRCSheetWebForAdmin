@@ -93,20 +93,20 @@ export default function Repports() {
                                                     <button onClick={async () => {
                                                         const comment = adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId);
 
-                                                        const mail = await providers.API.post(providers.APIUrl, "sendMail", null, {
+                                                        const mail = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendMail", null, {
                                                             senderEmail: "lrcsheet@gmail.com",
                                                             subject: "Notification entrante",
                                                             content: "Veuillez consulter votre message au niveau de l'espace web LRCSheet.",
                                                             emails: [repport.User.email],
                                                         });
 
-                                                        const notification = await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
+                                                        const notification = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendNotificationPush", null, {
                                                             path: "/dashboard/NOTIF/chat",
-                                                            EnterpriseId: repport.EnterpriseId,
-                                                            adminSectionIndex: 0,
-                                                            adminPageIndex: 0,
-                                                            senderId: 40,
-                                                            receiverId: repport.UserId
+                                                            EnterpriseId: String(repport.EnterpriseId),
+                                                            adminSectionIndex: "0",
+                                                            adminPageIndex: "0",
+                                                            senderId: "40",
+                                                            receiverId: String(repport.UserId)
                                                         })
 
                                                         const chat = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
