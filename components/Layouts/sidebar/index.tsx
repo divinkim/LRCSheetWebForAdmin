@@ -69,13 +69,12 @@ export function Sidebar() {
 
       const datas = {
         fcmToken: adminFcmToken,
-        id,
+        UserId: Number(id),
         adminRole,
-        adminEnterpriseId: EnterpriseId,
-        adminService
+        UserEnterpriseId: Number(EnterpriseId),
       }
       // Mise à jour du token de l'administrateur
-      const updateFcmTokenAdmin = await providers.API.post(providers.APIUrl, "sendFcmToken", null, datas);
+      const updateFcmTokenAdmin = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendFcmToken", null, datas);
       console.log("le token admin", updateFcmTokenAdmin.message);
 
     })()

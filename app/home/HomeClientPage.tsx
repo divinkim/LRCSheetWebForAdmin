@@ -25,26 +25,12 @@ export default function HomePage() {
     const [isLoading, setIsLoading] = useState(true);
     const { cardComponent, enterprise, loader } = HomeComponent();
     // const { isMobile, setIsOpen } = useSidebarContext()
-    //Mise à jour ou ajout fcmToken administrateur
+    // Mise à jour ou ajout fcmToken administrateur
     useEffect(() => {
         (async () => {
             if (typeof (window) === "undefined") return;
             const EnterpriseId = localStorage.getItem("EnterpriseId");
             const adminRole = localStorage.getItem("adminRole");
-            const adminFcmToken = localStorage.getItem("adminFcmToken");
-            const UserId = localStorage.getItem("id");
-
-            const requireAdminRoles = ["Super-Admin", "Supervisor-Admin"];
-
-            if (requireAdminRoles.includes(String(adminRole))) {
-                const data = {
-                    EnterpriseId: parseInt(EnterpriseId ?? ""),
-                    adminRole,
-                    adminFcmToken,
-                    UserId: Number(UserId),
-                }
-                await providers.API.post(providers.APIUrl, "updateOrAddAdminFcmToken", null, data);
-            }
 
             setTimeout(() => {
                 setIsLoading(false);
