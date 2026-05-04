@@ -175,7 +175,7 @@ export function useChat() {
         })
 
         if (response) {
-            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendNotificationToWebUser", null, {
+            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
                 path: "/dashboard/NOTIF/chat",
                 EnterpriseId: userData.EnterpriseId.toString(),
                 messagingType: "notification",
@@ -184,7 +184,7 @@ export function useChat() {
                 senderId: String(AdminId),
                 receiverId: String(userData.UserId)
             });
-            const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendMail", null, {
+            const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
                 senderEmail: "lrcsheet@gmail.com",
                 subject: "Notification entrante!",
                 content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
