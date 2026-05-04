@@ -100,7 +100,8 @@ export default function HomeComponent() {
     (async () => {
       if (typeof (window) === "undefined") return;
       const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-      const EnterpriseId = window.localStorage.getItem("EnterpriseId");
+      const EnterpriseId = localStorage.getItem("EnterpriseId");
+      console.log("entrepriseId", EnterpriseId)
       const UserId = localStorage.getItem("id");
       const fcmToken = localStorage.getItem('adminFcmToken');
       setEnterpriseId(EnterpriseId);
@@ -125,15 +126,15 @@ export default function HomeComponent() {
     })()
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const enterprises = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getEnterprises", null);
-      setData({
-        ...data,
-        enterprisesArray: enterprises
-      })
-    })()
-  }, [data.usersArray]);
+  // useEffect(() => {
+  //   (async () => {
+  //     const enterprises = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getEnterprises", null);
+  //     setData({
+  //       ...data,
+  //       enterprisesArray: enterprises
+  //     })
+  //   })()
+  // }, [data.usersArray]);
 
   useEffect(() => {
     (async () => {
