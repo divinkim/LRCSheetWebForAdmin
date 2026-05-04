@@ -115,8 +115,8 @@ export default function HomeComponent() {
         ...data,
         usersArray: users
       })
-      const fcmTokenResponse = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendFcmToken", null, {
-        id: Number(UserId),
+      const fcmTokenResponse = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendFcmToken", null, {
+        UserId: Number(UserId),
         UserEnterpriseId: Number(EnterpriseId),
         fcmToken
       });
@@ -127,7 +127,7 @@ export default function HomeComponent() {
 
   useEffect(() => {
     (async () => {
-      const enterprises = await providers.API.getAll("https://vps118934.serveur-vps.net:4000", "getEnterprises", null);
+      const enterprises = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getEnterprises", null);
       setData({
         ...data,
         enterprisesArray: enterprises
@@ -158,7 +158,7 @@ export default function HomeComponent() {
   useEffect(() => {
     (async () => {
       const EnterpriseId = localStorage.getItem("EnterpriseId");
-      const enterprise = await providers.API.getOne(providers.APIUrl, 'getEnterprise', Number(EnterpriseId));
+      const enterprise = await providers.API.getOne("https://vps118934.serveur-vps.net:4001", 'getEnterprise', Number(EnterpriseId));
 
       setEnterprise({
         subscriptionStatus: enterprise?.subscriptionStatus,

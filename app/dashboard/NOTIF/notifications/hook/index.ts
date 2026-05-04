@@ -88,7 +88,7 @@ export default function useNotifications() {
 
         console.log("les inputs", inputs)
 
-        const sendMail = await providers.API.post(providers.APIUrl, "sendMail", null, {
+        const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
             subject: inputs.title,
             content: inputs.content,
             emails: ["contact@lrcgroup-app.com"],
@@ -96,13 +96,13 @@ export default function useNotifications() {
         });
 
         for (const UserId of inputs.usersIds) {
-            const mail = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendMail", null, {
+            const mail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
                 subject: "Notification entrante!",
                 content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet.",
                 emails: inputs.emails,
                 senderEmail: "lrcsheet@gmail.com",
             });
-            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4000", "sendNotificationPush", null, {
+            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
                 path: "/dashboard/NOTIF/chat",
                 messagingType: "notification", //Niveau app mobile
                 EnterpriseId: Number(EnterpriseId),
