@@ -16,6 +16,7 @@ import { providers } from "@/index";
 type Attendances = {
   status: string;
   arrivalTime: string;
+  departureTime: string | null;
   Salary: {
     dailySalary: string;
   };
@@ -91,6 +92,9 @@ export default function HomeComponent() {
         totalLates += deductionAmount;
       } else if (status === "Absent") {
         totalAbsences += finalDailySalary;
+      }else if(status==="A temps" && !attendance.departureTime){
+         deductionAmount = Math.round(0.1 * finalDailySalary);
+        totalLates += deductionAmount;
       }
     }
     return totalLates + totalAbsences;

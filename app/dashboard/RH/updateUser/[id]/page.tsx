@@ -93,12 +93,6 @@ export default function UpdateUser() {
                                                                     ...inputs,
                                                                     [e.alias]: e.type === "number" ? parseInt(v.target.value) : v.target.value
                                                                 })
-                                                            } else if (e.alias === "status") {
-                                                                const value = v.target.value
-                                                                setInputs({
-                                                                    ...inputs,
-                                                                    [e.alias]: value === "Actif" ? true : value === "Inactif" ? false : null
-                                                                })
                                                             }
                                                         }
 

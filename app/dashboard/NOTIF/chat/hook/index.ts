@@ -121,7 +121,10 @@ export function useChat() {
                 ref.current.scrollIntoView({ behavior: "smooth" })
             }
             const newUsersArray = sortUsersByFrequency(users, chatMessage);
-            setUsersCloned(newUsersArray)
+            const unique = Array.from(
+                new Map(newUsersArray.map(item => [item.UserId, item])).values()
+            );
+            setUsersCloned(unique);
         })();
     }, [chatMessage])
 
@@ -192,17 +195,6 @@ export function useChat() {
             })
             console.log(notification);
             console.log(sendMail)
-        }
-
-
-        if (response) {
-            await providers.API.post(providers.APIUrl, "sendNotificationToWebUser", null, {
-                path: "/dashboard/NOTIF/chat",
-                EnterpriseId: userData.EnterpriseId.toString(),
-                adminSectionIndex: 0,
-                adminPageIndex: 0,
-                senderId: AdminId?.toString()
-            })
         }
     }
 

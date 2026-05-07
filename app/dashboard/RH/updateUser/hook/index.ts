@@ -25,7 +25,7 @@ type InputsValue = {
     DepartmentPostId: number | null,
     marialStatus: string | null,
     adminService: string | null,
-    status: boolean | null,
+    status: string | null,
     [key: string]: string | number | null | undefined | any,
 }
 
@@ -123,7 +123,6 @@ export function UpdateUserHookModal() {
     }, [inputs.EnterpriseId])
 
     //Récupération des données de l'utilisateur en fonction de l'id sur le navigateur
-
     useEffect(() => {
         (async () => {
             const getUserId = window.location.href.split('/').pop();
@@ -152,7 +151,7 @@ export function UpdateUserHookModal() {
                 DepartmentPostId: getUser.DepartmentPostId ?? null,
                 marialStatus: getUser.marialStatus ?? null,
                 adminService: getUser.adminService ?? null,
-                status: getUser.status
+                status: getUser.status ? "Actif" : "Inactif",
             })
         })()
     }, [adminRole])
@@ -350,7 +349,7 @@ export function UpdateUserHookModal() {
             CityId: inputs.CityId,
             CountryId: inputs.CountryId
         }
-
+       
         for (const [key, value] of Object.entries(requireFields)) {
             if (!value) {
                 return providers.alertMessage(false, "Champs invalides", "Veuillez renseigner tous les champs obligatoires", null);
@@ -358,7 +357,14 @@ export function UpdateUserHookModal() {
         }
 
         // console.log(requireFields);
-        const response = await providers.API.update(providers.APIUrl, "updateUser", null, inputs, Number(userId));
+        const response = await providers.API.update("https://vps118934.serveur-vps.net:4001", "updateUser", null,
+            {
+                ...inputs,
+                birthDate: new Date(String(inputs.birthDate)).toISOString(),
+                status: inputs.status === "Actif" ? true : false
+            },
+            Number(userId)
+        );
 
         providers.alertMessage(
             response.status,

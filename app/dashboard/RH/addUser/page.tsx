@@ -81,16 +81,6 @@ export default function AddUser() {
                                                 :
                                                 <select value={inputs[e.alias] ?? ""} onChange={(v) => {
                                                     let field = e.alias;
-                                                    if (e.alias === "status") {
-                                                        const value = v.target.value
-                                                        const fieldValue = {
-                                                            ...inputs,
-                                                            [e.alias]: value === "Actif" ? true : value === "Inactif" ? false : null
-                                                        }
-                                                        setInputs(fieldValue)
-                                                        localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify(fieldValue))
-                                                        return
-                                                    }
                                                     const fieldValue = {
                                                         ...inputs,
                                                         [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value

@@ -149,16 +149,16 @@ export class Api {
         }
     }
 
-    async update(fullUrl: string, methodName: string, token = null, data = {}, id: string | null | number) {
+    async update(url: string, methodName: string, token = null, data = {}, id: string | null | number) {
         try {
             const headers: Record<string, string> = {};
             let body: BodyInit;
             const formData = new FormData();
 
             // Construction de l'URL
-            fullUrl = id !== null
-                ? `${APIUrl}/api/${methodName}/${id}`
-                : `${APIUrl}/api/${methodName}`;
+            url = id ? `${url}/api/${methodName}/${id}` : `${url}/api/${methodName}`
+
+            console.log(url)
 
             // Vérifie si au moins un File ou Blob est présent dans data
             const isPresentFile = Object.values(data).some(
@@ -178,7 +178,7 @@ export class Api {
                 body = JSON.stringify(data);
             }
 
-            const response = await fetch(fullUrl, {
+            const response = await fetch(url, {
                 method: 'PUT',
                 headers,
                 body,

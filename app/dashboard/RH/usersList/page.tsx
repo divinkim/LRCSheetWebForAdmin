@@ -43,32 +43,35 @@ export default function UsersList() {
     useEffect(() => {
         if (typeof (window) === "undefined") return;
         (async () => {
-            const getAdminRole = window?.localStorage.getItem("adminRole");
+            const getAdminRole = localStorage.getItem("adminRole");
             setAdminRole(getAdminRole ?? "");
 
-            const authToken = window?.localStorage.getItem("authToken");
+            const authToken = localStorage.getItem("authToken");
+
             if (authToken === null) {
-                window.location.href = "/"
+                window.location.href = "/";
             }
 
-            let getEnterpriseIdOfAdmin = window?.localStorage.getItem("EnterpriseId");
+            let enterpriseIdOfAdmin = localStorage.getItem("EnterpriseId");
 
             const request = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-            if (parseInt(getEnterpriseIdOfAdmin ?? "") === 1) {
+            if (Number(enterpriseIdOfAdmin) === 1) {
                 setUsersList(request);
-                setSavedUsersList(request)
+                setSavedUsersList(request);
             } else {
-                const filterUsersByEnterpriseId = request.filter((user: { EnterpriseId: number }) => user.EnterpriseId === parseInt(getEnterpriseIdOfAdmin ?? ""));
+                const filterUsersByEnterpriseId = request.filter((user: { EnterpriseId: number }) => user.EnterpriseId === Number(enterpriseIdOfAdmin));
                 setUsersList(filterUsersByEnterpriseId);
                 setSavedUsersList(filterUsersByEnterpriseId);
             }
-
         })()
-    }, [getAdminRole]);
+    }, []);
 
     // 🔎 Filtrer par recherche
     function onSearch(value: string) {
-        let filtered = usersList.filter(item => item?.lastname?.toLocaleLowerCase()?.includes(value.toLocaleLowerCase()) || item?.firstname?.toLocaleLowerCase()?.includes(value.toLocaleLowerCase()));
+        let filtered = usersList.filter(item => item?.lastname?.toLowerCase()?.includes(value.toLowerCase())
+            || item?.firstname?.toLowerCase()?.includes(value.toLowerCase())
+        );
+        console.log("le tableau des utilisateurs", filtered)
         setSavedUsersList(filtered)
     }
 
@@ -76,10 +79,8 @@ export default function UsersList() {
     useEffect(() => {
         (() => {
             const maxPage = Math.ceil(savedUsersList?.length / limit);
-
             setMaxPage(maxPage);
             setPage(maxPage);
-
         })()
     }, [savedUsersList])
 
@@ -144,7 +145,7 @@ export default function UsersList() {
 
                             {
 
-                                savedUsersList.length > 0 ? savedUsersList.slice(start, start + limit).map((u) => (
+                                savedUsersList.length > 0 ? savedUsersList.slice(startPage, startPage + limit).map((u) => (
                                     <tr className="">
 
                                         <td className="p-2 border-b flex justify-center items-center h-[120px] border-gray-400 dark:border-gray-300">
@@ -153,28 +154,29 @@ export default function UsersList() {
 
                                         </td>
 
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{(u?.lastname ?? "")?.length > 7 ? u?.lastname?.slice(0, 6) + "..." : u?.lastname} {(u?.firstname ?? "")?.length > 7 ? u?.firstname?.slice(0, 6) + "..." : u?.firstname}</td>
+                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(String(u.lastname ?? ""), 7)} {providers.reduceLengthOfText(String(u.firstname), 7)}</td>
 
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{(u?.phone ?? "")?.length > 7 ? u?.phone?.slice(0, 6) + "..." : u?.phone}</td>
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{(u?.email ?? "")?.length > 7 ? u?.email?.slice(0, 6) + "..." : u?.email}</td>
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{(u?.gender ?? "")?.length > 7 ? u?.gender?.slice(0, 6) + "..." : u?.gender}</td>
+                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(String(u.phone), 7)}</td>
+                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(String(u.email), 7)}</td>
+                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{String(u.gender)}</td>
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">
                                             {u.Enterprise?.logo ? <img src={`${providers.APIUrl}/images/${u.Enterprise.logo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p>{u.Enterprise?.name}</p>}
                                         </td>
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.status ? <p className="bg-green-500 rounded-full py-2 text-white">Actif</p> : <p className='bg-red-500 rounded-full py-2 text-white'>Inactif</p>}</td>
                                         <td className="text-center font-semibold border-b border-r   h-auto  border-gray-400 dark:border-gray-300">
                                             <div className="relative top-0 text-center px-2 space-x-3 flex ">
-                                                <Link onClick={() => {
+                                                <button onClick={() => {
                                                     if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                        Swal.fire({
+                                                        return Swal.fire({
                                                             icon: 'warning',
                                                             title: "Violation d'accès!",
                                                             text: "Vous n'avez aucun droit d'effectuer cette action. Contacter votre administrateur de gestion",
                                                         });
                                                     }
-                                                }} href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/getUserProfile/${u.id}` : ""} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
+                                                    window.location.href = `/dashboard/RH/getUserProfile/${u.id}`;
+                                                }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
                                                     <p className="text-center">👁️</p>
-                                                </Link>
+                                                </button>
                                                 <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
                                                     if (!requireAdminRoles.includes(getAdminRole ?? "")) {
                                                         return Swal.fire({
@@ -183,10 +185,9 @@ export default function UsersList() {
                                                             text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
                                                         });
                                                     }
+                                                    window.location.href = `/dashboard/RH/updateUser/${u.id}`
                                                 }}>
-                                                    <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/updateUser/${u.id}` : ""} >
-                                                        <p className="text-center">🖊️</p>
-                                                    </Link>
+                                                    <p className="text-center">🖊️</p>
                                                 </button>
                                                 <button type="button" onClick={() => {
                                                     if (!requireAdminRoles.includes(getAdminRole ?? "")) {

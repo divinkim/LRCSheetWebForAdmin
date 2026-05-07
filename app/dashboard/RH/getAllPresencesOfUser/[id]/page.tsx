@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import { EventInput } from "@fullcalendar/core";
+import dayGridPlugin from "@fullcalendar/daygrid/index.js";
+import timeGridPlugin from "@fullcalendar/timegrid/index.js";
+import interactionPlugin from "@fullcalendar/interaction/index.js";
+import { EventInput } from "@fullcalendar/core/index.js";
 import { providers } from "@/index";
 
 interface CalendarEvent extends EventInput {
@@ -25,6 +25,7 @@ const CalendarPage = () => {
     lastname: "",
     dailySalary: "",
     netSalary: "",
+    photo: "",
     poste: "",
     Enterprise: { name: "", logo: "" }
   });
@@ -34,7 +35,7 @@ const CalendarPage = () => {
   const [absences, setAbsences] = useState<number | null>(null);
   const [attendances, setAttendances] = useState<any[]>([]);
   const [totalSalary, setTotalSalary] = useState("");
-
+  const [currentMonth, setCurrentMonth] = useState(0)
   const calendarRef = useRef<FullCalendar>(null);
 
   /* ------------------------------------------------------
@@ -58,6 +59,7 @@ const CalendarPage = () => {
               createdAt,
               status,
               User,
+              Salary
             } = item;
 
             const dateOnly = createdAt.split("T")[0];
@@ -79,10 +81,13 @@ const CalendarPage = () => {
                 name: `${User?.lastname?.toUpperCase()} ${User?.firstname}`,
                 status,
                 arrivalTime,
-                departureTime
+                departureTime,
+                dailySalary: Salary?.dailySalary || "0"
               }
             };
           });
+
+        setEvents(formatted);
 
         setEvents(formatted);
 
@@ -108,6 +113,7 @@ const CalendarPage = () => {
         dailySalary: response.Salary?.dailySalary,
         netSalary: response.Salary?.netSalary,
         poste: response.Post?.title,
+        photo: response.photo,
         Enterprise: {
           name: response?.Enterprise?.name,
           logo: response?.Enterprise?.logo
@@ -124,42 +130,50 @@ const CalendarPage = () => {
     let totalLates: number = 0;
     let totalePresences: number = 0;
 
-    const filterAttendance = attendances.filter((attendance: { mounth: number, createdAt: string }) => attendance.mounth === monthIndex)
+    const filterAttendance = attendances.filter(
+      (attendance: {
+        mounth: number, createdAt: string
+      }) => attendance.mounth === monthIndex
+    )
 
     for (const attendance of filterAttendance) {
       const status = attendance.status;
       const minutes = parseInt(attendance.arrivalTime.split(":")?.pop() ?? "");
+      const endTime = attendance.Planning.endTime?.slice(0, 5) || "";
+      const departureTime = attendance.departureTime?.slice(0, 5) || ""
       const finalMinutes = Number(minutes);
       const finalDailySalary = Number(dailySalary);
       let deductionAmount = 0;
-      const toleranceTime = parseInt(attendance.Enterprise?.toleranceTime ?? "");
-      const maxToleranceTime = parseInt(attendance.Enterprise?.maxToleranceTime ?? "") ?? 0;
-      const pourcentageOfHourlyDeduction = parseFloat(attendance.Enterprise?.pourcentageOfHourlyDeduction ?? "") ?? 0;
-      const maxPourcentageOfHourlyDeduction = parseFloat(attendance.Enterprise?.maxPourcentageOfHourlyDeduction ?? "") ?? 0;
 
-      // const pourcent = pourcentageOfHourlyDeduction / 100;
-      // const maxPourcent = maxPourcentageOfHourlyDeduction / 100;
-
-      // if (status === "En retard" && arrivalTime > toleranceTime && arrivalTime < maxToleranceTime) {
-      //   totalLates += parseInt(dailySalary) * pourcent;
-      // } else if (status === "En retard" && arrivalTime > maxToleranceTime) {
-      //   totalLates += parseInt(dailySalary) * maxPourcent;
-      // }
-      // if (attendance.status === "A temps") {
-      //   totalePresences += parseInt(dailySalary);
-      // }
-
-      if (status === "En retard" && finalMinutes <= 15) {
-        deductionAmount = Math.round(0.1 * finalDailySalary);
-        totalLates += finalDailySalary - deductionAmount;
-      } else if (status === "En retard" && finalMinutes > 15 && finalMinutes <= 30) {
-        deductionAmount = Math.round(0.15 * finalDailySalary);
-        totalLates += finalDailySalary - deductionAmount;
-      } else if (status === "En retard" && finalMinutes > 30) {
-        deductionAmount = Math.round(0.5 * finalDailySalary);
-        totalLates += finalDailySalary - deductionAmount;
-      } else if (status === "A temps") {
-        totalePresences += finalDailySalary;
+      if (currentMonth < 4) {
+        if (status === "En retard" && finalMinutes <= 15) {
+          deductionAmount = Math.round(0.1 * finalDailySalary);
+          totalLates += finalDailySalary - deductionAmount;
+        } else if (status === "En retard" && finalMinutes > 15 && finalMinutes <= 30) {
+          deductionAmount = Math.round(0.15 * finalDailySalary);
+          totalLates += finalDailySalary - deductionAmount;
+        } else if (status === "En retard" && finalMinutes > 30) {
+          deductionAmount = Math.round(0.5 * finalDailySalary);
+          totalAmount += finalDailySalary - deductionAmount;
+        } else if (status === "A temps") {
+          totalePresences += finalDailySalary;
+        }
+      } else {
+        if (status === "En retard" && finalMinutes <= 15) {
+          deductionAmount = Math.round(0.1 * finalDailySalary);
+          totalLates += finalDailySalary - deductionAmount;
+        } else if (status === "En retard" && finalMinutes > 15 && finalMinutes <= 30) {
+          deductionAmount = Math.round(0.15 * finalDailySalary);
+          totalLates += finalDailySalary - deductionAmount;
+        } else if (status === "En retard" && finalMinutes > 30) {
+          deductionAmount = Math.round(0.5 * finalDailySalary);
+          totalAmount += finalDailySalary - deductionAmount;
+        } else if ((status === "A temps" && departureTime < endTime) || (status === "A temps" && !departureTime)) {
+          deductionAmount = Math.round(0.1 * finalDailySalary);
+          totalePresences += finalDailySalary - deductionAmount;
+        } else {
+          totalePresences += finalDailySalary;
+        }
       }
     }
 
@@ -186,6 +200,9 @@ const CalendarPage = () => {
         <div className="rounded-2xl border w-full m-4 border-gray-200 dark:border-gray-300 dark:bg-gray-900 bg-white py-6 px-4">
           {/* Header Infos Employé */}
           <div className="flex mb-6  p-10 bg-gray-800 rounded shadow-sm justify-between">
+            <div className="w-[200px] h-[200px]">
+              <img src={data.photo ? `${providers.APIUrl}/images/${data.photo}` : "/images/clientProfile.png"} alt="" className="w-full h-full object-cover rounded-full" />
+            </div>
             <div className="flex flex-col space-y-2 font-semibold text-gray-300">
               <p><span className="font-bold">Nom:</span> {data.firstname}</p>
               <p><span className="font-bold">Prénom:</span> {data.lastname}</p>
@@ -223,7 +240,7 @@ const CalendarPage = () => {
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            eventContent={renderEventContent}
+            eventContent={(eventInfo) => renderEventContent(eventInfo, currentMonth)}
             initialView="dayGridMonth"
             headerToolbar={{
               left: "prev,next today",
@@ -237,6 +254,7 @@ const CalendarPage = () => {
               if (!calendarApi) return;
 
               const month = calendarApi.getDate().getMonth();
+              setCurrentMonth(month);
 
               getTotalSalary(attendances, month, data.dailySalary);
 
@@ -253,8 +271,82 @@ const CalendarPage = () => {
 
   );
 };
-const renderEventContent = (eventInfo: any) => {
+
+function getData(
+  arrivalTime: string,
+  departureTime: string,
+  endTime: string,
+  status: string,
+  dailySalary: number,
+  currentMonth: number
+) {
+  let deductionAmount = 0;
+  let deductionPercent = 0;
+
+  const minutes = parseInt(arrivalTime.split(":")?.[1] || "0");
+  if (currentMonth >= 4) {
+    if (status === "En retard") {
+      if (minutes <= 15) {
+        deductionPercent = 10;
+      } else if (minutes <= 30) {
+        deductionPercent = 15;
+      } else {
+        deductionPercent = 50;
+      }
+    } else if ((status === "A temps" && !departureTime) || (status === "A temps" && departureTime < endTime)) {
+      deductionPercent = 10;
+    } else if (status === "Absent") {
+      deductionPercent = 100;
+    } else {
+      deductionPercent = 0
+    }
+  } else {
+    if (status === "En retard") {
+      if (minutes <= 15) {
+        deductionPercent = 10;
+      } else if (minutes <= 30) {
+        deductionPercent = 15;
+      } else {
+        deductionPercent = 50;
+      }
+    } else if (status === "A temps") {
+      deductionPercent = 0;
+    } else if (status === "Absent") {
+      deductionPercent = 100;
+    }
+  }
+
+
+  deductionAmount = Math.round((deductionPercent / 100) * dailySalary);
+
+  return {
+    deductionAmount,
+    deductionPercent,
+    dailySalary: dailySalary - deductionAmount,
+  };
+}
+
+
+const renderEventContent = (eventInfo: any, currentMonth: number) => {
   const props = eventInfo.event.extendedProps;
+
+  // Sécurisation des données
+  const arrivalTime = props.arrivalTime || "";
+  const departureTime = props.departureTime || "";
+  const endTime = props.endTime || "";
+  const status = props.status || "";
+  const dailySalary = Number(props.dailySalary);
+  console.log("props", currentMonth)
+  // Calcul
+  const result = getData(
+    arrivalTime,
+    departureTime,
+    endTime,
+    status,
+    dailySalary,
+    currentMonth
+  );
+
   const colorMap: Record<string, string> = {
     Success: "text-green-600",
     Danger: "text-red-600",
@@ -265,25 +357,56 @@ const renderEventContent = (eventInfo: any) => {
   const statusColor = colorMap[props.calendar] || "text-gray-700";
 
   return (
-    <div className={`rounded-sm relative mb-5 ml-3`}>
-      <div className="flex flex-row mb-2 space-x-2 ">
+    <div className="rounded-sm lg:text-[11.5px] 2xl:text-[14px] relative mb-5 ml-3">
+      {/* Statut */}
+      <div className="flex flex-row mb-2 space-x-2">
         <p className="text-gray-600 dark:text-gray-300 font-semibold">
           Statut:
         </p>
-        <div className={`${statusColor}, font-semibold`}> {props.status === "A temps" ? "✅" + props.status : props.status === "En retard" ? "⏳ En retard" : "❌ Absent"}
+        <div className={`${statusColor} font-semibold`}>
+          {status === "A temps"
+            ? "✅ A temps"
+            : status === "En retard"
+              ? "⏳ En retard"
+              : "❌ Absent"}
         </div>
       </div>
+
+      {/* Arrivée */}
       <div className="text-gray-700 mb-2 dark:text-white">
-        <span className="text-gray-600 dark:text-gray-300 font-semibold">Arrivée:</span>   {props.arrivalTime === null ? "-" : props.arrivalTime?.slice(0, 5)}
+        <span className="font-semibold">Arrivée:</span>{" "}
+        {arrivalTime ? arrivalTime.slice(0, 5) : "-"}
       </div>
+
+      {/* Départ */}
       <div className="text-gray-700 mb-2 dark:text-white">
-        <span className="text-gray-600 dark:text-gray-300 font-semibold">Pause:</span>   {props.breakStartTime === null ? "-" : props.breakStartTime?.slice(0, 5)}
+        <span className="font-semibold">Départ:</span>{" "}
+        {departureTime ? departureTime.slice(0, 5) : "-"}
       </div>
-      <div className="text-gray-700 mb-2 dark:text-white">
-        <span className="text-gray-600 dark:text-gray-300 font-semibold">Reprise:</span>   {props.resumeTime === null ? "-" : props.resumeTime?.slice(0, 5)}
-      </div>
+      {
+
+        <div className={currentMonth >= 4 ? "block" : "hidden"}>
+          {/* Déduction */}
+          <div className="text-gray-700 mb-2 dark:text-white">
+            <span className="font-semibold">
+              Déduction: <span className='text-red-500 font-bold'>{result.deductionAmount.toLocaleString()} XAF</span>
+            </span>
+          </div>
+          <div className="text-gray-700 mb-2 dark:text-white">
+            <span className="font-semibold">
+              Déduction en %: {" "}
+              ({result.deductionPercent}%)
+            </span>
+          </div>
+          {/* Salaire du jour */}
+        </div>
+
+
+      }
       <div className="text-gray-700 dark:text-white">
-        <span className="text-gray-600 dark:text-gray-300 font-semibold">Départ:</span> {props.departureTime === null ? "-" : props.departureTime?.slice(0, 5)}
+        <span className="font-semibold">
+          Salaire du jour: <span className="bold text-blue-600">{result.dailySalary.toLocaleString()} XAF</span>
+        </span>
       </div>
     </div>
   );

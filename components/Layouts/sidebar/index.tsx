@@ -88,27 +88,27 @@ export function Sidebar() {
 
   console.log(isMobile)
 
-  useEffect(() => {
-    (async () => {
-      const id = localStorage.getItem("id");
-      const adminRole = localStorage.getItem("adminRole");
-      const EnterpriseId = localStorage.getItem("EnterpriseId");
-      const adminService = localStorage.getItem("adminService");
-      const adminFcmToken = localStorage.getItem("adminFcmToken");
+  // useEffect(() => {
+  //   (async () => {
+  //     const id = localStorage.getItem("id");
+  //     const adminRole = localStorage.getItem("adminRole");
+  //     const EnterpriseId = localStorage.getItem("EnterpriseId");
+  //     const adminService = localStorage.getItem("adminService");
+  //     const adminFcmToken = localStorage.getItem("adminFcmToken");
 
-      const datas = {
-        fcmToken: adminFcmToken,
-        id,
-        adminRole,
-        adminEnterpriseId: EnterpriseId,
-        adminService
-      }
-      // Mise à jour du token de l'administrateur
-      const updateFcmTokenAdmin = await providers.API.post(providers.APIUrl, "sendFcmToken", null, datas);
-      console.log("le token admin", updateFcmTokenAdmin.message);
+  //     const datas = {
+  //       fcmToken: adminFcmToken,
+  //       id,
+  //       adminRole,
+  //       adminEnterpriseId: EnterpriseId,
+  //       adminService
+  //     }
+  //     // Mise à jour du token de l'administrateur
+  //     const updateFcmTokenAdmin = await providers.API.post(providers.APIUrl, "sendFcmToken", null, datas);
+  //     console.log("le token admin", updateFcmTokenAdmin.message);
 
-    })()
-  }, []);
+  //   })()
+  // }, []);
   //Ecoute des notifications entrantes
 
   useEffect(() => {

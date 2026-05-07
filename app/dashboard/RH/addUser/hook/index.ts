@@ -25,7 +25,7 @@ type InputsValue = {
     DepartmentPostId: number | null,
     marialStatus: string | null,
     adminService: string | null,
-    status: boolean | null,
+    status: string | null,
     [key: string]: string | number | null | any,
 }
 
@@ -67,7 +67,7 @@ export default function AddUserHookModal() {
         DepartmentPostId: null,
         marialStatus: null,
         adminService: null,
-        status: null,
+        status: "",
     });
 
     const [isLoading, setIsLoading] = useState(false);
@@ -267,8 +267,8 @@ export default function AddUserHookModal() {
         {
             alias: "status",
             arrayData: [
-                { title: "Actif", value: true },
-                { title: "Inactif", value: false },
+                { title: "Actif", value: "Actif" },
+                { title: "Inactif", value: "Inactif" },
             ]
 
         },
@@ -336,7 +336,7 @@ export default function AddUserHookModal() {
 
         setIsLoading(true);
 
-        const response = await providers.API.post(providers.APIUrl, "createUser", null, inputs);
+        const response = await providers.API.post(providers.APIUrl, "createUser", null, { ...inputs, status: inputs.status === "Actif" ? true : false });
 
         setIsLoading(false);
 
