@@ -88,12 +88,12 @@ export const tablesModal = [
             links: [
                 {
                     title: "Ajouter un collaborateur au planning",
-                    href: "/dashboard/RH/addUserInPlanningOfWeek",
+                    href: "/dashboard/RH/addCollaboratorPlanning",
                     icon: faCalendarPlus
                 },
                 {
                     title: "Modifier le planning d'un collaborateur",
-                    href: "/dashboard/RH/updateUserInPlanningOfWeek",
+                    href: "/dashboard/RH/updateCollaboratorPlanning",
                     icon: faCalendarPlus
                 },
             ],

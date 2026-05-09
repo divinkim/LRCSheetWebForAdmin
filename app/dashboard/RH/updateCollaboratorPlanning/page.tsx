@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { providers } from "@/index";
 import { ClipLoader } from "react-spinners";
 import Link from "next/link";
-import useAddUserInPlanningOfWeek from "./hook/index";
+import useAddUserInPlanningOfWeek from "./hook";
 
 export default function addUserInPlanningOfWeek() {
     const { handleSubmit, onSearch, usersArrayCloned, addEditUserPlanningOfWeek, weekDays, plannings, isLoading, setDatas, datas } = useAddUserInPlanningOfWeek()
@@ -42,10 +42,10 @@ export default function addUserInPlanningOfWeek() {
                                     <input onChange={(e) => {
                                         onSearch(e.target.value)
                                     }}
-                                        className="p-3 bg-transparent outline-none rounded-md border border-gray-300 bg-white dark:border-gray-800 w-full"
+                                        className="p-4 bg-transparent outline-none rounded-md border border-gray-300 bg-white dark:border-gray-800 w-full"
                                         placeholder="Recherchez un collaborateur"
                                     />
-                                    <FontAwesomeIcon icon={faSearch} className="absolute right-4 top-4" />
+                                    <FontAwesomeIcon icon={faSearch} className="absolute right-4 top-5" />
                                 </div>
                             </div>
 
@@ -53,18 +53,15 @@ export default function addUserInPlanningOfWeek() {
                                 {usersArrayCloned.map((user) => (
                                     <div
                                         key={user.id}
-                                        className="dark:bg-gray-800/90 h-[70px] bg-white shadow-xl p-3 dark:shadow-none"
+                                        className="dark:bg-gray-800/90 h-[70px] bg-white rounded-md border border-gray-300 shadow-xl p-3 dark:shadow-none"
                                     >
                                         <div className='flex items-center space-x-4'>
-                                            {user.photo ? (
-                                                <img
-                                                    className="w-10 h-10 object-cover rounded-full"
-                                                    src={`${providers.APIUrl}/images/${user.photo}`}
-                                                    alt={`${user.firstname} ${user.lastname}`}
-                                                />
-                                            ) : (
-                                                <p className="text-[30px]">👤</p>
-                                            )}
+
+                                            <img
+                                                className="w-10 h-10 object-cover rounded-full"
+                                                src={user.photo ? `${providers.APIUrl}/images/${user.photo}` : "/images/clientProfile.png"}
+                                                alt={`${user.firstname} ${user.lastname}`}
+                                            />
 
                                             <p className="dark:text-gray-300 text-gray-700">
                                                 {user.lastname} {user.firstname}
@@ -76,7 +73,7 @@ export default function addUserInPlanningOfWeek() {
                                                     setDatas({
                                                         ...datas,
                                                         usersId: datas.usersId.includes(user.id) ? datas.usersId.filter(item => item !== user.id) : [...datas.usersId, user.id],
-                                                        EnterpriseId: datas.EnterpriseId
+                                                        EnterpriseId: user.EnterpriseId,
                                                     })
                                                 }}
                                             />
@@ -114,7 +111,7 @@ export default function addUserInPlanningOfWeek() {
                                 {weekDays.map((weekDay) => (
                                     <div
                                         key={weekDay.id}
-                                        className="dark:bg-gray-800/90 bg-white shadow-xl p-3 dark:shadow-none"
+                                        className="dark:bg-gray-800/90 bg-white rounded-md border border-gray-300 shadow-xl p-3 dark:shadow-none"
                                     >
                                         <div className='flex items-center space-x-4'>
                                             <p className="dark:text-gray-300 text-gray-700">
@@ -126,7 +123,7 @@ export default function addUserInPlanningOfWeek() {
                                                     setDatas({
                                                         ...datas,
                                                         weekDaysId: datas.weekDaysId.includes(weekDay.id) ? datas.weekDaysId.filter(item => item !== weekDay.id) : [...datas.weekDaysId, weekDay.id],
-
+                                                      
                                                     })
                                                 }}
                                             />

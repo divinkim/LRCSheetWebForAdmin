@@ -148,17 +148,20 @@ export default function WeekDaysPlanningsList() {
                             />
                             <FontAwesomeIcon icon={faSearch} className="absolute text-gray-400 right-3 top-[38px]" />
                         </div>
-                        {
-                            tablesModal.map((e) => (
-                                e.weekDaysPlanningList.links.map((item) => (
-                                    <Link href={item.href} className="bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 px-4">
-                                        <FontAwesomeIcon icon={item.icon} className="text-white" />
-                                        <span className='text-white font-semibold'> {item.title}</span>
-                                    </Link>
-                                ))
+                        <div className="flex flex-row items-center space-x-3">
+                            {
+                                tablesModal.map((e) => (
+                                    e.weekDaysPlanningList.links.map((item) => (
+                                        <Link href={item.href} className="bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 px-4">
+                                            <FontAwesomeIcon icon={item.icon} className="text-white" />
+                                            <span className='text-white font-semibold'> {item.title}</span>
+                                        </Link>
+                                    ))
 
-                            ))
-                        }
+                                ))
+                            }
+                        </div>
+
                     </div>
 
                     {/* 🧾 Tableau */}
@@ -194,7 +197,7 @@ export default function WeekDaysPlanningsList() {
                                         </td>
                                         <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.Enterprise?.logo ? <img src={`${providers.APIUrl}/images/${u.Enterprise?.logo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : u.Enterprise?.name}
                                         </td>
-                                        
+
                                         <td className="text-center font-semibold border border-gray-400 dark:border-gray-300">
                                             <div className="relative top-0 items-center justify-center px-2 space-x-3 flex ">
                                                 <button type="button" onClick={() => {

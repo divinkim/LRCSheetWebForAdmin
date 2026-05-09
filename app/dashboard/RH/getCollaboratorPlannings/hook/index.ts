@@ -75,7 +75,7 @@ export default function useGetUsersInPlanningOfWeek() {
 
             let EnterpriseId = window?.localStorage.getItem("EnterpriseId");
 
-            const request = await providers.API.getAll(providers.APIUrl, "getAllUsersPlanningsOfWeek", null);
+            const request = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getAllCollaboratorPlannings", null);
             if (Number(EnterpriseId) === 1) {
                 const filterWeekDaysPlanningsByEnterpriseId = request.filter((item: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(item.EnterpriseId))
                 setWeekDaysPlannings(filterWeekDaysPlanningsByEnterpriseId);

@@ -25,7 +25,7 @@ type Datas = {
     usersId: number[],
     weekDaysId: number[],
     PlanningId: number | null,
-    EnterpriseId: null
+    EnterpriseId: number|null
 }
 
 import { useState, useEffect } from "react";
@@ -41,7 +41,7 @@ export default function useAddUserInPlanningOfWeek() {
         usersId: [],
         weekDaysId: [],
         PlanningId: 0,
-        EnterpriseId: null
+        EnterpriseId: 0
     });
 
     useEffect(() => {
@@ -60,14 +60,14 @@ export default function useAddUserInPlanningOfWeek() {
         setIsLoading(true);
         console.log(datas)
 
-        if (datas.usersId.length <= 0 || datas.weekDaysId.length <= 0 || datas.PlanningId === 0) {
+        if (datas.usersId.length === 0 || datas.weekDaysId.length === 0 || datas.PlanningId === 0) {
             return setTimeout(() => {
                 providers.alertMessage(false, "Champs incorrectes", "Veuillez sélectionner au moins un utilisateur, un jour de la semaine y compris un planning", null);
                 setIsLoading(false)
             }, 1000)
         }
 
-        const response = await providers.API.update(providers.APIUrl, "updateUsersPlanningsOfWeek", null, datas, null);
+        const response = await providers.API.update("https://vps118934.serveur-vps.net:4001", "updateCollaboratorPlanning", null, datas, null);
 
         if (response.status) {
             setDatas({
