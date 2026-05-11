@@ -16,12 +16,12 @@ export default function Repports() {
                         <h1 className='font-bold text-[20px]'>{ComponentModal?.[0].Repport?.titlePage}</h1>
                         <p className="hidden lg:block text-blue-600">{ComponentModal?.[0].Repport?.path}</p>
                     </div>
-                    <hr className='' />
+                    <hr className='bg-gray-300 dark:bg-gray-800 border-0 h-[1px]' />
                     <div className="flex lg:justify-between mt-5 items-center flex-col space-y-4 lg:flex-row lg:space-y-0">
                         <div className='relative w-[300px]'>
                             <input onChange={(e) => {
                                 filterRepportsByUsersNames(e.target.value, monthIndice)
-                            }} type="text" className="bg-transparent border border-gray-400 p-3 rounded-md outline-none w-full" placeholder="Recherche par collaborateurs..." />
+                            }} type="text" className="bg-transparent border border-gray-400 dark:border-gray-800 p-3 rounded-md outline-none w-full" placeholder="Recherche par collaborateurs..." />
                             <FontAwesomeIcon icon={faSearch} className="absolute top-4 right-4 text-gray-400" />
                         </div>
                         <div>
@@ -72,7 +72,9 @@ export default function Repports() {
                                             })}</h1>
                                             <hr className='bg-gray-400 dark:bg-gray-800 border-0 h-[1px]' />
                                             <div className="flex flex-col space-y-5 pt-4">
-                                                <p className="font-normal leading-loose  dark:text-gray-300  whitespace-pre-wrap">{itemIndex === index && isVisible ? repport.content : providers.reduceLengthOfText(repport.content, 255)}
+                                                <p dangerouslySetInnerHTML={{
+                                                    __html: itemIndex === index && isVisible ? repport.content ?? "" : providers.reduceLengthOfText(repport.content, 255) ?? ""
+                                                }} className="font-normal leading-loose  dark:text-gray-300  whitespace-pre-wrap">
                                                 </p>
 
                                                 <div className={itemIndex === index && isVisible ? "relative -top-2" : "hidden"}>
@@ -88,7 +90,7 @@ export default function Repports() {
                                                     <textarea value={itemIndexOnWriting === index ? adminResponse : ""} onChange={(e) => {
                                                         setAdminResponse(e.target.value);
                                                         setItemIndexOnWriting(index)
-                                                    }} name="" id="" placeholder="Laissez un commentaire!" className="w-full bg-transparent  border border-gray-400 my-4 rounded-md dark:text-gray-300 placeholder-gray-600 dark:placeholder-gray-300  h-[100px] p-4 outline-none">
+                                                    }} name="" id="" placeholder="Laissez un commentaire!" className="w-full bg-transparent  border border-gray-400 dark:border-gray-800 my-4 rounded-md dark:text-gray-300 placeholder-gray-600 dark:placeholder-gray-300  h-[100px] p-4 outline-none">
                                                     </textarea>
                                                     <button onClick={async () => {
                                                         const comment = adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId);

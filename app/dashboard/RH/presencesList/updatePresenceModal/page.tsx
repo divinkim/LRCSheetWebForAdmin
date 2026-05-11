@@ -48,7 +48,7 @@ export default function UpdatePresenceModal() {
     function selectAllUser() {
         setInputs({
             ...inputs,
-            usersId: onSelectAllUser().getUsersId,
+            usersId: onSelectAllUser().getUsersIds,
             salariesId: onSelectAllUser().getSalariesIds,
             planningsId: onSelectAllUser().getPlanningIds,
             enterprisesId: onSelectAllUser().getEnterprisesIds

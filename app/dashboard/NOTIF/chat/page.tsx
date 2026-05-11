@@ -117,7 +117,12 @@ export default function Chat() {
                                     <div className="flex-1">
                                         <h2 className="text-md font-semibold">{item?.User?.firstname} {providers.reduceLengthOfText(item?.User?.lastname, 7)}</h2>
                                         <div className="flex flex-row justify-between items-center">
-                                            <p className="text-gray-600 text-[14px]">{providers.reduceLengthOfText(getLatestChatMessage(item?.UserId).content, 10)}</p>
+                                            <p className="text-gray-600 text-[14px]">
+                                                {providers.reduceLengthOfText(getLatestChatMessage(item.UserId).content.replace(/<br\s*\/?>/g, "\n")
+                                                    .replace(/<\/p>/g, "\n")
+                                                    .replace(/<p[^>]*>/g, "")
+                                                    .replace(/<[^>]+>/g, ""), 10)}
+                                            </p>
                                             <p className={getNotificationCount(item?.UserId) === 0 ? "hidden" : "bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full"}>
                                                 {getNotificationCount(item?.UserId)}
                                             </p>
@@ -194,7 +199,9 @@ export default function Chat() {
                                                                     <p className="font-semibold mb-4">{chat.title}</p>
                                                                 )
                                                             }
-                                                            <p className="whitespace-pre-line">{chat.content}</p>
+                                                            <div dangerouslySetInnerHTML={{
+                                                                __html: chat.content
+                                                            }} />
                                                             {
                                                                 chat.file && (
                                                                     <div className="flex justify-end mt-4">
