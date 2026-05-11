@@ -7,12 +7,15 @@ import { ClipLoader } from "react-spinners";
 import { useState } from "react";
 
 type UpdatePresence = {
-    usersIds: number[],
+    usersId: number[],
     arrivalTime: string | null,
     departureTime: string | null,
     resumeTime: string | null,
     breakStartTime: string | null,
-    createdAt: string | null,
+    enterprisesId: any[],
+    salariesId: any[],
+    planningsId: any[],
+    date: string,
 }
 
 export default function UpdatePresenceModal() {
@@ -20,18 +23,24 @@ export default function UpdatePresenceModal() {
     const [isLoading, setIsLoading] = useState(false);
 
     const [inputs, setInputs] = useState<UpdatePresence>({
-        usersIds: [],
+        usersId: [],
         arrivalTime: null,
         breakStartTime: null,
         resumeTime: null,
         departureTime: null,
-        createdAt: null,
+        salariesId: [],
+        enterprisesId: [],
+        planningsId: [],
+        date: "",
     });
 
-    function onSelect(UserId: number) {
+    function onSelect(UserId: number, SalaryId: number, PlanningId: number, EnterpriseId: number) {
         setInputs({
             ...inputs,
-            usersIds: inputs.usersIds.includes(UserId) ? inputs.usersIds.filter(item => item !== UserId) : [...inputs.usersIds, UserId],
+            usersId: inputs.usersId.includes(UserId) ? inputs.usersId.filter(item => item !== UserId) : [...inputs.usersId, UserId],
+            salariesId: inputs.salariesId.includes(SalaryId) ? inputs.salariesId.filter(item => item !== SalaryId) : [...inputs.salariesId, SalaryId],
+            planningsId: inputs.planningsId.includes(PlanningId) ? inputs.planningsId.filter(item => item !== PlanningId) : [...inputs.planningsId, PlanningId],
+            enterprisesId: inputs.enterprisesId.includes(EnterpriseId) ? inputs.enterprisesId.filter(item => item !== EnterpriseId) : [...inputs.enterprisesId, EnterpriseId],
         })
     }
 
@@ -39,21 +48,29 @@ export default function UpdatePresenceModal() {
     function selectAllUser() {
         setInputs({
             ...inputs,
-            usersIds: onSelectAllUser().getUsersIds
+            usersId: onSelectAllUser().getUsersId,
+            salariesId: onSelectAllUser().getSalariesIds,
+            planningsId: onSelectAllUser().getPlanningIds,
+            enterprisesId: onSelectAllUser().getEnterprisesIds
         })
     }
 
     function deselectAllUser() {
         setInputs({
             ...inputs,
-            usersIds: [],
+            usersId: [],
+            salariesId: [],
+            planningsId: [],
+            enterprisesId: []
         })
     }
 
     const handleSubmit = async () => {
         setIsLoading(true);
 
-        if (!inputs.createdAt) {
+        console.log(inputs)
+
+        if (!inputs.date) {
             return setTimeout(() => {
                 providers.alertMessage(
                     false, "Champs invalides", "Veuillez saisir la date à modifier", null
@@ -62,23 +79,32 @@ export default function UpdatePresenceModal() {
             }, 1000)
         }
 
-        const response = await providers.API.update(providers.APIUrl, "updateAttendance", null, inputs, "")
+        const response = await providers.API.post("https://vps118934.serveur-vps.net:4001",
+            "postAttendancesFromAdmin",
+            null,
+            inputs,
+        );
 
         const status = response.status;
         const title = response.title;
         const message = response.message;
-        const path = status ? "/dashboard/RH/presencesList" : null
+        const path = status ? "/dashboard/RH/presencesList" : null;
+
+        setIsLoading(false);
 
         providers.alertMessage(status, title, message, path);
-        setIsLoading(false);
+
         if (status) {
             setInputs({
-                usersIds: [],
-                arrivalTime: "",
-                breakStartTime: "",
-                resumeTime: "",
-                departureTime: "",
-                createdAt: ""
+                usersId: [],
+                arrivalTime: null,
+                breakStartTime: null,
+                resumeTime: null,
+                departureTime: null,
+                salariesId: [],
+                enterprisesId: [],
+                planningsId: [],
+                date: "",
             })
         }
     }
@@ -143,7 +169,7 @@ export default function UpdatePresenceModal() {
                                 <input onChange={(e) => {
                                     setInputs({
                                         ...inputs,
-                                        createdAt: e.target.value
+                                        date: e.target.value
                                     })
                                 }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full" type="date" />
                             </div>
@@ -165,10 +191,10 @@ export default function UpdatePresenceModal() {
                                 {
                                     presencesListCloned.map((user) => (
                                         <div className="flex flex-row space-y-4 mb-4 dark:text-gray-300 items-center space-x-3">
-                                            {user.User?.photo ? <img src={`${providers.APIUrl}/images/${user?.User?.photo}`} className="w-10 h-10 object-cover rounded-full" alt="" /> : <p className="text-[40px]"> 👮</p>}
-                                            <p>{user?.User?.firstname?.slice(0, 5) + "..."} {user?.User?.lastname}</p>
-                                            <input checked={inputs.usersIds.includes(user.UserId)} className="dark:bg-transparent" type="checkbox" value={user.UserId ?? ""} onChange={(e) => {
-                                                onSelect(user.UserId);
+                                            <img src={user?.User?.photo ? `${providers.APIUrl}/images/${user?.User?.photo}` : "/images/clientProfile.png"} className="w-10 h-10 object-cover rounded-full" alt="" />
+                                            <p>{providers.reduceLengthOfText(String(user?.User?.firstname), 5)} {user?.User?.lastname}</p>
+                                            <input checked={inputs.usersId.includes(user.UserId)} className="dark:bg-transparent" type="checkbox" value={user.UserId ?? ""} onChange={() => {
+                                                onSelect(user.UserId, user.SalaryId, user.PlanningId, user.EnterpriseId);
                                             }} />
                                         </div>
                                     ))

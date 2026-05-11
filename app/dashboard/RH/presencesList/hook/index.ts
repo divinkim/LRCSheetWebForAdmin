@@ -76,15 +76,16 @@ export function PresencesListHookModal() {
         setPresencesListCloned(usersFiltered);
     }
     //Mise à jour de l'utilisateur recherché
-   
+
     const onSelectAllUser = () => {
         const allIds = presencesList.filter(user => user.UserId && user?.EnterpriseId && user?.SalaryId);
         const getEnterprisesIds = allIds.map(item => item.EnterpriseId);
         const getUsersIds = allIds.map(item => item.UserId);
         const getSalariesIds = allIds.map(item => item.SalaryId);
+        const getPlanningIds = allIds.map(item => item.PlanningId);
 
-        return { allIds, getEnterprisesIds, getUsersIds, getSalariesIds}
+        return { allIds, getEnterprisesIds, getUsersIds, getSalariesIds, getPlanningIds }
     }
 
-    return { presencesListCloned, adminRole, onSearch, onSelectAllUser}
+    return { presencesListCloned, adminRole, onSearch, onSelectAllUser }
 }

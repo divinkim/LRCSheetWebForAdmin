@@ -43,7 +43,7 @@ export default function AddPresenceModal() {
                                 <input onChange={(e) => {
                                     setInputs({
                                         ...inputs,
-                                        createdAt: e.target.value
+                                        date: e.target.value
                                     })
                                 }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full" type="date" />
                             </div>
@@ -63,17 +63,18 @@ export default function AddPresenceModal() {
                             </div>
                             <div className='overflow-auto h-[50px]'>
                                 {
-                                    usersArray.map((user:any, index:number) => (
-                                        <div key={index} className="flex items-center space-x-4 mb-3">
+                                    usersArray.map((user) => (
+                                        <div key={user.id} className="flex items-center space-x-4 mb-3">
                                             <input onChange={() => {
-                                                onCheckBtnEvent(user.id, user.EnterpriseId, user.SalaryId);
+                                                onCheckBtnEvent(user.id, user.EnterpriseId, user.SalaryId, user.PlanningId);
                                             }} type="checkbox" checked={inputs.usersId.includes(user.id)} />
                                             <div className="flex items-center space-x-2">
-                                                {user.photo ? <img src={`${providers.APIUrl}/images/${user.photo} `} alt="" className="w-10 h-10 object-cover rounded-full" /> : <p className="text-[30px]">🧑‍💼</p>}
+                                                <img src={user.photo ? `${providers.APIUrl}/images/${user.photo} ` : "/images/clientProfile.png"} alt="" className="w-10 h-10 object-cover rounded-full" />
                                                 <p>{user.firstname} {user.lastname}</p>
                                             </div>
                                         </div>
                                     ))
+
                                 }
                             </div>
                         </div>

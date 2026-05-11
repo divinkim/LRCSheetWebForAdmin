@@ -10,14 +10,16 @@ type User = {
     EnterpriseId: number,
     photo: string | null,
     adminService: null,
+    PlanningId: any
 }
 
 type Inputs = {
     arrivalTime: string,
     usersId: number[],
     enterprisesId: number[],
+    planningsId: any[],
     salariesId: any[],
-    createdAt: string,
+    date: string,
 }
 
 export default function useAddPresenceModal() {
@@ -26,16 +28,17 @@ export default function useAddPresenceModal() {
     const [inputs, setInputs] = useState<Inputs>({
         arrivalTime: "",
         usersId: [],
+        planningsId: [],
         enterprisesId: [],
         salariesId: [],
-        createdAt: ""
+        date: ""
     });
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         (async () => {
             const EnterpriseId = localStorage.getItem("EnterpriseId");
-            const getUsers = await providers.API.getAll(providers.APIUrl, "getUsers", null);
+            const getUsers = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
 
             if (Number(EnterpriseId) === 1) {
                 const getUsersByEnterprises = getUsers.filter((user: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(user.EnterpriseId));
@@ -54,7 +57,7 @@ export default function useAddPresenceModal() {
         setUsersArray(getUser);
     }
 
-    const onCheckBtnEvent = (UserId: number, EnterpriseId: number, SalaryId: number) => {
+    const onCheckBtnEvent = (UserId: number, EnterpriseId: number, SalaryId: number, PlanningId: number) => {
         const checkInUsersIdArray = inputs.usersId.includes(UserId) ?
             inputs.usersId.filter(item => item !== UserId)
             : [...inputs.usersId, UserId];
@@ -68,11 +71,16 @@ export default function useAddPresenceModal() {
             inputs.salariesId.filter(item => item !== SalaryId)
             : [...inputs.salariesId, SalaryId];
 
+        const checkInPlanningsIdArray = inputs.salariesId.includes(PlanningId) ?
+            inputs.salariesId.filter(item => item !== PlanningId)
+            : [...inputs.planningsId, PlanningId];
+
         setInputs({
             ...inputs,
             usersId: checkInUsersIdArray,
             enterprisesId: checkInEnterprisesIdArray,
             salariesId: checkInSalariesIdArray,
+            planningsId: checkInPlanningsIdArray
         })
     }
 
@@ -80,12 +88,14 @@ export default function useAddPresenceModal() {
         const getAllUsersId = usersArray.filter(user => !user.adminService).map(user => user.id)
         const getAllEnterprisesId = usersArray.filter(user => !user.adminService).map(user => user.EnterpriseId)
         const getAllSalariesId = usersArray.filter(user => !user.adminService).map(user => user.SalaryId);
+        const getAllPlanningsId = usersArray.filter(user => !user.adminService).map(user => user.PlanningId);
 
         setInputs({
             ...inputs,
             usersId: getAllUsersId,
             salariesId: getAllSalariesId,
-            enterprisesId: getAllEnterprisesId
+            enterprisesId: getAllEnterprisesId,
+            planningsId: getAllPlanningsId
         })
     }
 
@@ -94,38 +104,59 @@ export default function useAddPresenceModal() {
             ...inputs,
             usersId: [],
             salariesId: [],
-            enterprisesId:[]
+            enterprisesId: [],
+            planningsId: []
         })
     }
 
     const handleSubmit = async () => {
         setIsLoading(true);
-    
+
         if (!inputs.arrivalTime || inputs.usersId.length < 0) {
-            setTimeout(() => {
-                setIsLoading(false);
-                providers.alertMessage(false, "Champs invalides", "Veuillez sélectionner au moins un utilisateur et une heure d'arrivée", null);
-            }, 1000);
-            return;
+            return providers.alertMessage(false, "Champs invalides",
+                "Veuillez sélectionner au moins un utilisateur et une heure d'arrivée",
+                null
+            );
         }
 
-        const response = await providers.API.post(providers.APIUrl, "addAttendanceFromAdmin", null, inputs);
+        const response = await providers.API.post(
+            "https://vps118934.serveur-vps.net:4001",
+            "postAttendancesFromAdmin", null,
+            inputs
+        );
+
+        setIsLoading(false);
+
+        providers.alertMessage(
+            response.status,
+            response.title,
+            response.message,
+            response.status ? "/dashboard/RH/presencesList" : null
+        );
+
         if (response.status) {
-            setIsLoading(false);
             setInputs({
                 arrivalTime: "",
                 usersId: [],
                 enterprisesId: [],
+                planningsId: [],
                 salariesId: [],
-                createdAt: ""
+                date: ""
             })
-            providers.alertMessage(response.status, response.title, response.message, "/dashboard/RH/presencesList");
-            return;
         }
-
-        providers.alertMessage(response.status, response.title, response.message, null);
-        setIsLoading(false);
     }
 
-    return { usersArray, setUsersArray, usersArrayCloned, filterUserByName, onCheckBtnEvent, handleSubmit, isLoading, setInputs, inputs, selectAllProfile, deselectAllProfile }
+    return {
+        usersArray,
+        setUsersArray,
+        usersArrayCloned,
+        filterUserByName,
+        onCheckBtnEvent,
+        handleSubmit,
+        isLoading,
+        setInputs,
+        inputs,
+        selectAllProfile,
+        deselectAllProfile
+    }
 }

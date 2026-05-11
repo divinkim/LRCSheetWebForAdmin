@@ -110,7 +110,7 @@ export default function PresencesList() {
                                 />
                                 <FontAwesomeIcon icon={faSearch} className="absolute text-gray-400 right-3 top-[38px]" />
                             </div>
-                            <div className="flex flex-col lg:flex-row items-center space-y-4 lg:space-y-0">
+                            <div className="flex flex-col lg:flex-row items-center space-x-4 space-y-4 lg:space-y-0">
                                 {
                                     tablesModal.map((e) => (
                                         e.presencesList.links.map((item) => (
