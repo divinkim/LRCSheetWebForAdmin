@@ -7,7 +7,8 @@ import { ClipLoader } from "react-spinners";
 
 export default function Repports() {
     const { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader } = RepportsListHook();
-
+    console.log("le tableau", repportsArrayCloned)
+    console.log(loader)
     return (
         <main className="bg-white dark:bg-transparent">
             <div className="flex">
@@ -42,7 +43,7 @@ export default function Repports() {
                     </div>
                     <div className="mx-auto mt-8 w-full">
                         {
-                            RepportsArray.length > 0 ?
+                            repportsArrayCloned.length > 0 ?
                                 repportsArrayCloned.filter(repport => repport.monthIndice === monthIndice).slice().reverse().map((repport, index) => (
                                     <div className="w-full h-auto bg-white border border-gray-300 dark:border-gray-800 shadow-xl mb-6 dark:shadow-none dark:border  p-4 rounded-xl dark:bg-transparent">
                                         <div className="flex justify-start items-center lg:justify-between flex-col lg:flex-row space-y-5 lg:space-y-0">
@@ -141,10 +142,14 @@ export default function Repports() {
                                             </div>
                                         </div>
                                     </div>
-                                )) : <div className="w-full h-[600px] items-center justify-center flex">
+                                )) : <div className="w-full h-[400px] items-center justify-center flex">
                                     {
-                                        RepportsArray.length === 0 && !loader ?
-                                            <img src="/images/folder.png" className="w-[200px] mx-auto h-[200px]" alt="" />
+                                        repportsArrayCloned.length === 0 && !loader ?
+                                            <div>
+                                                <img src="/images/folder.png" className="w-[200px] mx-auto h-[200px]" alt="" />
+                                                <p className="text-center font-semibold mt-4">Aucune donnée trouvée!</p>
+                                            </div>
+
                                             : <ClipLoader size={30} color="#1d4ed8" />
                                     }
 

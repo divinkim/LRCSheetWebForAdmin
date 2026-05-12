@@ -54,7 +54,9 @@ export function RepportsListHook() {
 
     useEffect(() => {
         (() => {
-            setLoader(false);
+            setTimeout(() => {
+                setLoader(false);
+            }, 2000)
         })()
     }, [RepportsArray])
 
@@ -79,7 +81,7 @@ export function RepportsListHook() {
     }
 
     function filterRepportsByUsersNames(value: string, monthIndice: number) {
-        const repports = RepportsArray.filter(repport => (repport.User?.firstname.toLocaleLowerCase()?.includes(value.toLocaleLowerCase()) || repport.User?.lastname.toLocaleLowerCase()?.includes(value.toLocaleLowerCase())) && repport.monthIndice === monthIndice);
+        const repports = RepportsArray.filter(repport => (repport.User?.firstname.toLowerCase()?.includes(value.toLowerCase()) || repport.User?.lastname.toLowerCase()?.includes(value.toLowerCase())) && repport.monthIndice === monthIndice);
         setRepportsArrayCloned(repports)
     }
 

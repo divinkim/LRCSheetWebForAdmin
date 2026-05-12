@@ -4,7 +4,7 @@ import { faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { PresencesListHookModal } from "../hook";
 import { providers } from "@/index";
 import { ClipLoader } from "react-spinners";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type UpdatePresence = {
     usersId: number[],
@@ -18,10 +18,21 @@ type UpdatePresence = {
     date: string,
 }
 
-export default function UpdatePresenceModal() {
-    const { presencesListCloned, onSearch, onSelectAllUser, } = PresencesListHookModal();
-    const [isLoading, setIsLoading] = useState(false);
+type User = {
+    lastname: string | null,
+    firstname: string | null,
+    PlanningId: number,
+    SalaryId: number,
+    EnterpriseId: number,
+    photo: string | null,
+    id: number
+}
 
+export default function UpdatePresenceModal() {
+    const { presencesListCloned, onSelectAllUser, } = PresencesListHookModal();
+    const [isLoading, setIsLoading] = useState(false);
+    const [users, setUsers] = useState<User[]>([]);
+    const [usersCloned, setUsersCloned] = useState<User[]>([]);
     const [inputs, setInputs] = useState<UpdatePresence>({
         usersId: [],
         arrivalTime: null,
@@ -44,7 +55,6 @@ export default function UpdatePresenceModal() {
         })
     }
 
-
     function selectAllUser() {
         setInputs({
             ...inputs,
@@ -64,6 +74,19 @@ export default function UpdatePresenceModal() {
             enterprisesId: []
         })
     }
+
+    function onSearch(e: string) {
+        const newUsersArray = users.filter(item => item?.lastname?.toLowerCase().includes(e.toLowerCase()) || item?.firstname?.toLowerCase().includes(e.toLowerCase()));
+        setUsersCloned(newUsersArray);
+    }
+
+    useEffect(() => {
+        (async () => {
+            const users = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
+            setUsers(users);
+            setUsersCloned(users);
+        })()
+    }, [])
 
     const handleSubmit = async () => {
         setIsLoading(true);
@@ -118,7 +141,7 @@ export default function UpdatePresenceModal() {
                     <div className="flex flex-col mb-3 w-full relative">
                         <label htmlFor="" className="mb-2 dark:text-gray-300">Rechercher un collaborateur</label>
                         <input placeholder="Recherche..." className="border outline dark:bg-transparent border-gray-400 dark:placeholder-gray-300 dark:text-gray-300 rounded p-3 w-full outline-none" onChange={(e) => {
-                            onSearch(e.target.value, "")
+                            onSearch(e.target.value)
                         }} type="text" />
                     </div>
                     <div className="w-full lg:flex mt-4 flex-col">
@@ -180,21 +203,21 @@ export default function UpdatePresenceModal() {
                         <div className="flex flex-col overflow-y-auto space-y-4">
                             <div className="flex space-x-2 mb-2 font-semibold">
                                 <div>
-                                    <button onClick={selectAllUser} type="button" className="bg-green-600 text-white p-2 rounded-md hover:scale-105 ease duration-500 font-semibold">Tout sélectionner</button>
+                                    <button onClick={selectAllUser} type="button" className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md ease duration-500 font-semibold">Tout sélectionner</button>
                                 </div>
 
                                 <div>
-                                    <button onClick={deselectAllUser} type="button" className="bg-red-600 text-white p-2 rounded-md hover:scale-105 ease duration-500 font-semibold">Tout déselectionner</button>
+                                    <button onClick={deselectAllUser} type="button" className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-md ease duration-500 font-semibold">Tout déselectionner</button>
                                 </div>
                             </div>
                             <div className='h-[50px]'>
                                 {
-                                    presencesListCloned.map((user) => (
+                                    usersCloned.map((user) => (
                                         <div className="flex flex-row space-y-4 mb-4 dark:text-gray-300 items-center space-x-3">
-                                            <img src={user?.User?.photo ? `${providers.APIUrl}/images/${user?.User?.photo}` : "/images/clientProfile.png"} className="w-10 h-10 object-cover rounded-full" alt="" />
-                                            <p>{providers.reduceLengthOfText(String(user?.User?.firstname), 5)} {user?.User?.lastname}</p>
-                                            <input checked={inputs.usersId.includes(user.UserId)} className="dark:bg-transparent" type="checkbox" value={user.UserId ?? ""} onChange={() => {
-                                                onSelect(user.UserId, user.SalaryId, user.PlanningId, user.EnterpriseId);
+                                            <img src={user?.photo ? `${providers.APIUrl}/images/${user?.photo}` : "/images/clientProfile.png"} className="w-10 h-10 object-cover rounded-full" alt="" />
+                                            <p>{providers.reduceLengthOfText(String(user?.firstname), 5)} {user?.lastname}</p>
+                                            <input checked={inputs.usersId.includes(user.id)} className="dark:bg-transparent" type="checkbox" value={user.id ?? ""} onChange={() => {
+                                                onSelect(user.id, user.SalaryId, user.PlanningId, user.EnterpriseId);
                                             }} />
                                         </div>
                                     ))
