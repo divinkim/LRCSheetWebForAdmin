@@ -33,21 +33,21 @@ type PresencesDatas = {
     }
 }
 
+type User = {
+    lastname: string | null,
+    firstname: string | null,
+    PlanningId: number,
+    SalaryId: number,
+    EnterpriseId: number,
+    photo: string | null,
+    id: number
+}
+
 export function PresencesListHookModal() {
     const [presencesList, setPresencesList] = useState<PresencesDatas[]>([]);
     const [presencesListCloned, setPresencesListCloned] = useState<PresencesDatas[]>([]);
-    const [currentMonthValue, setCurrenMonthValue] = useState(new Date().getMonth());
-    const [savedPresencesList, setSavedPresencesList] = useState<PresencesDatas[]>([]);
-    const [searchValue, setSearchValue] = useState("");
-    const [pageName, setPageName] = useState("")
-    const [page, setPage] = useState(1);             // page courante
-    const limit = 5;                                 // items par page
-    const [isLoading, setIsLoading] = useState(false);
-    const [showAddPresenceModal, setShowAddPresenceModal] = useState(false);
-    const [showUpdatePresenceModal, setShowUpdatePresenceModal] = useState(false);
-    const requireAdminRoles = ['Super-Admin', 'Supervisor-Admin'];
-
-    const [createdAt, setCreatedAt] = useState<string | null>(null);
+    const [users, setUsers] = useState<User[]>([]);
+    const [usersCloned, setUsersCloned] = useState<User[]>([]);
     const [adminRole, setAdminRole] = useState<string>("");
 
     useEffect(() => {
@@ -55,6 +55,15 @@ export function PresencesListHookModal() {
         const role = window?.localStorage.getItem("adminRole");;
         setAdminRole(role ?? "");
     }, []);
+
+    useEffect(() => {
+        (async () => {
+            const users = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
+            setUsers(users);
+            setUsersCloned(users);
+        })()
+    }, [])
+
 
     useEffect(() => {
         (async () => {
@@ -69,23 +78,29 @@ export function PresencesListHookModal() {
     function onSearch(value: string, page: string) {
         const usersFiltered = presencesList.filter(user => user?.User?.firstname?.toString()?.toLowerCase()?.includes(value.toLowerCase()) || user?.User?.lastname?.toString()?.toLowerCase()?.includes(value.toLowerCase()));
 
-        if (page === "addPresenceModal" || page === "updatePresenceModal") {
-            return setPresencesListCloned([usersFiltered[0]])
-        }
+        // if (page === "addPresenceModal" || page === "updatePresenceModal") {
+        //     return setPresencesListCloned([usersFiltered[0]])
+        // }
 
         setPresencesListCloned(usersFiltered);
     }
-    //Mise à jour de l'utilisateur recherché
+  
 
     const onSelectAllUser = () => {
-        const allIds = presencesList.filter(user => user.UserId && user?.EnterpriseId && user?.SalaryId);
-        const getEnterprisesIds = allIds.map(item => item.EnterpriseId);
-        const getUsersIds = allIds.map(item => item.UserId);
-        const getSalariesIds = allIds.map(item => item.SalaryId);
-        const getPlanningIds = allIds.map(item => item.PlanningId);
+        const allIds = users.filter(item => item.id && item.EnterpriseId && item.PlanningId && item.SalaryId);
+        const getEnterprisesId = allIds.map(item => item.EnterpriseId);
+        const getUsersId = allIds.map(item => item.id);
+        const getSalariesId = allIds.map(item => item.SalaryId);
+        const getPlanningId = allIds.map(item => item.PlanningId);
 
-        return { allIds, getEnterprisesIds, getUsersIds, getSalariesIds, getPlanningIds }
+        return {
+            allIds,
+            getEnterprisesId,
+            getUsersId,
+            getSalariesId,
+            getPlanningId
+        }
     }
 
-    return { presencesListCloned, adminRole, onSearch, onSelectAllUser }
+    return { presencesListCloned, adminRole, onSearch, onSelectAllUser, users, usersCloned, setUsersCloned }
 }

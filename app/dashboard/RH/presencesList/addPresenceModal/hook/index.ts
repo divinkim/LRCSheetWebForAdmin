@@ -57,23 +57,19 @@ export default function useAddPresenceModal() {
         setUsersArray(getUser);
     }
 
+    function includesValue(array: number[], value: number) {
+        const result = array.includes(value) ? array.filter(item => item !== value) : [...array, value];
+        return result;
+    }
+
     const onCheckBtnEvent = (UserId: number, EnterpriseId: number, SalaryId: number, PlanningId: number) => {
-        const checkInUsersIdArray = inputs.usersId.includes(UserId) ?
-            inputs.usersId.filter(item => item !== UserId)
-            : [...inputs.usersId, UserId];
+        const checkInUsersIdArray = includesValue(inputs.usersId, UserId)
 
-        const checkInEnterprisesIdArray = inputs.enterprisesId.includes(EnterpriseId) ?
-            inputs.enterprisesId.filter(item => item !== EnterpriseId)
-            : [...inputs.enterprisesId, EnterpriseId];
+        const checkInEnterprisesIdArray = [...inputs.enterprisesId, EnterpriseId];
 
+        const checkInSalariesIdArray = [...inputs.salariesId, SalaryId];
 
-        const checkInSalariesIdArray = inputs.salariesId.includes(SalaryId) ?
-            inputs.salariesId.filter(item => item !== SalaryId)
-            : [...inputs.salariesId, SalaryId];
-
-        const checkInPlanningsIdArray = inputs.salariesId.includes(PlanningId) ?
-            inputs.salariesId.filter(item => item !== PlanningId)
-            : [...inputs.planningsId, PlanningId];
+        const checkInPlanningsIdArray = [...inputs.planningsId, PlanningId];
 
         setInputs({
             ...inputs,

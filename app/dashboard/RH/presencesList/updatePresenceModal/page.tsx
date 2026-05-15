@@ -18,21 +18,10 @@ type UpdatePresence = {
     date: string,
 }
 
-type User = {
-    lastname: string | null,
-    firstname: string | null,
-    PlanningId: number,
-    SalaryId: number,
-    EnterpriseId: number,
-    photo: string | null,
-    id: number
-}
-
 export default function UpdatePresenceModal() {
-    const { presencesListCloned, onSelectAllUser, } = PresencesListHookModal();
+    const { onSelectAllUser, users, usersCloned, setUsersCloned } = PresencesListHookModal();
     const [isLoading, setIsLoading] = useState(false);
-    const [users, setUsers] = useState<User[]>([]);
-    const [usersCloned, setUsersCloned] = useState<User[]>([]);
+
     const [inputs, setInputs] = useState<UpdatePresence>({
         usersId: [],
         arrivalTime: null,
@@ -45,23 +34,28 @@ export default function UpdatePresenceModal() {
         date: "",
     });
 
+    function includesValue(array: number[], value: number) {
+        const result = array.includes(value) ? array.filter(item => item !== value) : [...array, value];
+        return result;
+    }
+
     function onSelect(UserId: number, SalaryId: number, PlanningId: number, EnterpriseId: number) {
         setInputs({
             ...inputs,
-            usersId: inputs.usersId.includes(UserId) ? inputs.usersId.filter(item => item !== UserId) : [...inputs.usersId, UserId],
-            salariesId: inputs.salariesId.includes(SalaryId) ? inputs.salariesId.filter(item => item !== SalaryId) : [...inputs.salariesId, SalaryId],
-            planningsId: inputs.planningsId.includes(PlanningId) ? inputs.planningsId.filter(item => item !== PlanningId) : [...inputs.planningsId, PlanningId],
-            enterprisesId: inputs.enterprisesId.includes(EnterpriseId) ? inputs.enterprisesId.filter(item => item !== EnterpriseId) : [...inputs.enterprisesId, EnterpriseId],
+            usersId: includesValue(inputs.usersId, UserId),
+            salariesId: [...inputs.salariesId, SalaryId],
+            planningsId: [...inputs.planningsId, PlanningId],
+            enterprisesId: [...inputs.enterprisesId, EnterpriseId],
         })
     }
 
     function selectAllUser() {
         setInputs({
             ...inputs,
-            usersId: onSelectAllUser().getUsersIds,
-            salariesId: onSelectAllUser().getSalariesIds,
-            planningsId: onSelectAllUser().getPlanningIds,
-            enterprisesId: onSelectAllUser().getEnterprisesIds
+            usersId: onSelectAllUser().getUsersId,
+            salariesId: onSelectAllUser().getSalariesId,
+            planningsId: onSelectAllUser().getPlanningId,
+            enterprisesId: onSelectAllUser().getEnterprisesId
         })
     }
 
@@ -75,18 +69,11 @@ export default function UpdatePresenceModal() {
         })
     }
 
+
     function onSearch(e: string) {
         const newUsersArray = users.filter(item => item?.lastname?.toLowerCase().includes(e.toLowerCase()) || item?.firstname?.toLowerCase().includes(e.toLowerCase()));
         setUsersCloned(newUsersArray);
     }
-
-    useEffect(() => {
-        (async () => {
-            const users = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
-            setUsers(users);
-            setUsersCloned(users);
-        })()
-    }, [])
 
     const handleSubmit = async () => {
         setIsLoading(true);

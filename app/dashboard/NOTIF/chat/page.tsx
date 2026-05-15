@@ -205,10 +205,10 @@ export default function Chat() {
                                                             {
                                                                 chat.file && (
                                                                     <div className="flex justify-end mt-4">
-                                                                        <Link href={`${providers.APIUrl}/images/${chat.file}`} className="cursor-pointer ease duration-500 hover:scale-105">
+                                                                        <a target="_blank" href={`${providers.APIUrl}/images/${chat.file}`} className="cursor-pointer ease duration-500 hover:scale-105">
                                                                             <img src="/images/folder.png" alt="" className="w-10 h-10 rounded-md relative left-6" />
                                                                             <p className="underline text-blue-700">Pièce jointe</p>
-                                                                        </Link>
+                                                                        </a>
                                                                     </div>
                                                                 )
                                                             }

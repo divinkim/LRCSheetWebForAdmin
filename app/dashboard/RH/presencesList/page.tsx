@@ -91,7 +91,7 @@ export default function PresencesList() {
                         tablesModal.map((e) => (
                             <div className="flex font-semibold justify-between px-4 items-center">
                                 <h1 className="text-[20px] my-4 font-bold dark:text-gray-300">{e.presencesList.pageTitle}  </h1>
-                                <button className='text-blue-700 dark:text-blue-600 hidden xl:block'>{e.presencesList.path}</button>
+                                <button className='text-blue-700 dark:text-blue-600 hidden xl:block'>Dashboard/RH/Présences au poste</button>
                             </div>
                         ))
                     }
@@ -147,7 +147,7 @@ export default function PresencesList() {
                                     {
                                         tablesModal.map((item) => (
                                             item.presencesList.table.titles.map((e) => (
-                                                <th className="border font-normal py-2 xl:px-5 border-gray-400 dark:border-gray-300 text-gray-200  2xl:px-10 px-2 dark:text-gray-300">{e.title}</th>
+                                                <th className="border font-semibold py-2 xl:px-5 border-gray-400 dark:border-gray-300 text-gray-200  2xl:px-10 px-2 dark:text-gray-300">{e.title}</th>
                                             ))
                                         ))
                                     }
@@ -159,12 +159,10 @@ export default function PresencesList() {
                                     presencesListCloned.length > 0 ? presencesListCloned.slice(startPage, startPage + limit).map((u) => (
                                         <tr className="">
                                             <td className="border p-2 border-gray-400 dark:border-gray-300">
-                                                {u.User?.photo ? <img src={`${providers.APIUrl}/images/${u.User?.photo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p className="text-center text-[40px]">
-                                                    🧑‍💼
-                                                </p>}
+                                               <img src={u.User.photo ? `${providers.APIUrl}/images/${u.User?.photo}`:"/images/clientProfile.png"} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> 
                                             </td>
                                             <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.User?.lastname} {u.User?.firstname}</td>
-                                            <td className="border p-2 border-gray-400 dark:border-gray-300 dark:text-gray-300 text-center font-semibold">{u.arrivalTime === "00:00:00" ? "--" : u.arrivalTime} - {u?.breakStartTime ?? "--"}</td>
+                                            <td className="border p-2 border-gray-400 dark:border-gray-300 dark:text-gray-300 text-center font-semibold">{u.arrivalTime === "00:00:00" || u.arrivalTime === "00:00" ? "--" : u.arrivalTime} - {u?.breakStartTime ?? "--"}</td>
                                             <td className="border p-2 border-gray-400 dark:border-gray-300 dark:text-gray-300 text-center font-semibold">{u?.resumeTime ?? "--"} - {u?.departureTime ?? "--"}</td>
                                             {/* <td className="border p-2 border-gray-400 dark:border-gray-300 dark:text-gray-300 text-center font-semibold">{u.Planning?.startTime ? u.Planning.startTime.slice(0, 5) : "--"} - {u.Planning?.endTime ? u.Planning.endTime.slice(0, 5) : "--"}</td> */}
                                             <td className="border w-[155px] p-2 border-gray-400 dark:border-gray-300 dark:text-gray-300 text-center font-semibold">{new Date(u.createdAt ?? "").toLocaleDateString('fr-Fr', {
