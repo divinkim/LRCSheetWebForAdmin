@@ -4,6 +4,7 @@ import { faArrowLeft, faChevronDown, faChevronLeft, faChevronRight, faChevronUp,
 import { providers } from "@/index";
 import { RepportsListHook } from "./hook";
 import { ClipLoader } from "react-spinners";
+import socket from "@/socket";
 
 export default function Repports() {
     const { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader } = RepportsListHook();
@@ -65,18 +66,22 @@ export default function Repports() {
                                         </div>
                                         <div className="my-6 flex flex-col space-y-2 font-bold">
                                             <h1> Objet: {repport.title}</h1>
-                                            <h1>Date: {new Date(repport.createdAt).toLocaleDateString('fr-Fr', {
-                                                day: "2-digit",
-                                                month: "long",
-                                                year: "numeric",
-                                                weekday: "short"
-                                            })}</h1>
+                                            <div className="flex items-center space-x-1">
+                                                <h1>Date: {new Date(repport.createdAt).toLocaleDateString('fr-Fr', {
+                                                    day: "2-digit",
+                                                    month: "long",
+                                                    year: "numeric",
+                                                    weekday: "short"
+                                                })}</h1>
+                                                <p>à {new Date(repport.createdAt).toLocaleTimeString([], { minute: "2-digit", hour: "2-digit" })}</p>
+                                            </div>
+
                                             <hr className='bg-gray-400 dark:bg-gray-800 border-0 h-[1px]' />
                                             <div className="flex flex-col space-y-5 pt-4">
                                                 <p dangerouslySetInnerHTML={{
                                                     __html: itemIndex === index && isVisible ? repport.content ?? "" : providers.reduceLengthOfText(repport.content, 255) ?? ""
-                                                }} className="font-normal leading-loose  dark:text-gray-300  whitespace-pre-wrap">
-                                                </p>
+                                                }} className="[&_ul]:mb-4 font-normal [&_li]:mb-3 [&_p]:mb-4" />
+
 
                                                 <div className={itemIndex === index && isVisible ? "relative -top-2" : "hidden"}>
                                                     {
@@ -95,6 +100,15 @@ export default function Repports() {
                                                     </textarea>
                                                     <button onClick={async () => {
                                                         const comment = adminReportComment(adminResponse, repport.id, repport.User.email, repport.UserId);
+                                                        const AdminId = localStorage.getItem("UserId");
+                                                        socket.emit("onSendChatData", {
+                                                            path: "/Dashboard/NOTIF/chat",
+                                                            adminSectionIndex: "0",
+                                                            adminPageIndex: "0",
+                                                            receiverId: [repport.UserId],
+                                                            senderId: String(AdminId),
+                                                        })
+
 
                                                         const mail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
                                                             senderEmail: "lrcsheet@gmail.com",

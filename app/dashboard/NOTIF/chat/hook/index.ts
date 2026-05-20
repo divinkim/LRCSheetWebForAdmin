@@ -3,7 +3,7 @@ import { providers } from "@/index";
 import { useState, useEffect } from "react";
 import SidebarHook from "@/components/Layouts/sidebar/hook";
 import { useRef } from "react";
-import { Ms_Madi } from "next/font/google";
+import socket from "@/socket";
 
 type Users = {
     fcmToken: string,
@@ -53,7 +53,11 @@ export function useChat() {
         EnterpriseId: 0,
         files: "",
     })
-
+    const [notificationsCountLive, setNotificationCountLive] = useState({
+        status: false,
+        count: [0],
+        UserId: 0
+    })
     const [chatMessage, setChatMessage] = useState<ChatMessage[]>([]);
 
     function getNotificationCount(UserId: number) {
@@ -138,9 +142,48 @@ export function useChat() {
 
     useEffect(() => {
         (() => {
-           setLoader(false) 
+            setLoader(false)
         })()
-    },[users])
+    }, [users])
+
+    function onSearch(value: string) {
+        const searchUsers = users.filter(item => item.User?.firstname.toLowerCase().includes(value.toLowerCase()) || item.User?.lastname.toLowerCase().includes(value.toLowerCase()));
+        const unique = Array.from(
+            new Map(searchUsers.map(item => [item.UserId, item])).values()
+        );
+        setUsersCloned(unique);
+    }
+
+    useEffect(() => {
+        const handle = (datas: any) => {
+            const UserId = localStorage.getItem("id")
+            if (datas.receiverId === String(UserId)) {
+                console.log("event reçu", datas)
+                setStoredNotificationsArray((prev) => [...prev, datas]);
+
+                const notificationCount = [...storedNotificationsArray, datas].filter(item => item.senderId === datas.senderId).length;
+
+                setNotificationCountLive({
+                    status: true,
+                    count: [notificationCount],
+                    UserId: Number(datas.senderId)
+                })
+            }
+        };
+
+        socket.off("getChatData", handle);
+
+        socket.on("getChatData", handle);
+
+        return () => {
+            socket.off("getChatData", handle)
+        }
+    }, [])
+
+    function notificationsCompter(UserId: number) {
+        const result = storedNotificationsArray.filter(item => Number(item.senderId) === UserId);
+        return result.length
+    }
 
     async function sendChatMessage() {
         if (!data.content)
@@ -162,6 +205,8 @@ export function useChat() {
             }
         ]);
 
+
+
         const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
             content: data.content,
             receiverId: userData.UserId,
@@ -170,6 +215,14 @@ export function useChat() {
             file: data.files,
             role: "Super-Admin",
         });
+
+        socket.emit("onSendChatData", {
+            path: "/Dashboard/NOTIF/chat",
+            adminSectionIndex: "0",
+            adminPageIndex: "0",
+            receiverId: [userData.UserId],
+            senderId: String(AdminId),
+        })
 
         setData({
             ...data,
@@ -198,12 +251,7 @@ export function useChat() {
         }
     }
 
-    function onSearch(value: string) {
-        const searchUsers = users.filter(item => item.User.firstname.toLowerCase().includes(value.toLowerCase()) || item.User.lastname.toLowerCase().includes(value.toLowerCase()));
-        setUsersCloned(searchUsers);
-    }
-
     console.log("le tableau", storedNotificationsArray)
 
-    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader }
+    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter }
 }

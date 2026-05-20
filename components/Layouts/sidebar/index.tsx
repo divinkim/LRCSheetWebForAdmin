@@ -2,6 +2,7 @@
 // import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import socket from "@/socket";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NAV_DATA } from "./data";
@@ -79,6 +80,23 @@ export function Sidebar() {
 
     })()
   }, []);
+
+  useEffect(() => {
+    const handler = (data: any) => {
+      const UserId = localStorage.getItem("id");
+      if (data.receiverId === String(UserId)) {
+        console.log(data)
+        setStoredNotificationsArray((prev) => [...prev, data]);
+      }
+    }
+
+    socket.off("getChatData", handler)
+    socket.on("getChatData", handler)
+
+    return () => {
+      socket.off("getChatData", handler)
+    }
+  }, [])
 
   useEffect(() => {
     (() => {

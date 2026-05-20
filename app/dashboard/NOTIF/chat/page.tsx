@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
 import { useState } from "react";
 import { ClipLoader } from "react-spinners";
+import Loader from "@/components/loader/loader";
 type ChatMessage = {
     role: string;
     receiverId: number;
@@ -19,7 +20,7 @@ type ChatMessage = {
 
 export default function Chat() {
 
-    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId } = useChat();
+    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter } = useChat();
     const [showChat, setShowChat] = useState(false)
     const { isMobile } = useSidebarContext()
     const chatMessageGrouped: Record<string, ChatMessage[]> = chatMessage.reduce((acc, item) => {
@@ -87,7 +88,7 @@ export default function Chat() {
                     </div>
 
                     {
-                        users.length > 0 ?
+                        usersCloned.length > 0 && !loader ?
                             usersCloned.map((item, index) => (
                                 <div key={index} onClick={() => {
                                     setUserData({
@@ -123,16 +124,36 @@ export default function Chat() {
                                                     .replace(/<p[^>]*>/g, "")
                                                     .replace(/<[^>]+>/g, ""), 10)}
                                             </p>
-                                            <p className={getNotificationCount(item?.UserId) === 0 ? "hidden" : "bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full"}>
-                                                {getNotificationCount(item?.UserId)}
-                                            </p>
+                                            {
+                                                !notificationsCountLive.status && (
+                                                    <p className={notificationsCompter(item?.UserId) === 0 ? "hidden" : "bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full"}>
+                                                        {notificationsCompter(item?.UserId)}
+                                                    </p>
+                                                )
+                                            }
+
+                                            {
+                                                notificationsCountLive.status && notificationsCountLive.UserId === item.UserId && notificationsCountLive.count[0] > 0 && (
+                                                    <p className="bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full">
+                                                        {notificationsCountLive.count[0]}
+                                                    </p>
+                                                )
+                                            }
                                             <p className="text-gray-600 text-[12px]">{getLatestChatMessage(item?.UserId).date}</p>
                                         </div>
                                     </div>
                                 </div>
                             )) :
                             <div className="w-full h-[500px] items-center flex justify-center">
-                                <ClipLoader size={30} color="#1d4ed8" />
+                                {
+                                    usersCloned.length === 0 && loader ?
+                                        <ClipLoader size={30} color="#1d4ed8" />
+                                        : <div>
+                                            <img src="/images/folder.png" className="w-[150px] h-[150px] relative left-5 object-cover" alt="" />
+                                            <p className="mt-3 text-center">Aucune donnée trouvée</p>
+                                        </div>
+                                }
+
                             </div>
                     }
                 </div>
@@ -201,7 +222,7 @@ export default function Chat() {
                                                             }
                                                             <div dangerouslySetInnerHTML={{
                                                                 __html: chat.content
-                                                            }} />
+                                                            }} className="[&_ul]:mb-4 font-normal [&_li]:mb-3 [&_p]:mb-4" />
                                                             {
                                                                 chat.file && (
                                                                     <div className="flex justify-end mt-4">

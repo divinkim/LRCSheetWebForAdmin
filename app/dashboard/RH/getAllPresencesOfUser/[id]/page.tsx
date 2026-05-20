@@ -14,6 +14,7 @@ interface CalendarEvent extends EventInput {
     name: string;
     status: string;
     arrivalTime: string;
+    startTime: string;
     endTime: string;
   };
 }
@@ -59,7 +60,8 @@ const CalendarPage = () => {
               createdAt,
               status,
               User,
-              Salary
+              Salary,
+              Planning,
             } = item;
 
             const dateOnly = createdAt.split("T")[0];
@@ -82,7 +84,9 @@ const CalendarPage = () => {
                 status,
                 arrivalTime,
                 departureTime,
-                dailySalary: Salary?.dailySalary || "0"
+                dailySalary: Salary?.dailySalary || "0",
+                startTime: Planning?.startTime || "0",
+                endTime: Planning?.endTime || "0",
               }
             };
           });
@@ -328,87 +332,99 @@ function getData(
 
 
 const renderEventContent = (eventInfo: any, currentMonth: number) => {
-  const props = eventInfo.event.extendedProps;
+    const props = eventInfo.event.extendedProps;
 
-  // Sécurisation des données
-  const arrivalTime = props.arrivalTime || "";
-  const departureTime = props.departureTime || "";
-  const endTime = props.endTime || "";
-  const status = props.status || "";
-  const dailySalary = Number(props.dailySalary);
-  console.log("props", currentMonth)
-  // Calcul
-  const result = getData(
-    arrivalTime,
-    departureTime,
-    endTime,
-    status,
-    dailySalary,
-    currentMonth
-  );
+    // Sécurisation des données
+    const arrivalTime = props.arrivalTime || "";
+    const departureTime = props.departureTime || "";
+    const endTime = props.endTime || "";
+    const status = props.status || "";
+    const startTime = props.startTime || "";
 
-  const colorMap: Record<string, string> = {
-    Success: "text-green-600",
-    Danger: "text-red-600",
-    Warning: "text-yellow-500",
-    Primary: "text-blue-500"
-  };
+    const dailySalary = Number(props.dailySalary);
 
-  const statusColor = colorMap[props.calendar] || "text-gray-700";
+    console.log("props", currentMonth)
+    // Calcul
+    const result = getData(
+        arrivalTime,
+        departureTime,
+        endTime,
+        status,
+        dailySalary,
+        currentMonth
+    );
 
-  return (
-    <div className="rounded-sm lg:text-[11.5px] 2xl:text-[14px] relative mb-5 ml-3">
-      {/* Statut */}
-      <div className="flex flex-row mb-2 space-x-2">
-        <p className="text-gray-600 dark:text-gray-300 font-semibold">
-          Statut:
-        </p>
-        <div className={`${statusColor} font-semibold`}>
-          {status === "A temps"
-            ? "✅ A temps"
-            : status === "En retard"
-              ? "⏳ En retard"
-              : "❌ Absent"}
+    const colorMap: Record<string, string> = {
+        Success: "text-green-600",
+        Danger: "text-red-600",
+        Warning: "text-yellow-500",
+        Primary: "text-blue-500"
+    };
+
+    const statusColor = colorMap[props.calendar] || "text-gray-700";
+
+    return (
+        <div className="rounded-sm lg:text-[11.5px] 2xl:text-[14px] relative mb-5 ml-3">
+            {/* Statut */}
+            <div className="flex flex-row mb-2 space-x-2">
+                <p className="text-gray-600 dark:text-gray-300 font-semibold">
+                    Statut:
+                </p>
+                <div className={`${statusColor} font-semibold`}>
+                    {status === "A temps"
+                        ? "✅ A temps"
+                        : status === "En retard"
+                            ? "⏳ En retard"
+                            : "❌ Absent"}
+                </div>
+            </div>
+
+            {/* Arrivée */}
+            <div className="text-gray-700 mb-2 dark:text-white">
+                <span className="font-semibold">Arrivée:</span>{" "}
+                {arrivalTime ? arrivalTime.slice(0, 5) : "-"}
+            </div>
+
+            {/* Départ */}
+            <div className="text-gray-700 mb-2 dark:text-white">
+                <span className="font-semibold">Départ:</span>{" "}
+                {departureTime ? departureTime.slice(0, 5) : "-"}
+            </div>
+
+            <div className="text-gray-700 mb-2 dark:text-white">
+                <span className="font-semibold">Heure de début:</span>{" "}
+                {startTime ? startTime.slice(0, 5) : "-"}
+            </div>
+
+            {/* Départ */}
+            <div className="text-gray-700 mb-2 dark:text-white">
+                <span className="font-semibold">Heure de fin:</span>{" "}
+                {endTime ? endTime.slice(0, 5) : "-"}
+            </div>
+            {
+                <div className={currentMonth >= 4 ? "block" : "hidden"}>
+                    {/* Déduction */}
+                    <div className="text-gray-700 mb-2 dark:text-white">
+                        <span className="font-semibold">
+                            Déduction: <span className='text-red-500 font-bold'>{result.deductionAmount.toLocaleString()} XAF</span>
+                        </span>
+                    </div>
+                    <div className="text-gray-700 mb-2 dark:text-white">
+                        <span className="font-semibold">
+                            Déduction en %: {" "}
+                            ({result.deductionPercent}%)
+                        </span>
+                    </div>
+                    {/* Salaire du jour */}
+                </div>
+            }
+            <div className="text-gray-700 dark:text-white">
+                <span className="font-semibold">
+                    Salaire du jour: <span className="bold text-blue-600">{result.dailySalary.toLocaleString()} XAF</span>
+                </span>
+            </div>
         </div>
-      </div>
-
-      {/* Arrivée */}
-      <div className="text-gray-700 mb-2 dark:text-white">
-        <span className="font-semibold">Arrivée:</span>{" "}
-        {arrivalTime ? arrivalTime.slice(0, 5) : "-"}
-      </div>
-
-      {/* Départ */}
-      <div className="text-gray-700 mb-2 dark:text-white">
-        <span className="font-semibold">Départ:</span>{" "}
-        {departureTime ? departureTime.slice(0, 5) : "-"}
-      </div>
-      {
-
-        <div className={currentMonth >= 4 ? "block" : "hidden"}>
-          {/* Déduction */}
-          <div className="text-gray-700 mb-2 dark:text-white">
-            <span className="font-semibold">
-              Déduction: <span className='text-red-500 font-bold'>{result.deductionAmount.toLocaleString()} XAF</span>
-            </span>
-          </div>
-          <div className="text-gray-700 mb-2 dark:text-white">
-            <span className="font-semibold">
-              Déduction en %: {" "}
-              ({result.deductionPercent}%)
-            </span>
-          </div>
-          {/* Salaire du jour */}
-        </div>
-
-
-      }
-      <div className="text-gray-700 dark:text-white">
-        <span className="font-semibold">
-          Salaire du jour: <span className="bold text-blue-600">{result.dailySalary.toLocaleString()} XAF</span>
-        </span>
-      </div>
-    </div>
-  );
+    );
 };
+
 export default CalendarPage;
