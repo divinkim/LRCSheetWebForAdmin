@@ -2,7 +2,7 @@
 import { providers } from "@/index";
 import { useChat } from "./hook";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMessage, faPaperclip, faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faMessage, faPaperclip, faPhone, faSearch, faTimes, faVideo } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
 import { useState } from "react";
@@ -21,7 +21,8 @@ type ChatMessage = {
 
 export default function Chat() {
 
-    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter } = useChat();
+    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling } = useChat();
+
     const [showChat, setShowChat] = useState(false)
     const { isMobile } = useSidebarContext()
     const chatMessageGrouped: Record<string, ChatMessage[]> = chatMessage.reduce((acc, item) => {
@@ -70,6 +71,42 @@ export default function Chat() {
 
     return (
         <div className="flex h-[626px] overflow-hidden">
+            {
+                isCalling && !callAccepted && (
+                    <div className="fixed top-5 right-5 bg-white shadow-lg rounded-lg p-4 z-50">
+                        <p className="font-semibold">
+                            Appel en cours...
+                        </p>
+
+                        <button
+                            onClick={endCall}
+                            className="mt-3 bg-red-500 text-white px-4 py-2 rounded-md"
+                        >
+                            Annuler
+                        </button>
+                    </div>
+                )
+            }
+            {
+                incomingCall && !callAccepted && (
+                    <div className="fixed bottom-5 right-5 bg-white shadow-lg p-4 rounded-lg">
+                        <p>Appel entrant...</p>
+                        <button
+                            onClick={acceptCall}
+                            className="bg-green-500 text-white px-4 py-2 rounded-md"
+                        >
+                            Accepter
+                        </button>
+                    </div>
+                )
+            }
+            {
+                callAccepted && (
+                    <div className="fixed top-5 right-5 bg-green-500 text-white p-4 rounded">
+                        Appel connecté
+                    </div>
+                )
+            }
             <div className={` bg-white border-r border-gray-300 dark:border-gray-800 dark:bg-gray-900 overflow-y-auto pb-10 ${isMobile && !showChat ? "w-full" : isMobile && showChat ? "hidden" : "w-[35%]"}`}>
                 <header className="p-4 border-b border-gray-300 flex justify-between items-center bg-gray-900 dark:border dark:border-gray-800  text-white">
                     <h1 className="text-2xl text-white font-semibold">LRCSheet Chat</h1>
@@ -186,13 +223,21 @@ export default function Chat() {
                                         <img className="w-10 h-10 rounded-full object-cover" src={userData.photo ? `${providers.APIUrl}/images/${userData.photo}` : "/images/clientProfile.png"} />
                                         <h1 className="text-xl dark:text-gray-300 font-semibold">{userData.firstname} {providers.reduceLengthOfText(userData.lastname, 7)}</h1>
                                     </div>
-                                    <div className="lg:hidden" onClick={() => {
+                                    <div className="flex items-center space-x-4" onClick={() => {
                                         setShowChat(false)
                                     }}>
-                                        <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
+                                        <div className="flex items-center space-x-3">
+                                            <FontAwesomeIcon icon={faPhone} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105 cursor-pointer ease duration-500" onClick={startAudioCall} />
+                                            <FontAwesomeIcon icon={faVideo} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105" />
+                                        </div>
+                                        <div className="lg:hidden">
+                                            <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
+                                        </div>
                                     </div>
                                 </div>
                             </header>
+
+                            <audio ref={remoteAudio} autoPlay />
 
                             <div className="h-[500px] pb-32 lg:pb-20 overflow-y-auto px-4 pt-4">
                                 {

@@ -60,6 +60,190 @@ export function useChat() {
     })
     const [chatMessage, setChatMessage] = useState<ChatMessage[]>([]);
 
+    const [isCalling, setIsCalling] = useState(false);
+    const [incomingCall, setIncomingCall] = useState<any>(null);
+    const [callAccepted, setCallAccepted] = useState(false);
+
+    const peerConnection = useRef<RTCPeerConnection | null>(null);
+    const localStream = useRef<MediaStream | null>(null);
+    const remoteAudio = useRef<HTMLAudioElement | null>(null);
+
+    //Fonction pour lancer un appel
+    const startAudioCall = async () => {
+        try {
+
+            setIsCalling(true);
+
+            // récupération micro
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+
+            localStream.current = stream;
+
+            // création connexion WebRTC
+            const pc = new RTCPeerConnection({
+                iceServers: [
+                    {
+                        urls: "stun:stun.l.google.com:19302"
+                    }
+                ]
+            });
+
+            peerConnection.current = pc;
+
+            // ajouter audio
+            stream.getTracks().forEach(track => {
+                pc.addTrack(track, stream);
+            });
+
+            // audio distant
+            pc.ontrack = (event) => {
+                if (remoteAudio.current) {
+                    remoteAudio.current.srcObject = event.streams[0];
+                }
+            };
+
+            // ICE candidate
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit("iceCandidate", {
+                        candidate: event.candidate,
+                        to: userData.UserId
+                    });
+                }
+            };
+
+            // créer offre
+            const offer = await pc.createOffer();
+
+            await pc.setLocalDescription(offer);
+
+            socket.emit("callUser", {
+                to: userData.UserId,
+                from: AdminId,
+                offer
+            });
+
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    //Fonction pour recevoir un appel
+    useEffect(() => {
+        socket.on("incomingCall", async (data) => {
+            setIncomingCall(data);
+        });
+
+        return () => {
+            socket.off("incomingCall");
+        }
+    }, []);
+
+    const acceptCall = async () => {
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+
+        localStream.current = stream;
+
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                {
+                    urls: "stun:stun.l.google.com:19302"
+                }
+            ]
+        });
+
+        peerConnection.current = pc;
+
+        stream.getTracks().forEach(track => {
+            pc.addTrack(track, stream);
+        });
+
+        pc.ontrack = (event) => {
+            if (remoteAudio.current) {
+                remoteAudio.current.srcObject = event.streams[0];
+            }
+        };
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit("iceCandidate", {
+                    candidate: event.candidate,
+                    to: incomingCall.from
+                });
+            }
+        };
+
+        await pc.setRemoteDescription(
+            new RTCSessionDescription(incomingCall.offer)
+        );
+
+        const answer = await pc.createAnswer();
+
+        await pc.setLocalDescription(answer);
+
+        socket.emit("answerCall", {
+            to: incomingCall.from,
+            answer
+        });
+
+        setCallAccepted(true);
+    };
+    //Réponse à l'appel
+    useEffect(() => {
+        socket.on("callAnswered", async (data) => {
+
+            await peerConnection.current?.setRemoteDescription(
+                new RTCSessionDescription(data.answer)
+            );
+
+            setCallAccepted(true);
+        });
+
+        return () => {
+            socket.off("callAnswered");
+        }
+
+    }, []);
+
+    //
+    useEffect(() => {
+        socket.on("iceCandidate", async (data) => {
+            try {
+
+                await peerConnection.current?.addIceCandidate(
+                    new RTCIceCandidate(data.candidate)
+                );
+
+            } catch (err) {
+                console.log(err);
+            }
+
+        });
+
+        return () => {
+            socket.off("iceCandidate");
+        }
+
+    }, []);
+
+    const endCall = () => {
+
+        peerConnection.current?.close();
+
+        localStream.current?.getTracks().forEach(track => {
+            track.stop();
+        });
+
+        setCallAccepted(false);
+        setIncomingCall(null);
+        setIsCalling(false);
+    };
+
     function getNotificationCount(UserId: number) {
         const count = storedNotificationsArray.filter((item: { senderId: string }) => Number(item.senderId) === UserId);
         return count.length;
@@ -264,5 +448,5 @@ export function useChat() {
 
     console.log("le tableau", storedNotificationsArray)
 
-    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter }
+    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling }
 }

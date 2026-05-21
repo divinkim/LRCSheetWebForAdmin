@@ -67,6 +67,13 @@ export function Sidebar() {
       const EnterpriseId = localStorage.getItem("EnterpriseId");
       const adminService = localStorage.getItem("adminService");
       const adminFcmToken = localStorage.getItem("adminFcmToken");
+      const UserId = Number(id);
+      
+      useEffect(() => {
+        if (UserId) {
+          socket.emit("register", Number(UserId));
+        }
+      }, [UserId]);
 
       const datas = {
         fcmToken: adminFcmToken,
