@@ -125,6 +125,13 @@ export function useChat() {
     }, []);
 
     useEffect(() => {
+        (async () => {
+            const chatMessage = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getChatMessage", null);
+            setChatMessage(chatMessage);
+        })()
+    }, [storedNotificationsArray])
+
+    useEffect(() => {
         (() => {
             if (ref.current) {
                 ref.current.scrollIntoView({ behavior: "smooth" })
