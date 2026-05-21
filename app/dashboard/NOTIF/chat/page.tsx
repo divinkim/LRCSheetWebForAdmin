@@ -103,7 +103,7 @@ export default function Chat() {
                     </div>
                 </div>
             )}
-           
+
             {
                 isCalling && !callAccepted && (
                     <div className="fixed top-5 right-5 bg-white shadow-lg rounded-lg p-4 z-50">
@@ -267,6 +267,7 @@ export default function Chat() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
                             </header>
 
                             <audio ref={remoteAudio} autoPlay />
