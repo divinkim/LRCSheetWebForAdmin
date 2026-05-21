@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import socket from "@/socket";
 import {
     faChevronDown, faChevronUp, faUser, faUserGroup, faBell, faPaperPlane, faList, faFileAlt, faShieldAlt,
     faUserClock, faUsers, faUserPlus, faClipboardList,
@@ -127,6 +128,21 @@ export default function SidebarHook() {
         }
         //Notifications live
     }, []);
+
+    useEffect(() => {
+        const event = (data: { senderId: number, receiverId: number }) => {
+            const removeNotificationsCount = storedNotificationsArray.filter(
+                item => item.senderId !== String(data.senderId) && item.receiverId !== data.receiverId
+            );
+            console.log("le nouveau tableau de notif", removeNotificationsCount)
+            setStoredNotificationsArray(removeNotificationsCount);
+        }
+        socket.off("removeNotificationsCount", event);
+        socket.on("removeNotificationsCount", event);
+        return () => {
+            socket.on("removeNotificationsCount", event);
+        }
+    }, [])
 
     useEffect(() => {
         (() => {

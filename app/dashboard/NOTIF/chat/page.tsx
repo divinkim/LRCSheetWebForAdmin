@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
 import { useState } from "react";
 import { ClipLoader } from "react-spinners";
+import socket from "@/socket";
 import Loader from "@/components/loader/loader";
 type ChatMessage = {
     role: string;
@@ -106,6 +107,7 @@ export default function Chat() {
                                     })
                                     setShowChat(true);
                                     removeNotificationCount(item.UserId)
+                                    socket.emit("onReadMessage", { senderId: item.UserId, receiverId: Number(AdminId) })
                                 }} className={item.UserId !== AdminId ? "flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover dark:hover:bg-gray-800/50 ease duration-500   border-b border-gray-300 dark:border-gray-800" : "hidden"}>
 
                                     <div className="w-12 h-12 bg-gray-300 rounded-full mr-3">
