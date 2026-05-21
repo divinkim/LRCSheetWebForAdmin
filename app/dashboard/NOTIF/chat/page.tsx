@@ -21,7 +21,10 @@ type ChatMessage = {
 
 export default function Chat() {
 
-    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling } = useChat();
+    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
+        remoteVideo,
+        startVideoCall,
+        callType } = useChat();
 
     const [showChat, setShowChat] = useState(false)
     const { isMobile } = useSidebarContext()
@@ -71,6 +74,36 @@ export default function Chat() {
 
     return (
         <div className="flex h-[626px] overflow-hidden">
+            {callType === "video" && (
+                <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center">
+
+                    {/* REMOTE VIDEO */}
+                    <video
+                        ref={remoteVideo}
+                        autoPlay
+                        className="w-full h-full object-cover"
+                    />
+
+                    {/* LOCAL VIDEO */}
+                    <video
+                        ref={localVideo}
+                        autoPlay
+                        muted
+                        className="w-40 h-40 absolute bottom-5 right-5 border-2 border-white rounded-lg"
+                    />
+
+                    {/* CONTROLS */}
+                    <div className="absolute top-5 right-5">
+                        <button
+                            onClick={endCall}
+                            className="bg-red-600 text-white px-4 py-2 rounded"
+                        >
+                            Raccrocher
+                        </button>
+                    </div>
+                </div>
+            )}
+           
             {
                 isCalling && !callAccepted && (
                     <div className="fixed top-5 right-5 bg-white shadow-lg rounded-lg p-4 z-50">
@@ -228,13 +261,12 @@ export default function Chat() {
                                     }}>
                                         <div className="flex items-center space-x-3">
                                             <FontAwesomeIcon icon={faPhone} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105 cursor-pointer ease duration-500" onClick={startAudioCall} />
-                                            <FontAwesomeIcon icon={faVideo} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105" />
-                                        </div>
-                                        <div className="lg:hidden">
-                                            <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
+                                            <FontAwesomeIcon icon={faVideo} onClick={startVideoCall} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full cursor-pointer dark:text-gray-300 hover:scale-105" />
+                                            <div className="lg:hidden">
+                                                <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
                             </header>
 
                             <audio ref={remoteAudio} autoPlay />

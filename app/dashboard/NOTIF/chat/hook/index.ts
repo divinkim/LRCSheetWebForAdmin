@@ -63,10 +63,83 @@ export function useChat() {
     const [isCalling, setIsCalling] = useState(false);
     const [incomingCall, setIncomingCall] = useState<any>(null);
     const [callAccepted, setCallAccepted] = useState(false);
+    const localVideo = useRef<HTMLVideoElement | null>(null);
+    const remoteVideo = useRef<HTMLVideoElement | null>(null);
 
+    const [callType, setCallType] = useState<"audio" | "video">("audio");
     const peerConnection = useRef<RTCPeerConnection | null>(null);
     const localStream = useRef<MediaStream | null>(null);
     const remoteAudio = useRef<HTMLAudioElement | null>(null);
+
+    const startVideoCall = async () => {
+        try {
+
+            setIsCalling(true);
+            setCallType("video");
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: true
+            });
+
+            localStream.current = stream;
+
+            // afficher ma vidéo
+            if (localVideo.current) {
+                localVideo.current.srcObject = stream;
+            }
+
+            const pc = new RTCPeerConnection({
+                iceServers: [
+                    {
+                        urls: "stun:stun.l.google.com:19302"
+                    }
+                ]
+            });
+
+            peerConnection.current = pc;
+
+            stream.getTracks().forEach(track => {
+                pc.addTrack(track, stream);
+            });
+
+            pc.ontrack = (event) => {
+
+                // audio
+                if (remoteAudio.current) {
+                    remoteAudio.current.srcObject = event.streams[0];
+                }
+
+                // video
+                if (remoteVideo.current) {
+                    remoteVideo.current.srcObject = event.streams[0];
+                }
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit("iceCandidate", {
+                        candidate: event.candidate,
+                        to: userData.UserId
+                    });
+                }
+            };
+
+            const offer = await pc.createOffer();
+
+            await pc.setLocalDescription(offer);
+
+            socket.emit("callUser", {
+                to: userData.UserId,
+                from: AdminId,
+                offer,
+                type: "video"
+            });
+
+        } catch (error) {
+            console.log(error);
+        }
+    };
 
     //Fonction pour lancer un appel
     const startAudioCall = async () => {
@@ -131,23 +204,25 @@ export function useChat() {
     };
 
     //Fonction pour recevoir un appel
-    useEffect(() => {
-        socket.on("incomingCall", async (data) => {
-            setIncomingCall(data);
-        });
+    socket.on("incomingCall", async (data) => {
 
-        return () => {
-            socket.off("incomingCall");
-        }
-    }, []);
+        setCallType(data.type || "audio");
+
+        setIncomingCall(data);
+    });
 
     const acceptCall = async () => {
 
         const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
+            audio: true,
+            video: callType === "video"
         });
 
         localStream.current = stream;
+
+        if (callType === "video" && localVideo.current) {
+            localVideo.current.srcObject = stream;
+        }
 
         const pc = new RTCPeerConnection({
             iceServers: [
@@ -164,8 +239,13 @@ export function useChat() {
         });
 
         pc.ontrack = (event) => {
+
             if (remoteAudio.current) {
                 remoteAudio.current.srcObject = event.streams[0];
+            }
+
+            if (remoteVideo.current) {
+                remoteVideo.current.srcObject = event.streams[0];
             }
         };
 
@@ -242,6 +322,14 @@ export function useChat() {
         setCallAccepted(false);
         setIncomingCall(null);
         setIsCalling(false);
+
+        if (localVideo.current) {
+            localVideo.current.srcObject = null;
+        }
+
+        if (remoteVideo.current) {
+            remoteVideo.current.srcObject = null;
+        }
     };
 
     function getNotificationCount(UserId: number) {
@@ -448,5 +536,10 @@ export function useChat() {
 
     console.log("le tableau", storedNotificationsArray)
 
-    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling }
+    return {
+        users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
+        remoteVideo,
+        startVideoCall,
+        callType
+    }
 }
