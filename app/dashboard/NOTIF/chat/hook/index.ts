@@ -67,6 +67,11 @@ export function useChat() {
 
     function removeNotificationCount(UserId: number) {
         const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: string, adminPageIndex: string }) => Number(item.senderId) !== UserId && (Number(item.adminPageIndex) === 0 && Number(item.adminSectionIndex) === 0));
+        setNotificationCountLive({
+            status: false,
+            count: [0],
+            UserId: 0
+        })
         setStoredNotificationsArray(deleteItem);
         localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem))
     }
@@ -167,6 +172,8 @@ export function useChat() {
                     count: [notificationCount],
                     UserId: Number(datas.senderId)
                 })
+
+                setStoredNotificationsArray([...storedNotificationsArray, datas])
             }
         };
 
@@ -204,16 +211,14 @@ export function useChat() {
             }
         ]);
 
-
-
-        // const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
-        //     content: data.content,
-        //     receiverId: userData.UserId,
-        //     senderId: AdminId,
-        //     EnterpriseId: 1,
-        //     file: data.files,
-        //     role: "Super-Admin",
-        // });
+        const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
+            content: data.content,
+            receiverId: userData.UserId,
+            senderId: AdminId,
+            EnterpriseId: 1,
+            file: data.files,
+            role: "Super-Admin",
+        });
 
         socket.emit("onSendChatData", {
             path: "/Dashboard/NOTIF/chat",
@@ -229,28 +234,28 @@ export function useChat() {
             files: ""
         })
 
-        // if (response) {
-        //     const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
-        //         path: "/dashboard/NOTIF/chat",
-        //         EnterpriseId: userData.EnterpriseId.toString(),
-        //         messagingType: "notification",
-        //         adminSectionIndex: "0",
-        //         adminPageIndex: "0",
-        //         senderId: String(AdminId),
-        //         receiverId: String(userData.UserId)
-        //     });
-        //     const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
-        //         senderEmail: "lrcsheet@gmail.com",
-        //         subject: "Notification entrante!",
-        //         content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
-        //         emails: [userData.email],
-        //     })
-        //     console.log(notification);
-        //     console.log(sendMail)
-        // }
+        if (response) {
+            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
+                path: "/dashboard/NOTIF/chat",
+                EnterpriseId: userData.EnterpriseId.toString(),
+                messagingType: "notification",
+                adminSectionIndex: "0",
+                adminPageIndex: "0",
+                senderId: String(AdminId),
+                receiverId: String(userData.UserId)
+            });
+            const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
+                senderEmail: "lrcsheet@gmail.com",
+                subject: "Notification entrante!",
+                content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
+                emails: [userData.email],
+            })
+            console.log(notification);
+            console.log(sendMail)
+        }
     }
 
     console.log("le tableau", storedNotificationsArray)
 
-    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter}
+    return { users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter }
 }
