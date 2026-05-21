@@ -158,8 +158,7 @@ export function useChat() {
         const handle = (datas: any) => {
             const UserId = localStorage.getItem("id")
             if (datas.receiverId === String(UserId)) {
-                console.log("event reçu", datas)
-                setStoredNotificationsArray((prev) => [...prev, datas]);
+                console.log("event reçu en live LRCSheetWebAdmin chat", datas)
 
                 const notificationCount = [...storedNotificationsArray, datas].filter(item => item.senderId === datas.senderId).length;
 
@@ -207,14 +206,14 @@ export function useChat() {
 
 
 
-        const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
-            content: data.content,
-            receiverId: userData.UserId,
-            senderId: AdminId,
-            EnterpriseId: 1,
-            file: data.files,
-            role: "Super-Admin",
-        });
+        // const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
+        //     content: data.content,
+        //     receiverId: userData.UserId,
+        //     senderId: AdminId,
+        //     EnterpriseId: 1,
+        //     file: data.files,
+        //     role: "Super-Admin",
+        // });
 
         socket.emit("onSendChatData", {
             path: "/Dashboard/NOTIF/chat",
@@ -230,25 +229,25 @@ export function useChat() {
             files: ""
         })
 
-        if (response) {
-            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
-                path: "/dashboard/NOTIF/chat",
-                EnterpriseId: userData.EnterpriseId.toString(),
-                messagingType: "notification",
-                adminSectionIndex: "0",
-                adminPageIndex: "0",
-                senderId: String(AdminId),
-                receiverId: String(userData.UserId)
-            });
-            const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
-                senderEmail: "lrcsheet@gmail.com",
-                subject: "Notification entrante!",
-                content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
-                emails: [userData.email],
-            })
-            console.log(notification);
-            console.log(sendMail)
-        }
+        // if (response) {
+        //     const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
+        //         path: "/dashboard/NOTIF/chat",
+        //         EnterpriseId: userData.EnterpriseId.toString(),
+        //         messagingType: "notification",
+        //         adminSectionIndex: "0",
+        //         adminPageIndex: "0",
+        //         senderId: String(AdminId),
+        //         receiverId: String(userData.UserId)
+        //     });
+        //     const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
+        //         senderEmail: "lrcsheet@gmail.com",
+        //         subject: "Notification entrante!",
+        //         content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
+        //         emails: [userData.email],
+        //     })
+        //     console.log(notification);
+        //     console.log(sendMail)
+        // }
     }
 
     console.log("le tableau", storedNotificationsArray)

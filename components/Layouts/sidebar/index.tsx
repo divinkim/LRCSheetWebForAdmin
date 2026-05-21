@@ -84,6 +84,8 @@ export function Sidebar() {
   useEffect(() => {
     const handler = (data: any) => {
       const UserId = localStorage.getItem("id");
+      console.log("les données en live LRCSheetWebAdmin sidebare", data)
+      console.log(UserId)
       if (data.receiverId === String(UserId)) {
         console.log(data)
         setStoredNotificationsArray((prev) => [...prev, data]);
