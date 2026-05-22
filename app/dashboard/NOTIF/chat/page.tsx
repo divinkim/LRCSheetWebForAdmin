@@ -24,7 +24,7 @@ export default function Chat() {
     const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
         remoteVideo,
         startVideoCall,
-        callType } = useChat();
+        callType, setIsCalling, setCallType } = useChat();
 
     const [showChat, setShowChat] = useState(false)
     const { isMobile } = useSidebarContext()
@@ -76,7 +76,6 @@ export default function Chat() {
         <div className="flex h-[626px] overflow-hidden">
             {callType === "video" && (
                 <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center">
-
                     {/* REMOTE VIDEO */}
                     <video
                         ref={remoteVideo}
@@ -95,8 +94,11 @@ export default function Chat() {
                     {/* CONTROLS */}
                     <div className="absolute top-5 right-5">
                         <button
-                            onClick={endCall}
-                            className="bg-red-600 text-white px-4 py-2 rounded"
+                            onClick={() => {
+                                endCall();
+                                setCallType("audio");
+                            }}
+                            className="bg-red-500 ease duration-500 hover:bg-red-600 text-white px-4 py-2 rounded"
                         >
                             Raccrocher
                         </button>
@@ -106,37 +108,68 @@ export default function Chat() {
 
             {
                 isCalling && !callAccepted && (
-                    <div className="fixed top-5 right-5 bg-white shadow-lg rounded-lg p-4 z-50">
-                        <p className="font-semibold">
-                            Appel en cours...
-                        </p>
-
-                        <button
-                            onClick={endCall}
-                            className="mt-3 bg-red-500 text-white px-4 py-2 rounded-md"
-                        >
-                            Annuler
-                        </button>
+                    <div className="fixed flex items-center justify-center z-50 w-full h-full bg-black/70">
+                        <div className="bg-white w-[350px] lg:w-[470px] rounded-md h-[400px] relative lg:right-36 -top-10 flex justify-center items-center">
+                            <div className="flex flex-col space-y-5">
+                                <h1 className="text-center text-xl font-bold text-gray-700">Appel en cours...</h1>
+                                <img src="/images/clientProfile.png" className="rounded-full w-[150px] h-[150px] relative left-8" />
+                                <div className='flex items-center space-x-3'>
+                                    <button onClick={endCall}
+                                        className="bg-red-500 ease duration-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+                                    >
+                                        Annuler
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )
             }
+
             {
                 incomingCall && !callAccepted && (
-                    <div className="fixed bottom-5 right-5 bg-white shadow-lg p-4 rounded-lg">
-                        <p>Appel entrant...</p>
-                        <button
-                            onClick={acceptCall}
-                            className="bg-green-500 text-white px-4 py-2 rounded-md"
-                        >
-                            Accepter
-                        </button>
+                    <div className="fixed flex items-center justify-center z-50  w-full h-full bg-black/70">
+                        <div className="bg-white w-[350px] lg:w-[470px] rounded-md h-[400px] relative lg:right-36 -top-10 flex justify-center items-center">
+                            <div className="flex flex-col space-y-5">
+                                <h1 className="text-center text-xl font-bold text-gray-700">Appel entrant...</h1>
+                                <img src="/images/clientProfile.png" className="rounded-full w-[150px] h-[150px] relative left-8" />
+                                <div className='flex items-center space-x-3'>
+                                    <button
+                                        onClick={acceptCall}
+                                        className="bg-green-500 ease duration-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
+                                    >
+                                        Accepter
+                                    </button>
+                                    <button onClick={endCall}
+                                        className="bg-red-500 ease duration-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+                                    >
+                                        Réfuser
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 )
             }
+
             {
-                callAccepted && (
-                    <div className="fixed top-5 right-5 bg-green-500 text-white p-4 rounded">
-                        Appel connecté
+                callAccepted && callType !== "video" && (
+                    <div className="fixed flex items-center justify-center z-50 w-full h-full bg-black/70">
+                        <div className="bg-white w-[350px] lg:w-[470px] rounded-md h-[400px] relative lg:right-36 -top-10 flex justify-center items-center">
+                            <div className="flex flex-col space-y-5">
+                                <h1 className="text-center font-bold text-gray-700">Appel connecté...</h1>
+                                <img src="/images/clientProfile.png" className="rounded-full w-[150px] h-[150px] relative left-2" />
+                                <div className='flex items-center space-x-3'>
+                                    <button onClick={endCall}
+                                        className="bg-red-500 ease relative left-5 duration-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+                                    >
+                                        Raccrocher
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 )
             }
@@ -205,9 +238,9 @@ export default function Chat() {
                                             }
 
                                             {
-                                                notificationsCountLive.status && notificationsCountLive.UserId === item.UserId && notificationsCountLive.count[0] > 0 && (
+                                                notificationsCountLive.status && notificationsCountLive.UserId === item.UserId && notificationsCountLive.count > 0 && (
                                                     <p className="bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full">
-                                                        {notificationsCountLive.count[0]}
+                                                        {notificationsCountLive.count}
                                                     </p>
                                                 )
                                             }
@@ -270,7 +303,7 @@ export default function Chat() {
                                 </div>
                             </header>
 
-                            <audio ref={remoteAudio} autoPlay />
+                            <audio ref={remoteAudio} autoPlay playsInline />
 
                             <div className="h-[500px] pb-32 lg:pb-20 overflow-y-auto px-4 pt-4">
                                 {

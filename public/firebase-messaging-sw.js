@@ -55,14 +55,15 @@ async function saveNotificationToDB(notification) {
 messaging.onBackgroundMessage(async (payload) => {
   console.log("Payload reçu en background:", payload);
 
-  const title = payload?.data?.title || "Nouvelle notification";
-  const body = payload?.data?.body || "";
+  const title = payload?.notification?.title || "Nouvelle notification";
+  const body = payload?.notification?.body || "";
 
   const notificationData = {
     path: payload?.data?.path || "/",
     adminSectionIndex: payload?.data?.adminSectionIndex || "0",
     adminPageIndex: payload?.data?.adminPageIndex || "0",
-    senderId: payload?.data?.senderId
+    senderId: payload?.data?.senderId,
+    receiverId: payload?.data?.receiverId,
   };
 
   //Sauvegarde locale
@@ -70,8 +71,9 @@ messaging.onBackgroundMessage(async (payload) => {
 
   //Affichage de la notification navigateur
   await self.registration.showNotification(title, {
+    title,
     body: body,
-    icon: "/images/logo/logo.png",
+    icon: "/images/logo.png",
     data: notificationData,
     requireInteraction: true, // reste affichée jusqu'à interaction
     actions: [

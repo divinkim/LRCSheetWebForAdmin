@@ -55,7 +55,7 @@ export function useChat() {
     })
     const [notificationsCountLive, setNotificationCountLive] = useState({
         status: false,
-        count: [0],
+        count: 0,
         UserId: 0
     })
     const [chatMessage, setChatMessage] = useState<ChatMessage[]>([]);
@@ -71,11 +71,60 @@ export function useChat() {
     const localStream = useRef<MediaStream | null>(null);
     const remoteAudio = useRef<HTMLAudioElement | null>(null);
 
+    // STATUS APPEL
+    const [callStatus, setCallStatus] = useState<
+        "idle" | "ringing" | "accepted" | "rejected" | "ended"
+    >("idle");
+
+    // DURÉE APPEL
+    const [callDuration, setCallDuration] = useState(0);
+
+    // TIMER
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // FORMAT TEMPS
+    function formatCallDuration(seconds: number) {
+
+        const hrs = Math.floor(seconds / 3600);
+
+        const mins = Math.floor((seconds % 3600) / 60);
+
+        const secs = seconds % 60;
+
+        return [
+            hrs.toString().padStart(2, "0"),
+            mins.toString().padStart(2, "0"),
+            secs.toString().padStart(2, "0")
+        ].join(":");
+    }
+
+    // START TIMER
+    function startCallTimer() {
+
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+        }
+
+        timerRef.current = setInterval(() => {
+            setCallDuration(prev => prev + 1);
+        }, 1000);
+    }
+
+    // STOP TIMER
+    function stopCallTimer() {
+
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+        }
+    }
+
     const startVideoCall = async () => {
         try {
 
             setIsCalling(true);
             setCallType("video");
+            setCallStatus("ringing");
+
 
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
@@ -103,16 +152,26 @@ export function useChat() {
                 pc.addTrack(track, stream);
             });
 
-            pc.ontrack = (event) => {
+            pc.ontrack = async (event) => {
 
-                // audio
+                console.log("TRACK REÇU", event);
+
+                const remoteStream = event.streams[0];
+
                 if (remoteAudio.current) {
-                    remoteAudio.current.srcObject = event.streams[0];
-                }
 
-                // video
-                if (remoteVideo.current) {
-                    remoteVideo.current.srcObject = event.streams[0];
+                    remoteAudio.current.srcObject = remoteStream;
+
+                    remoteAudio.current.volume = 1;
+
+                    remoteAudio.current.muted = false;
+
+                    try {
+                        await remoteAudio.current.play();
+                        console.log("audio play ok");
+                    } catch (err) {
+                        console.log("play bloqué", err);
+                    }
                 }
             };
 
@@ -146,6 +205,7 @@ export function useChat() {
         try {
 
             setIsCalling(true);
+            setCallStatus("ringing");
 
             // récupération micro
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -205,10 +265,11 @@ export function useChat() {
 
     //Fonction pour recevoir un appel
     socket.on("incomingCall", async (data) => {
-
-        setCallType(data.type || "audio");
-
-        setIncomingCall(data);
+        if (data.to === Number(AdminId)) {
+            console.log("appel entrant", data)
+            setCallType(data.type || "audio");
+            setIncomingCall(data);
+        }
     });
 
     const acceptCall = async () => {
@@ -271,8 +332,11 @@ export function useChat() {
             answer
         });
 
+        setIsCalling(true);
         setCallAccepted(true);
+        setCallStatus("ringing");
     };
+
     //Réponse à l'appel
     useEffect(() => {
         socket.on("callAnswered", async (data) => {
@@ -282,11 +346,36 @@ export function useChat() {
             );
 
             setCallAccepted(true);
+
+            setCallStatus("accepted");
+
+            setCallStatus("accepted");
+            startCallTimer();
+            startCallTimer();
+
         });
 
         return () => {
             socket.off("callAnswered");
         }
+
+    }, []);
+
+    //Appel réjeté
+    useEffect(() => {
+
+        socket.on("callRejected", () => {
+
+            setCallStatus("rejected");
+
+            setIsCalling(false);
+
+            stopCallTimer();
+        });
+
+        return () => {
+            socket.off("callRejected");
+        };
 
     }, []);
 
@@ -311,6 +400,21 @@ export function useChat() {
 
     }, []);
 
+    const rejectCall = () => {
+
+        socket.emit("rejectCall", {
+            to: incomingCall.from
+        });
+
+        setIncomingCall(null);
+
+        setCallStatus("rejected");
+
+        setIsCalling(false);
+
+        stopCallTimer();
+    };
+
     const endCall = () => {
 
         peerConnection.current?.close();
@@ -318,6 +422,10 @@ export function useChat() {
         localStream.current?.getTracks().forEach(track => {
             track.stop();
         });
+
+        stopCallTimer();
+        setCallStatus("ended");
+        setCallDuration(0);
 
         setCallAccepted(false);
         setIncomingCall(null);
@@ -341,7 +449,7 @@ export function useChat() {
         const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: string, adminPageIndex: string }) => Number(item.senderId) !== UserId && (Number(item.adminPageIndex) === 0 && Number(item.adminSectionIndex) === 0));
         setNotificationCountLive({
             status: false,
-            count: [0],
+            count: 0,
             UserId: 0
         })
         setStoredNotificationsArray(deleteItem);
@@ -443,21 +551,22 @@ export function useChat() {
             const UserId = localStorage.getItem("id")
             if (datas.receiverId === String(UserId)) {
                 console.log("event reçu en live LRCSheetWebAdmin chat", datas)
-
+                const local = localStorage.getItem("storedNotificationsArray");
+                const storedNotificationsArray = local ? JSON.parse(local) : [];
                 const notificationCount = [...storedNotificationsArray, datas].filter(item => item.senderId === datas.senderId).length;
 
                 setNotificationCountLive({
                     status: true,
-                    count: [notificationCount],
+                    count: notificationCount - 1,
                     UserId: Number(datas.senderId)
                 })
 
-                setStoredNotificationsArray([...storedNotificationsArray, datas])
+                setStoredNotificationsArray([...storedNotificationsArray, datas]);
+                // localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, datas]));
             }
         };
 
         socket.off("getChatData", handle);
-
         socket.on("getChatData", handle);
 
         return () => {
@@ -535,11 +644,16 @@ export function useChat() {
     }
 
     console.log("le tableau", storedNotificationsArray)
+    // formatCallDuration(callDuration)
 
     return {
         users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
         remoteVideo,
         startVideoCall,
-        callType
+        callType, setIsCalling, setCallType,
+        rejectCall,
+        callStatus,
+        callDuration,
+        formatCallDuration
     }
 }

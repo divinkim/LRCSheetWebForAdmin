@@ -104,52 +104,62 @@ export default function SidebarHook() {
                         receiverId: remoteMessage.data?.receiverId,
                     };
 
-                    setStoredNotificationsArray((prev) => [...prev, notif]);
-                    setCount(prevCount => prevCount + 1);
+                    localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, notif]));
 
-                    Swal.fire({
-                        icon: "info",
-                        title: "Notification entrante",
-                        text: "Vous avez une nouvelle notification",
-                        showCancelButton: true,
-                        cancelButtonText: "Plus tard",
-                        confirmButtonText: "Voir",
-                    }).then((res) => {
-                        if (res.isConfirmed) {
-                            window.location.href = `${notif.path}`;
-                        }
-                    });
+                    // setCount(prevCount => prevCount + 1);
+                    // Swal.fire({
+                    //     icon: "info",
+                    //     title: "Notification entrante",
+                    //     text: "Vous avez une nouvelle notification",
+                    //     showCancelButton: true,
+                    //     cancelButtonText: "Plus tard",
+                    //     confirmButtonText: "Voir",
+                    // }).then((res) => {
+                    //     if (res.isConfirmed) {
+                    //         window.location.href = `${notif.path}`;
+                    //     }
+                    // });
                 } else if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId) && remoteMessage.data?.page) {
 
                 }
             });
 
-            return () => unsubscribe();
+            return () => { unsubscribe() };
         }
         //Notifications live
     }, []);
 
     useEffect(() => {
         const event = (data: { senderId: number, receiverId: number }) => {
+            const UserId = localStorage.getItem("id");
+            const local = localStorage.getItem("storedNotificationsArray");
+            const storedNotificationsArray = local ? JSON.parse(local) : [];
+
+            console.log("événement écoute de lecture", data)
+            console.log("le tableau de notification", storedNotificationsArray)
+            console.log("le UserId", UserId)
+
             const removeNotificationsCount = storedNotificationsArray.filter(
-                item => item.senderId !== String(data.senderId) && item.receiverId !== data.receiverId
+                (item: { senderId: string, receiverId: string }) => item.senderId !== String(data.senderId) && String(data.receiverId) !== String(UserId)
             );
             console.log("le nouveau tableau de notif", removeNotificationsCount)
             setStoredNotificationsArray(removeNotificationsCount);
         }
+
         socket.off("removeNotificationsCount", event);
         socket.on("removeNotificationsCount", event);
+
         return () => {
-            socket.on("removeNotificationsCount", event);
+            socket.off("removeNotificationsCount", event);
         }
     }, [])
 
-    useEffect(() => {
-        (() => {
-            console.log("les notifs en question", storedNotificationsArray);
-            if (storedNotificationsArray.length > 0) localStorage.setItem("storedNotificationsArray", JSON.stringify(storedNotificationsArray));
-        })();
-    }, [count]);
+    // useEffect(() => {
+    //     (() => {
+    //         console.log("les notifs en question", storedNotificationsArray);
+    //         if (storedNotificationsArray.length > 0) localStorage.setItem("storedNotificationsArray", JSON.stringify(storedNotificationsArray));
+    //     })();
+    // }, [count]);
 
     const ItemAside = [
         // Onglet notifications

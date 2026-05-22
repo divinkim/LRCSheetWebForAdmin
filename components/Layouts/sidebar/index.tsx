@@ -68,7 +68,7 @@ export function Sidebar() {
       const adminService = localStorage.getItem("adminService");
       const adminFcmToken = localStorage.getItem("adminFcmToken");
       const UserId = Number(id);
-      
+
       useEffect(() => {
         if (UserId) {
           socket.emit("register", Number(UserId));
@@ -94,8 +94,11 @@ export function Sidebar() {
       console.log("les données en live LRCSheetWebAdmin sidebare", data)
       console.log(UserId)
       if (data.receiverId === String(UserId)) {
+        const local = localStorage.getItem("storedNotificationsArray");
+        const storedNotificationsArray = local ? JSON.parse(local) : [];
         console.log(data)
-        setStoredNotificationsArray((prev) => [...prev, data]);
+        setStoredNotificationsArray([...storedNotificationsArray, data]);
+        localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, data]))
       }
     }
 
