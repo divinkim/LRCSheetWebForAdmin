@@ -203,7 +203,7 @@ const CalendarPage = () => {
       <div className="flex">
         <div className="rounded-2xl border w-full m-4 border-gray-200 dark:border-gray-300 dark:bg-gray-900 bg-white py-6 px-4">
           {/* Header Infos Employé */}
-          <div className="flex mb-6  p-10 bg-gray-800 rounded shadow-sm justify-between">
+          <div className="flex mb-6 flex-wrap  p-10 bg-gray-800 rounded shadow-sm justify-between">
             <div className="w-[200px] h-[200px]">
               <img src={data.photo ? `${providers.APIUrl}/images/${data.photo}` : "/images/clientProfile.png"} alt="" className="w-full h-full object-cover rounded-full" />
             </div>

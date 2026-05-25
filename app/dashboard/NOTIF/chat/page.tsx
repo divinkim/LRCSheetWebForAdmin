@@ -24,7 +24,7 @@ export default function Chat() {
     const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
         remoteVideo,
         startVideoCall,
-        callType, setIsCalling, setCallType } = useChat();
+        callType, setIsCalling, setCallType, usersOnLine } = useChat();
 
     const [showChat, setShowChat] = useState(false)
     const { isMobile } = useSidebarContext()
@@ -212,13 +212,14 @@ export default function Chat() {
                                     removeNotificationCount(item.UserId)
                                     socket.emit("onReadMessage", { senderId: item.UserId, receiverId: Number(AdminId) })
                                 }} className={item.UserId !== AdminId ? "flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover dark:hover:bg-gray-800/50 ease duration-500   border-b border-gray-300 dark:border-gray-800" : "hidden"}>
-
-                                    <div className="w-12 h-12 bg-gray-300 rounded-full mr-3">
+                                    <div className="w-12 h-12 bg-gray-300 rounded-full mr-3 relative">
                                         <img
                                             src={item?.User?.photo ? `${providers.APIUrl}/images/${item?.User?.photo}` : "/images/clientProfile.png"}
                                             alt="User Avatar"
                                             className="w-12 h-12 rounded-full object-cover"
                                         />
+                                        <div className={`w-2 h-2 rounded-full absolute bottom-0 right-0 ${usersOnLine.includes(item.UserId) ? "bg-green-500" : "bg-red-500"}`}>
+                                        </div>
                                     </div>
                                     <div className="flex-1">
                                         <h2 className="text-md font-semibold">{item?.User?.firstname} {providers.reduceLengthOfText(item?.User?.lastname, 7)}</h2>
@@ -286,8 +287,18 @@ export default function Chat() {
                             <header className="bg-white dark:bg-gray-900  border-b border-gray-300 dark:border-gray-800 p-4 text-gray-700">
                                 <div className="flex flex-row items-center justify-between">
                                     <div className="flex items-center space-x-4">
-                                        <img className="w-10 h-10 rounded-full object-cover" src={userData.photo ? `${providers.APIUrl}/images/${userData.photo}` : "/images/clientProfile.png"} />
-                                        <h1 className="text-xl dark:text-gray-300 font-semibold">{userData.firstname} {providers.reduceLengthOfText(userData.lastname, 7)}</h1>
+                                       <div className='w-10 h-10 relative'>
+                                            <img className="w-full h-full rounded-full object-cover" src={userData.photo ? `${providers.APIUrl}/images/${userData.photo}` : "/images/clientProfile.png"} />
+                                            <div className={`w-2 h-2 rounded-full absolute bottom-0 right-0 ${usersOnLine.includes(userData.UserId) ? "bg-green-500" : "bg-red-500"}`}>
+                                            </div>
+                                        </div>
+
+                                        <div className="">
+                                            <h1 className="text-xl dark:text-gray-300 font-semibold">{userData.firstname} {providers.reduceLengthOfText(userData.lastname, 7)}</h1>
+                                            <div className="flex items-center space-x-3">
+                                                <p className="text-sm dark:text-gray-300">{usersOnLine.includes(userData.UserId) ? "En ligne" : "Hors ligne"}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="flex items-center space-x-4" onClick={() => {
                                         setShowChat(false)

@@ -113,7 +113,7 @@ export default function Repports() {
                                                         const mail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
                                                             senderEmail: "lrcsheet@gmail.com",
                                                             subject: "Notification entrante",
-                                                            content: "Veuillez consulter votre message au niveau de l'espace web LRCSheet.",
+                                                            content: "Veuillez consulter votre messagerie sur l'espace LRCSheet Web https://vps118934.serveur-vps.net:4000/Dashboard/NOTIF/chat",
                                                             emails: [repport.User.email],
                                                         });
 

@@ -73,13 +73,11 @@ export default function SidebarHook() {
         });
     }
 
-    //Réception des notifs entrantes
     useEffect(() => {
         (async () => {
             const local = localStorage.getItem("storedNotificationsArray");
             const current = local ? JSON.parse(local) : [];
             setStoredNotificationsArray(current);
-
             //Récupération de IndexedDB (site fermé)
             const backgroundNotifs = await getAndClearNotifications();
 
@@ -89,14 +87,18 @@ export default function SidebarHook() {
                 setCount(prevCount => prevCount + 1);
             }
         })();
+    }, [])
 
+    //Réception des notifs push
+    useEffect(() => {
         if (messaging) {
             const unsubscribe = onMessage(messaging, (remoteMessage) => {
+                console.log(remoteMessage)
                 const EnterpriseId = localStorage.getItem("EnterpriseId");
 
-                if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId) && !remoteMessage.data?.page) {
+                if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId)) {
 
-                    const notif = {
+                    const notificationComponent = {
                         path: remoteMessage.data?.path,
                         adminSectionIndex: remoteMessage.data?.adminSectionIndex,
                         adminPageIndex: remoteMessage.data?.adminPageIndex,
@@ -104,46 +106,26 @@ export default function SidebarHook() {
                         receiverId: remoteMessage.data?.receiverId,
                     };
 
-                    localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, notif]));
-
-                    // setCount(prevCount => prevCount + 1);
-                    // Swal.fire({
-                    //     icon: "info",
-                    //     title: "Notification entrante",
-                    //     text: "Vous avez une nouvelle notification",
-                    //     showCancelButton: true,
-                    //     cancelButtonText: "Plus tard",
-                    //     confirmButtonText: "Voir",
-                    // }).then((res) => {
-                    //     if (res.isConfirmed) {
-                    //         window.location.href = `${notif.path}`;
-                    //     }
-                    // });
-                } else if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId) && remoteMessage.data?.page) {
-
+                    setStoredNotificationsArray((prev) => [...prev, notificationComponent])
+                    setCount(prevCount => prevCount + 1);
                 }
             });
 
-            return () => { unsubscribe() };
+            return () => {
+                unsubscribe();
+            };
         }
-        //Notifications live
     }, []);
 
+    //Supression en temps réel quand l'utilisateur accède à l'espace de conversation
     useEffect(() => {
         const event = (data: { senderId: number, receiverId: number }) => {
-            const UserId = localStorage.getItem("id");
-            const local = localStorage.getItem("storedNotificationsArray");
-            const storedNotificationsArray = local ? JSON.parse(local) : [];
-
-            console.log("événement écoute de lecture", data)
-            console.log("le tableau de notification", storedNotificationsArray)
-            console.log("le UserId", UserId)
-
-            const removeNotificationsCount = storedNotificationsArray.filter(
-                (item: { senderId: string, receiverId: string }) => item.senderId !== String(data.senderId) && String(data.receiverId) !== String(UserId)
+            const notificationsArray = storedNotificationsArray.filter(
+                item => item.senderId !== String(data.senderId) && item.receiverId !== String(data.receiverId)
             );
-            console.log("le nouveau tableau de notif", removeNotificationsCount)
-            setStoredNotificationsArray(removeNotificationsCount);
+            console.log(notificationsArray)
+            setStoredNotificationsArray(notificationsArray);
+            // localStorage.setItem("storedNotificationsArray", JSON.stringify(notificationsArray))
         }
 
         socket.off("removeNotificationsCount", event);
@@ -152,14 +134,16 @@ export default function SidebarHook() {
         return () => {
             socket.off("removeNotificationsCount", event);
         }
-    }, [])
+    }, []);
 
-    // useEffect(() => {
-    //     (() => {
-    //         console.log("les notifs en question", storedNotificationsArray);
-    //         if (storedNotificationsArray.length > 0) localStorage.setItem("storedNotificationsArray", JSON.stringify(storedNotificationsArray));
-    //     })();
-    // }, [count]);
+    useEffect(() => {
+        (() => {
+            if (storedNotificationsArray.length > 0) {
+                console.log("notifications", storedNotificationsArray)
+                localStorage.setItem("storedNotificationsArray", JSON.stringify(storedNotificationsArray));
+            }
+        })();
+    }, [count]);
 
     const ItemAside = [
         // Onglet notifications
@@ -436,6 +420,8 @@ export default function SidebarHook() {
         const getNotificationsCount = storedNotificationsArray.filter((item: { senderId: string }) => item.senderId === UserId);
         return getNotificationsCount.length;
     }
+
+    console.log(storedNotificationsArray)
 
     return { ItemAside, storedNotificationsArray, setStoredNotificationsArray, getSectionNotificationsCount, getPageNotificationsCount, getUserNotificationsCount };
 }

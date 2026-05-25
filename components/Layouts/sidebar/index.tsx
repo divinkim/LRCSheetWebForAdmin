@@ -59,6 +59,7 @@ export function Sidebar() {
 
   const { ItemAside, getPageNotificationsCount, getSectionNotificationsCount, storedNotificationsArray, setStoredNotificationsArray } = SidebarHook();
 
+
   useEffect(() => {
     (async () => {
       if (typeof (window) === "undefined") return;
@@ -69,11 +70,7 @@ export function Sidebar() {
       const adminFcmToken = localStorage.getItem("adminFcmToken");
       const UserId = Number(id);
 
-      useEffect(() => {
-        if (UserId) {
-          socket.emit("register", Number(UserId));
-        }
-      }, [UserId]);
+      socket.emit("register", Number(UserId));
 
       const datas = {
         fcmToken: adminFcmToken,
@@ -88,27 +85,27 @@ export function Sidebar() {
     })()
   }, []);
 
-  useEffect(() => {
-    const handler = (data: any) => {
-      const UserId = localStorage.getItem("id");
-      console.log("les données en live LRCSheetWebAdmin sidebare", data)
-      console.log(UserId)
-      if (data.receiverId === String(UserId)) {
-        const local = localStorage.getItem("storedNotificationsArray");
-        const storedNotificationsArray = local ? JSON.parse(local) : [];
-        console.log(data)
-        setStoredNotificationsArray([...storedNotificationsArray, data]);
-        localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, data]))
-      }
-    }
+  // useEffect(() => {
+  //   const handler = (data: any) => {
+  //     const UserId = localStorage.getItem("id");
+  //     console.log("les données en live LRCSheetWebAdmin sidebare", data)
+  //     console.log(UserId)
+  //     if (data.receiverId === String(UserId)) {
+  //       const local = localStorage.getItem("storedNotificationsArray");
+  //       const storedNotificationsArray = local ? JSON.parse(local) : [];
+  //       console.log(data)
+  //       setStoredNotificationsArray([...storedNotificationsArray, data]);
+  //       localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, data]))
+  //     }
+  //   }
 
-    socket.off("getChatData", handler)
-    socket.on("getChatData", handler)
+  //   socket.off("getChatData", handler)
+  //   socket.on("getChatData", handler)
 
-    return () => {
-      socket.off("getChatData", handler)
-    }
-  }, [])
+  //   return () => {
+  //     socket.off("getChatData", handler)
+  //   }
+  // }, [])
 
   useEffect(() => {
     (() => {

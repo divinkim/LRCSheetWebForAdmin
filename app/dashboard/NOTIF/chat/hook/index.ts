@@ -33,6 +33,7 @@ export function useChat() {
     const [usersCloned, setUsersCloned] = useState<Users[]>([]);
     const [AdminId, setAdminId] = useState<number | null>(null)
     const { storedNotificationsArray, setStoredNotificationsArray } = SidebarHook();
+    const [usersOnLine, setUsersOnline] = useState<number[]>([]);
     const [userData, setUserData] = useState({
         fcmToken: "",
         UserId: 0,
@@ -445,17 +446,18 @@ export function useChat() {
         return count.length;
     }
 
-    function removeNotificationCount(UserId: number) {
-        const deleteItem = storedNotificationsArray.filter((item: { senderId: string, adminSectionIndex: string, adminPageIndex: string }) => Number(item.senderId) !== UserId && (Number(item.adminPageIndex) === 0 && Number(item.adminSectionIndex) === 0));
+    function removeNotificationCount(senderId: number) {
+        const deleteItem = storedNotificationsArray.filter(item => Number(item.senderId) !== senderId && item.receiverId === Number(AdminId));
+
+        console.log(deleteItem)
+
         setNotificationCountLive({
             status: false,
             count: 0,
             UserId: 0
         })
-        setStoredNotificationsArray(deleteItem);
         localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem))
     }
-
     function sortUsersByFrequency(users: Users[], messages: ChatMessage[]) {
         const map = new Map();
         messages.forEach((msg) => {
@@ -546,31 +548,49 @@ export function useChat() {
         setUsersCloned(unique);
     }
 
+    //Ecoute en temps réel des donnée du chat
     useEffect(() => {
         const handle = (datas: any) => {
             const UserId = localStorage.getItem("id")
             if (datas.receiverId === String(UserId)) {
-                console.log("event reçu en live LRCSheetWebAdmin chat", datas)
+                console.log(datas)
+
                 const local = localStorage.getItem("storedNotificationsArray");
                 const storedNotificationsArray = local ? JSON.parse(local) : [];
+
                 const notificationCount = [...storedNotificationsArray, datas].filter(item => item.senderId === datas.senderId).length;
 
                 setNotificationCountLive({
                     status: true,
-                    count: notificationCount - 1,
+                    count: notificationCount,
                     UserId: Number(datas.senderId)
                 })
 
-                setStoredNotificationsArray([...storedNotificationsArray, datas]);
-                // localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, datas]));
+                // setStoredNotificationsArray([...storedNotificationsArray, datas])
+                // localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, datas]))
             }
         };
 
         socket.off("getChatData", handle);
+
         socket.on("getChatData", handle);
 
         return () => {
             socket.off("getChatData", handle)
+        }
+    }, [])
+
+    useEffect(() => {
+        const event = (data: number[]) => {
+            console.log("utilisateurs connecté", data)
+            setUsersOnline(data);
+            return;
+        }
+        socket.off("usersOnline", event);
+        socket.on("usersOnline", event);
+
+        return () => {
+            socket.off("usersOnline", event);
         }
     }, [])
 
@@ -654,6 +674,7 @@ export function useChat() {
         rejectCall,
         callStatus,
         callDuration,
-        formatCallDuration
+        formatCallDuration,
+        usersOnLine
     }
 }
