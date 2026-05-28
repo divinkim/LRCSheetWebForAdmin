@@ -35,6 +35,7 @@ type notificationProps = {
 
 export default function SidebarHook() {
     const [storedNotificationsArray, setStoredNotificationsArray] = useState<any[]>([]);
+    const [isNotification, setIsNotification] = useState(false)
     const [count, setCount] = useState(0);
     const messaging = getFirebaseMessaging()
     const DB_NAME = "NotificationDB";
@@ -83,6 +84,7 @@ export default function SidebarHook() {
 
             if (backgroundNotifs.length > 0) {
                 const merged = [...current, ...backgroundNotifs];
+                localStorage.setItem("storedNotificationsArray", JSON.stringify(merged))
                 setStoredNotificationsArray(merged);
                 setCount(prevCount => prevCount + 1);
             }
@@ -95,7 +97,7 @@ export default function SidebarHook() {
             const unsubscribe = onMessage(messaging, (remoteMessage) => {
                 console.log(remoteMessage)
                 const EnterpriseId = localStorage.getItem("EnterpriseId");
-
+                setIsNotification(false);
                 if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId)) {
 
                     const notificationComponent = {
@@ -106,8 +108,13 @@ export default function SidebarHook() {
                         receiverId: remoteMessage.data?.receiverId,
                     };
 
-                    setStoredNotificationsArray((prev) => [...prev, notificationComponent])
-                    setCount(prevCount => prevCount + 1);
+                    setStoredNotificationsArray((prev) => [...prev, notificationComponent]);
+
+                    const local = localStorage.getItem("storedNotificationsArray");
+                    const current = local ? JSON.parse(local) : [];
+                    localStorage.setItem("storedNotificationsArray", JSON.stringify([...current, notificationComponent]));
+
+                    setIsNotification(true);
                 }
             });
 
@@ -120,12 +127,17 @@ export default function SidebarHook() {
     //Supression en temps réel quand l'utilisateur accède à l'espace de conversation
     useEffect(() => {
         const event = (data: { senderId: number, receiverId: number }) => {
-            const notificationsArray = storedNotificationsArray.filter(
-                item => item.senderId !== String(data.senderId) && item.receiverId !== String(data.receiverId)
-            );
-            console.log(notificationsArray)
-            setStoredNotificationsArray(notificationsArray);
-            // localStorage.setItem("storedNotificationsArray", JSON.stringify(notificationsArray))
+            const local = localStorage.getItem("storedNotificationsArray");
+            const storedNotificationsArray: any[] = local ? JSON.parse(local) : [];
+
+            if (storedNotificationsArray.some(item => item.senderId === String(data.senderId))) {
+                const notificationsArray = storedNotificationsArray.filter(
+                    item => item.senderId !== String(data.senderId) && item.receiverId !== String(data.receiverId)
+                );
+                console.log(notificationsArray)
+                setStoredNotificationsArray(notificationsArray);
+                localStorage.setItem("storedNotificationsArray", JSON.stringify(notificationsArray));
+            }
         }
 
         socket.off("removeNotificationsCount", event);
@@ -134,16 +146,31 @@ export default function SidebarHook() {
         return () => {
             socket.off("removeNotificationsCount", event);
         }
-    }, []);
+    }, [])
 
     useEffect(() => {
-        (() => {
-            if (storedNotificationsArray.length > 0) {
-                console.log("notifications", storedNotificationsArray)
-                localStorage.setItem("storedNotificationsArray", JSON.stringify(storedNotificationsArray));
+        const handler = (data: any) => {
+            const UserId = localStorage.getItem("UserId");
+            console.log(data)
+
+            if (data.receiverId === String(UserId)) {
+                // const local = localStorage.getItem("storedNotificationsArray");
+                // const storedNotificationsArray = local ? JSON.parse(local) : [];
+
+                console.log(data)
+                setStoredNotificationsArray((prev) => [...prev, data]);
+                // localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, data]))
             }
-        })();
-    }, [count]);
+        }
+
+        socket.off("getChatData", handler)
+        socket.on("getChatData", handler)
+
+        return () => {
+            socket.off("getChatData", handler)
+        }
+    }, [])
+
 
     const ItemAside = [
         // Onglet notifications

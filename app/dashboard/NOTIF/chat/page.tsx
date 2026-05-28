@@ -287,7 +287,7 @@ export default function Chat() {
                             <header className="bg-white dark:bg-gray-900  border-b border-gray-300 dark:border-gray-800 p-4 text-gray-700">
                                 <div className="flex flex-row items-center justify-between">
                                     <div className="flex items-center space-x-4">
-                                       <div className='w-10 h-10 relative'>
+                                        <div className='w-10 h-10 relative'>
                                             <img className="w-full h-full rounded-full object-cover" src={userData.photo ? `${providers.APIUrl}/images/${userData.photo}` : "/images/clientProfile.png"} />
                                             <div className={`w-2 h-2 rounded-full absolute bottom-0 right-0 ${usersOnLine.includes(userData.UserId) ? "bg-green-500" : "bg-red-500"}`}>
                                             </div>
@@ -304,8 +304,15 @@ export default function Chat() {
                                         setShowChat(false)
                                     }}>
                                         <div className="flex items-center space-x-3">
-                                            <FontAwesomeIcon icon={faPhone} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105 cursor-pointer ease duration-500" onClick={startAudioCall} />
-                                            <FontAwesomeIcon icon={faVideo} onClick={startVideoCall} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full cursor-pointer dark:text-gray-300 hover:scale-105" />
+                                            <FontAwesomeIcon icon={faPhone} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105 cursor-pointer ease duration-500" onClick={() => {
+                                                // startAudioCall   
+                                            }
+                                            } />
+                                            <FontAwesomeIcon icon={faVideo} onClick={
+                                                () => {
+                                                    // startVideoCall                 
+                                                }
+                                            } className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full cursor-pointer dark:text-gray-300 hover:scale-105" />
                                             <div className="lg:hidden">
                                                 <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
                                             </div>

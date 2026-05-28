@@ -595,6 +595,8 @@ export function useChat() {
     }, [])
 
     function notificationsCompter(UserId: number) {
+        const local = localStorage.getItem("storedNotificationsArray");
+        const storedNotificationsArray: any[] = local ? JSON.parse(local) : [];
         const result = storedNotificationsArray.filter(item => Number(item.senderId) === UserId);
         return result.length
     }
@@ -655,7 +657,7 @@ export function useChat() {
             const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
                 senderEmail: "lrcsheet@gmail.com",
                 subject: "Notification entrante!",
-                content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet",
+                content: "Veuillez consulter votre messagerie sur l'espace LRCSheet Web https://vps118934.serveur-vps.net:4000/Dashboard/NOTIF/chat",
                 emails: [userData.email],
             })
             console.log(notification);
