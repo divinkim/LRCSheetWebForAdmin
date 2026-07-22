@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,11 +15,12 @@ import {
   faTrash,
   faUserPlus,
   faSpinner,
+  faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
-import Swal from "sweetalert2";
 
 import { providers } from "@/index";
 import { tablesModal } from "@/components/Tables/tablesModal";
+import { useToast } from "@/components/toast"; // Importation du hook personnalisé
 
 type UserData = {
   id: number;
@@ -41,8 +43,10 @@ const REQUIRED_ADMIN_ROLES = ["Super-Admin", "Supervisor-Admin"];
 const ITEMS_PER_PAGE = 5;
 
 export default function UsersList() {
+  const router = useRouter();
   const { data: session, status } = useSession();
-  
+  const toast = useToast(); // Initialisation de toast via useToast()
+
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [usersList, setUsersList] = useState<UserData[]>([]);
@@ -71,7 +75,8 @@ export default function UsersList() {
           setUsersList(filtered);
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération des utilisateurs:", error);
+        toast.error("Erreur lors de la récupération des collaborateurs");
+        console.error("Erreur fetchUsers:", error);
       } finally {
         setLoading(false);
       }
@@ -80,7 +85,7 @@ export default function UsersList() {
     fetchUsers();
   }, [session, status]);
 
-  // 2. Filtrage réactif des utilisateurs
+  // 2. Filtrage réactif
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return usersList;
@@ -94,28 +99,22 @@ export default function UsersList() {
     );
   }, [search, usersList]);
 
-  // 3. Calculs de la pagination
+  // 3. Calculs de pagination
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
   const paginatedUsers = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
     return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredUsers, page]);
 
-  // Réinitialiser la page sur nouvelle recherche
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
   };
 
-  // Action Vérification Accès
+  // Contrôle des accès avec Toast
   const checkAccessAndExecute = (action: () => void) => {
     if (!hasAdminAccess) {
-      Swal.fire({
-        icon: "warning",
-        title: "Accès refusé !",
-        text: "Vous n'avez pas les droits nécessaires pour effectuer cette action. Contactez votre administrateur.",
-        confirmButtonColor: "#2563eb",
-      });
+      toast.error("Accès refusé : Droits insuffisants.");
       return;
     }
     action();
@@ -123,63 +122,53 @@ export default function UsersList() {
 
   // Suppression d'un utilisateur
   const handleDeleteUser = (id: number) => {
-    checkAccessAndExecute(() => {
-      Swal.fire({
-        icon: "warning",
-        title: "Supprimer le collaborateur ?",
-        text: "Cette action est irréversible.",
-        showCancelButton: true,
-        confirmButtonText: "Oui, supprimer",
-        cancelButtonText: "Annuler",
-        confirmButtonColor: "#dc2626",
-        cancelButtonColor: "#64748b",
-      }).then(async (result) => {
-        if (result.isConfirmed) {
-          try {
-            const response = await providers.API.delete(
-              providers.APIUrl,
-              "deleteUser",
-              id,
-              {}
-            );
-            providers.alertMessage(
-              response.status,
-              response.title,
-              response.message,
-              "/dashboard/RH/usersList"
-            );
-            setUsersList((prev) => prev.filter((u) => u.id !== id));
-          } catch (err) {
-            console.error("Erreur de suppression:", err);
-          }
+    checkAccessAndExecute(async () => {
+      // Si ton useToast prend un toast personnalisé ou gère les promesses / confirmations :
+      if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce collaborateur ?")) {
+        return;
+      }
+
+      try {
+        const response = await providers.API.delete(
+          providers.APIUrl,
+          "deleteUser",
+          id,
+          {}
+        );
+
+        if (response.status) {
+          toast.success("Bravo", "Collaborateur supprimé avec succès");
+          setUsersList((prev) => prev.filter((u) => u.id !== id));
         }
-      });
+      } catch (err) {
+        toast.error("Erreur", err instanceof Error ? err.message : "Erreur réseau");
+      }
     });
   };
 
   return (
     <div className="w-full p-4 sm:p-6 text-slate-700 dark:text-slate-300">
-      {/* En-tête */}
+      {/* En-tête de page */}
       {tablesModal.map((e, index) => (
         <div
           key={index}
-          className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-6 border-b border-slate-200 dark:border-slate-800"
+          className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-5 mb-6 border-b border-slate-200 dark:border-slate-800"
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
               {e.usersList.pageTitle}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Gestion et suivi des profils collaborateurs
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Gestion centralisée et suivi des profils collaborateurs
             </p>
           </div>
-          <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-2 sm:mt-0">
+          <p className="text-sm font-semibold px-3 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 mt-3 sm:mt-0">
             {e.usersList.path}
           </p>
         </div>
       ))}
 
-      {/* Barre d'actions (Recherche + Boutons d'ajout) */}
+      {/* Barre d'actions */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
         <div className="relative w-full sm:w-80">
           <input
@@ -187,7 +176,7 @@ export default function UsersList() {
             placeholder="Rechercher un collaborateur..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent shadow-sm transition-all placeholder:text-slate-400"
           />
           <FontAwesomeIcon
             icon={faSearch}
@@ -201,7 +190,7 @@ export default function UsersList() {
               <Link
                 key={idx}
                 href={item.href}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors shadow-sm w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] w-full sm:w-auto"
               >
                 <FontAwesomeIcon icon={item.icon || faUserPlus} />
                 <span>{item.title}</span>
@@ -215,10 +204,10 @@ export default function UsersList() {
       <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
         <table className="w-full text-left text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+            <tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold uppercase text-sm tracking-wider">
               {tablesModal.map((e) =>
                 e.usersList.table.titles.map((item, idx) => (
-                  <th key={idx} className="px-4 py-3.5 whitespace-nowrap">
+                  <th key={idx} className="px-5 py-4 whitespace-nowrap">
                     {item.title}
                   </th>
                 ))
@@ -230,57 +219,68 @@ export default function UsersList() {
             {loading ? (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-slate-500">
-                  <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-blue-600 mb-2" />
-                  <p>Chargement des données...</p>
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="animate-spin text-2xl text-blue-600 mb-3"
+                  />
+                  <p className="font-medium">Chargement des données...</p>
                 </td>
               </tr>
             ) : paginatedUsers.length > 0 ? (
               paginatedUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                  className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors duration-150"
                 >
                   {/* Photo */}
-                  <td className="px-4 py-3">
-                    <img
-                      src={
-                        user.photo
-                          ? `${providers.APIUrl}/images/${user.photo}`
-                          : "/images/clientProfile.png"
-                      }
-                      alt={user.lastname || "Profil"}
-                      className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                    />
+                  <td className="px-5 py-3.5">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                      <Image
+                        src={
+                          user.photo
+                            ? `${providers.APIUrl}/images/${user.photo}`
+                            : "/images/clientProfile.png"
+                        }
+                        alt={user.lastname || "Profil"}
+                        fill
+                        sizes="40px"
+                        className="object-cover"
+                      />
+                    </div>
                   </td>
 
                   {/* Nom & Prénom */}
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                  <td className="px-5 py-3.5 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                     {user.lastname ?? "-"} {user.firstname ?? ""}
                   </td>
 
                   {/* Téléphone */}
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  {/* <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                     {user.phone ?? "-"}
-                  </td>
+                  </td> */}
 
                   {/* Email */}
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                     {user.email ?? "-"}
                   </td>
 
                   {/* Genre */}
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                  <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">
                     {user.gender ?? "-"}
                   </td>
 
                   {/* Entreprise */}
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3.5">
                     {user.Enterprise?.logo ? (
-                      <img
-                        src={`${providers.APIUrl}/images/${user.Enterprise.logo}`}
-                        alt={user.Enterprise.name || "Entreprise"}
-                        className="w-8 h-8 rounded-md object-cover border border-slate-200"
-                      />
+                      <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <Image
+                          src={`${providers.APIUrl}/images/${user.Enterprise.logo}`}
+                          alt={user.Enterprise.name || "Entreprise"}
+                          fill
+                          sizes="32px"
+                          className="object-cover"
+                        />
+                      </div>
                     ) : (
                       <span className="text-sm font-semibold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {user.Enterprise?.name || "N/A"}
@@ -289,51 +289,54 @@ export default function UsersList() {
                   </td>
 
                   {/* Statut */}
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3.5">
                     <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${
-                        user.status
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                          : "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                      }`}
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold ${user.status
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-400"
+                        : "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-400"
+                        }`}
                     >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full mr-1.5 ${user.status ? "bg-emerald-500" : "bg-rose-500"
+                          }`}
+                      />
                       {user.status ? "Actif" : "Inactif"}
                     </span>
                   </td>
 
                   {/* Actions */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-1.5">
                       <button
                         title="Consulter le profil"
                         onClick={() =>
                           checkAccessAndExecute(() => {
-                            window.location.href = `/dashboard/RH/getUserProfile/${user.id}`;
+                            router.push(`/dashboard/RH/getUserProfile/${user.id}`);
                           })
                         }
-                        className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                        className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-all"
                       >
-                        <FontAwesomeIcon icon={faEye} />
+                        <FontAwesomeIcon icon={faEye} className="w-4 h-4" />
                       </button>
 
                       <button
                         title="Modifier"
                         onClick={() =>
                           checkAccessAndExecute(() => {
-                            window.location.href = `/dashboard/RH/updateUser/${user.id}`;
+                            router.push(`/dashboard/RH/updateUser/${user.id}`);
                           })
                         }
-                        className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-600 dark:text-amber-400 transition-colors"
+                        className="p-2 rounded-lg text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all"
                       >
-                        <FontAwesomeIcon icon={faPen} />
+                        <FontAwesomeIcon icon={faPen} className="w-4 h-4" />
                       </button>
 
                       <button
                         title="Supprimer"
                         onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
+                        className="p-2 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all"
                       >
-                        <FontAwesomeIcon icon={faTrash} />
+                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -341,7 +344,7 @@ export default function UsersList() {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-500">
+                <td colSpan={8} className="py-10 text-center text-slate-500">
                   Aucun collaborateur trouvé.
                 </td>
               </tr>
@@ -352,27 +355,33 @@ export default function UsersList() {
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Page <span className="font-semibold text-slate-700 dark:text-slate-200">{page}</span> sur{" "}
-          <span className="font-semibold text-slate-700 dark:text-slate-200">{totalPages}</span>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Page{" "}
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
+            {page}
+          </span>{" "}
+          sur{" "}
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
+            {totalPages}
+          </span>
         </p>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
-            <span>Précédent</span>
+            <span>Suivant</span>
           </button>
 
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
           >
-            <span>Suivant</span>
+            <span>Précédent</span>
             <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
           </button>
         </div>

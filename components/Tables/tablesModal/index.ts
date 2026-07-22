@@ -17,7 +17,6 @@ export const tablesModal = [
                 titles: [
                     { title: "Profils", alias: "" },
                     { title: "Noms & prénoms", alias: "" },
-                    { title: "Téléphones", alias: "" },
                     { title: "Emails", alias: "" },
                     { title: "Genres", alias: "" },
                     { title: "Entreprises", alias: "" },

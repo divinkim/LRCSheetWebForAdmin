@@ -109,8 +109,6 @@ export default function useAddPresenceModal() {
 
     const handleSubmit = async () => {
         try {
-           
-
             if (!inputs.arrivalTime || inputs.usersId.length < 0) {
                 toast.error("Champs invalides",
                     "Veuillez sélectionner au moins un utilisateur et une heure d'arrivée"
@@ -118,20 +116,31 @@ export default function useAddPresenceModal() {
                 return;
             }
             setIsLoading(true);
-            const response = await providers.API.post(
+            await providers.API.post(
                 "https://vps118934.serveur-vps.net:4001",
                 "postAttendancesFromAdmin", null,
                 inputs
             );
-            toast.success(response.title, response.message);
-            window.location.href = "/dashboard/RH/presencesList";
+            toast.success(
+                "Bravo",
+                "Horaires enregistrées avec succès"
+            );
+            setInputs({
+                arrivalTime: "",
+                usersId: [],
+                planningsId: [],
+                enterprisesId: [],
+                salariesId: [],
+                date: ""
+            })
         } catch (error) {
             console.log(error)
             toast.error("Erreur",
                 error instanceof Error
                     ? error.message :
                     "Erreur inconnue"
-            )
+            );
+
         } finally {
             setIsLoading(false)
         }

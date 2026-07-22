@@ -15,8 +15,8 @@ async function refreshAccessToken(token: any) {
             ...token,
             authToken: refreshedTokens.authToken,
             refreshToken: refreshedTokens.refreshToken ?? token.refreshToken,
-            //expiration dans 14 minutes (en ms)
-            authTokenExpiresIn: Date.now() + 14 * 60 * 1000,
+            //expiration dans 10 minutes (en ms)
+            authTokenExpiresIn: Date.now() + 60 * 60 * 1000,
             error: null, // Reset en cas de succès
         };
     } catch (error) {
@@ -85,8 +85,8 @@ export const authOptions = {
                     adminRole: user.adminRole,
                     EnterpriseId: user.EnterpriseId,
                     adminService: user.adminService,
-                    //DÉFINITION DE L'EXPIRATION : 14 min à partir de maintenant
-                    authTokenExpiresIn: Date.now() + 14 * 60 * 1000,
+                    //DÉFINITION DE L'EXPIRATION : 10 min à partir de maintenant
+                    authTokenExpiresIn: Date.now() + 60 * 60 * 1000,
                 };
             }
 

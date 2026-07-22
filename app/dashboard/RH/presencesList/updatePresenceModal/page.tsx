@@ -89,12 +89,22 @@ export default function UpdatePresenceModal() {
             );
 
             const status = response.status;
-            const title = response.title;
-            const message = response.message;
+            const title = "Bravo";
+            const message = "Horaires modifiées avec succès";
 
             if (status) {
                 toast.success(title, message);
-                return window.location.href = "/dashboard/RH/presencesList";
+                setInputs({
+                    usersId: [],
+                    arrivalTime: null,
+                    breakStartTime: null,
+                    resumeTime: null,
+                    departureTime: null,
+                    salariesId: [],
+                    enterprisesId: [],
+                    planningsId: [],
+                    date: "",
+                })
             }
         } catch (error) {
             console.log(error)
@@ -111,9 +121,7 @@ export default function UpdatePresenceModal() {
 
     return (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-
             <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-
                 {/* Header */}
                 <div className="px-8 my-5">
 

@@ -42,19 +42,18 @@ type User = {
     photo: string | null,
     id: number
 }
-
+import { useSession } from "next-auth/react";
 export function PresencesListHookModal() {
     const [presencesList, setPresencesList] = useState<PresencesDatas[]>([]);
     const [presencesListCloned, setPresencesListCloned] = useState<PresencesDatas[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
     const [adminRole, setAdminRole] = useState<string>("");
-
+    const { data: session } = useSession();
+    console.log(session)
     useEffect(() => {
-        if (typeof (window) === "undefined") return
-        const role = window?.localStorage.getItem("adminRole");;
-        setAdminRole(role ?? "");
-    }, []);
+        setAdminRole(session?.user.adminRole ?? "")
+    }, [session]);
 
     useEffect(() => {
         (async () => {
@@ -80,7 +79,7 @@ export function PresencesListHookModal() {
 
         setPresencesListCloned(usersFiltered);
     }
-    
+
     const onSelectAllUser = () => {
         const allIds = users.filter(item => item.id && item.EnterpriseId && item.PlanningId && item.SalaryId);
         const getEnterprisesId = allIds.map(item => item.EnterpriseId);
