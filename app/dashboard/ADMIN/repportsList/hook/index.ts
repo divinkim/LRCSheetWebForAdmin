@@ -36,6 +36,11 @@ export function RepportsListHook() {
     const { setStoredNotificationsArray } = SidebarHook();
     const [loader, setLoader] = useState(true);
 
+    async function getAdminResponse() {
+        const getAdminRepportComment = await providers.API.getAll(providers.APIUrl, "getAdminReportComment", null);
+        setAdminReportCommentArray(getAdminRepportComment)
+    }
+
     useEffect(() => {
         (async () => {
             if (typeof (window) === "undefined") return;
@@ -45,10 +50,7 @@ export function RepportsListHook() {
                 setRepportsArrayCloned(ComponentModal.at(0)?.Repport?.repportsArray ?? []);
                 setEnterpriseId(EnterpriseId);
             }
-            const getAdminRepportComment = await providers.API.getAll(providers.APIUrl, "getAdminReportComment", null);
-            setAdminReportCommentArray(getAdminRepportComment)
-            setStoredNotificationsArray([]);
-            localStorage.removeItem("storedNotificationsArray");
+            getAdminResponse()
         })()
     }, [ComponentModal?.at(0)?.Repport?.repportsArray]);
 
@@ -76,30 +78,47 @@ export function RepportsListHook() {
     ];
 
     function navigateBetweenMonths(repportArray: RepportsValue[], monthIndice: number, EnterpriseId: number) {
-        const newRepportsArray = repportArray.filter(repport => repport.EnterpriseId === EnterpriseId && repport.monthIndice === monthIndice);
+        const newRepportsArray = repportArray.filter(repport => repport.EnterpriseId === EnterpriseId &&
+            repport.monthIndice === monthIndice
+        );
         return setRepportsArrayCloned(newRepportsArray)
     }
 
     function filterRepportsByUsersNames(value: string, monthIndice: number) {
-        const repports = RepportsArray.filter(repport => (repport.User?.firstname.toLowerCase()?.includes(value.toLowerCase()) || repport.User?.lastname.toLowerCase()?.includes(value.toLowerCase())) && repport.monthIndice === monthIndice);
-        setRepportsArrayCloned(repports)
+        const reports = RepportsArray.filter(report => {
+            const valueToLowarCase = value.toLowerCase();
+            const lastname = report.User.lastname?.toLowerCase() || "";
+            const firstname = report.User.firstname?.toLowerCase() || "";
+            const reportMonth = new Date(report.createdAt).getMonth();
+            return (
+                monthIndice === reportMonth &&
+                (firstname.includes(valueToLowarCase) || lastname.includes(valueToLowarCase))
+            )
+        });
+        setRepportsArrayCloned(reports)
     }
 
     async function adminReportComment(content: string, RepportId: number, email: string, UserId: number) {
         setIsLoading(true);
         if (!content) {
-            return providers.alertMessage(false, "Champ invalide", "Veuillez saisir un commentaire", null)
+            return providers.alertMessage(false,
+                "Champ invalide", "Veuillez saisir un commentaire",
+                null
+            )
         }
 
-        const response = await providers.API.post(providers.APIUrl, "addAdminReportComment", null, {
-            UserId,
-            content,
-            RepportId
-        });
-        console.log(response);
-        if (response.status) setAdminResponse("")
-
+        const response = await providers.API.post(
+            providers.APIUrl,
+            "addAdminReportComment",
+            null,
+            {
+                UserId,
+                content,
+                RepportId
+            }
+        );
+        if (response.status) setAdminResponse("");
     }
 
-    return { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader }
+    return { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader, getAdminResponse }
 }

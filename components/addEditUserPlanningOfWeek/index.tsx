@@ -34,22 +34,30 @@ export default function AddOrEditUserPlanningOfWeek() {
             let EnterpriseId = localStorage.getItem("EnterpriseId");
             setEnterpriseId(EnterpriseId);
 
-            const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
+            const users:any[] = await providers.API.getAll(providers.APIUrl, "getUsers", null);
 
             if (Number(EnterpriseId) === 1) {
-                const filterUserByEnterpriseId = users.filter((user: { EnterpriseId: number, adminService: string | null }) => [1, 2, 3, 4, null].includes(user.EnterpriseId));
-
+                const filterUserByEnterpriseId = users.filter(user =>
+                    [1, 2, 3, 4, null].includes(user.EnterpriseId)
+                );
                 setUsers(filterUserByEnterpriseId);
                 return;
             }
-            const filterUserByEnterpriseId = users.filter((user: { EnterpriseId: number, adminService: string | null }) => user.EnterpriseId === Number(EnterpriseId) && user.adminService === null);
+            const filterUserByEnterpriseId = users.filter(user =>
+                user.EnterpriseId === Number(EnterpriseId) &&
+                user.adminService === null
+            );
             setUsers(filterUserByEnterpriseId);
         })()
     }, []);
 
     useEffect(() => {
         (async () => {
-            const plannings = await providers.API.getAll(providers.APIUrl, "getPlannings", null);
+            const plannings = await providers.API.getAll(
+                "https://vps118934.serveur-vps.net:4001",
+                "getPlannings",
+                null
+            );
             const filterPlanningsByEnterpriseId = plannings.filter((planning: { EnterpriseId: number }) => planning.EnterpriseId === parseInt(enterpriseId ?? ""))
             setPlannings(filterPlanningsByEnterpriseId);
         })()
@@ -92,7 +100,7 @@ export default function AddOrEditUserPlanningOfWeek() {
                     path: "/dashboard/RH/getCollaboratorPlannings",
                 },
                 {
-                    title: "Aujouter un collaborateur au planning",
+                    title: "Ajouter un collaborateur au planning",
                     icon: faUserPlus,
                     path: "/dashboard/RH/addCollaboratorPlanning"
                 }

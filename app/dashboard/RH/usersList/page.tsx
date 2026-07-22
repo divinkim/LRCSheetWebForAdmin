@@ -1,265 +1,382 @@
 "use client";
-import { useEffect, useState } from "react";
-import { providers } from "@/index";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faSearch } from "@fortawesome/free-solid-svg-icons";
+
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { tablesModal } from "@/components/Tables/tablesModal";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronLeft,
+  faChevronRight,
+  faSearch,
+  faEye,
+  faPen,
+  faTrash,
+  faUserPlus,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
-// import TablesPage from "@/app/tables/page";
 
-type UsersDatas = {
-    id: number,
-    firstname: string | null | undefined,
-    lastname: string | null | undefined,
-    phone: string | null | undefined,
-    address: string | null | undefined,
-    birthDate: string | null | undefined,
-    email: string | null | undefined,
-    status: boolean | null,
-    gender: string | null | undefined,
-    photo: string | null | undefined,
-    Enterprise: {
-        name: string | null | undefined,
-        logo: string | null | undefined
-    },
+import { providers } from "@/index";
+import { tablesModal } from "@/components/Tables/tablesModal";
 
-}
+type UserData = {
+  id: number;
+  firstname: string | null;
+  lastname: string | null;
+  phone: string | null;
+  address: string | null;
+  birthDate: string | null;
+  email: string | null;
+  status: boolean | null;
+  gender: string | null;
+  photo: string | null;
+  Enterprise?: {
+    name: string | null;
+    logo: string | null;
+  };
+};
+
+const REQUIRED_ADMIN_ROLES = ["Super-Admin", "Supervisor-Admin"];
+const ITEMS_PER_PAGE = 5;
 
 export default function UsersList() {
-    const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);             // page courante
+  const { data: session, status } = useSession();
+  
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [usersList, setUsersList] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    const [usersList, setUsersList] = useState<UsersDatas[]>([]);
-    const [savedUsersList, setSavedUsersList] = useState<UsersDatas[]>([]);
-    const [getAdminRole, setAdminRole] = useState("");
-    const limit = 5;                                 // items par page
-    const [maxPage, setMaxPage] = useState(0);
-    const [start, setStart] = useState(1);
+  // Rôle de l'utilisateur connecté
+  const userRole = session?.user?.adminRole ?? "";
+  const hasAdminAccess = REQUIRED_ADMIN_ROLES.includes(userRole);
 
-    const [loading, setIsLoading] = useState(false);
-    const requireAdminRoles = ['Super-Admin', 'Supervisor-Admin'];
+  // 1. Chargement des données
+  useEffect(() => {
+    async function fetchUsers() {
+      if (status !== "authenticated" || !session?.user) return;
 
-    useEffect(() => {
-        if (typeof (window) === "undefined") return;
-        (async () => {
-            const getAdminRole = localStorage.getItem("adminRole");
-            setAdminRole(getAdminRole ?? "");
+      try {
+        setLoading(true);
+        const enterpriseId = session.user.EnterpriseId;
+        const data = await providers.API.getAll(providers.APIUrl, "getUsers", null);
 
-            const authToken = localStorage.getItem("authToken");
-
-            if (authToken === null) {
-                window.location.href = "/";
-            }
-
-            let enterpriseIdOfAdmin = localStorage.getItem("EnterpriseId");
-
-            const request = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-            if (Number(enterpriseIdOfAdmin) === 1) {
-                setUsersList(request);
-                setSavedUsersList(request);
-            } else {
-                const filterUsersByEnterpriseId = request.filter((user: { EnterpriseId: number }) => user.EnterpriseId === Number(enterpriseIdOfAdmin));
-                setUsersList(filterUsersByEnterpriseId);
-                setSavedUsersList(filterUsersByEnterpriseId);
-            }
-        })()
-    }, []);
-
-    // 🔎 Filtrer par recherche
-    function onSearch(value: string) {
-        let filtered = usersList.filter(item => item?.lastname?.toLowerCase()?.includes(value.toLowerCase())
-            || item?.firstname?.toLowerCase()?.includes(value.toLowerCase())
-        );
-        console.log("le tableau des utilisateurs", filtered)
-        setSavedUsersList(filtered)
+        if (enterpriseId === 1) {
+          setUsersList(data || []);
+        } else {
+          const filtered = (data || []).filter(
+            (user: any) => user.EnterpriseId === enterpriseId
+          );
+          setUsersList(filtered);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des utilisateurs:", error);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    // 📑 Pagination
-    useEffect(() => {
-        (() => {
-            const maxPage = Math.ceil(savedUsersList?.length / limit);
-            setMaxPage(maxPage);
-            setPage(maxPage);
-        })()
-    }, [savedUsersList])
+    fetchUsers();
+  }, [session, status]);
 
-    const startPage = (start - 1) * limit;
+  // 2. Filtrage réactif des utilisateurs
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return usersList;
 
-    return (
-        <div>
-            <div className="flex justify-center w-full mx-auto">
-                <main className='m-4  w-full text-gray-700 dark:text-gray-300 dark:bg-transparent'>
-                    {
-                        tablesModal.map((e) => (
-                            <div className="flex font-semibold justify-between items-center">
-                                <h1 className="text-[20px] my-4 font-bold dark:text-gray-300">{e.usersList.pageTitle}  </h1>
-                                <p className='text-blue-700 dark:text-blue-600 hidden xl:block'>{e.usersList.path}</p>
-                            </div>
-                        ))
-                    }
-                    <hr className='' />
-                    <div className="flex flex-col space-y-4 xl:space-y-0  lg:flex-row items-center justify-between">
-                        <div className="relative w-[250px]">
-                            <input
-                                type="text"
-                                placeholder="Rechercher un profil..."
-                                className="border  outline-none border-gray-300 dark:bg-transparent px-3 py-2.5 rounded-md my-6 w-full"
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value)
-                                    onSearch(e.target.value)
-                                    setPage(1); // reset page quand on tape
-                                }}
-                            />
-                            <FontAwesomeIcon icon={faSearch} className="absolute text-gray-400 right-3 top-[38px]" />
-                        </div>
-                        {
-                            tablesModal.map((e) => (
-                                e.usersList.links.map((item) => (
-                                    <Link href={item.href} className="bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 px-4">
-                                        <FontAwesomeIcon icon={item.icon} className="text-white" />
-                                        <span className='text-white font-semibold'> {item.title}</span>
-                                    </Link>
-                                ))
+    return usersList.filter(
+      (user) =>
+        user.firstname?.toLowerCase().includes(query) ||
+        user.lastname?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        user.phone?.toLowerCase().includes(query)
+    );
+  }, [search, usersList]);
 
-                            ))
-                        }
-                    </div>
+  // 3. Calculs de la pagination
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredUsers, page]);
 
-                    {/* 🧾 Tableau */}
-                    <table className="border w-full mx-auto">
-                        <thead>
-                            <tr className="bg-gray-800 dark:bg-transparent ">
-                                {
-                                    tablesModal.map((e) => (
-                                        e.usersList.table.titles.map((item) => (
-                                            <th className="border py-2 xl:px-5 border-gray-400 dark:border-gray-300 text-gray-300  2xl:px-10 px-2 dark:text-gray-300">{item.title}</th>
-                                        ))
-                                    ))
-                                }
-                            </tr>
-                        </thead>
+  // Réinitialiser la page sur nouvelle recherche
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
 
-                        <tbody className="w-full">
+  // Action Vérification Accès
+  const checkAccessAndExecute = (action: () => void) => {
+    if (!hasAdminAccess) {
+      Swal.fire({
+        icon: "warning",
+        title: "Accès refusé !",
+        text: "Vous n'avez pas les droits nécessaires pour effectuer cette action. Contactez votre administrateur.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+    action();
+  };
 
-                            {
+  // Suppression d'un utilisateur
+  const handleDeleteUser = (id: number) => {
+    checkAccessAndExecute(() => {
+      Swal.fire({
+        icon: "warning",
+        title: "Supprimer le collaborateur ?",
+        text: "Cette action est irréversible.",
+        showCancelButton: true,
+        confirmButtonText: "Oui, supprimer",
+        cancelButtonText: "Annuler",
+        confirmButtonColor: "#dc2626",
+        cancelButtonColor: "#64748b",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            const response = await providers.API.delete(
+              providers.APIUrl,
+              "deleteUser",
+              id,
+              {}
+            );
+            providers.alertMessage(
+              response.status,
+              response.title,
+              response.message,
+              "/dashboard/RH/usersList"
+            );
+            setUsersList((prev) => prev.filter((u) => u.id !== id));
+          } catch (err) {
+            console.error("Erreur de suppression:", err);
+          }
+        }
+      });
+    });
+  };
 
-                                savedUsersList.length > 0 ? savedUsersList.slice(startPage, startPage + limit).map((u) => (
-                                    <tr className="">
-
-                                        <td className="p-2 border-b flex justify-center items-center h-[120px] border-gray-400 dark:border-gray-300">
-
-                                            <img src={u.photo ? `${providers.APIUrl}/images/${u.photo}` : "/images/clientProfile.png"} alt="" className="rounded-full w-[50px] h-[50px] object-cover" />
-
-                                        </td>
-
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(String(u.lastname ?? ""), 7)} {providers.reduceLengthOfText(String(u.firstname), 7)}</td>
-
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(String(u.phone), 7)}</td>
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(String(u.email), 7)}</td>
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{String(u.gender)}</td>
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">
-                                            {u.Enterprise?.logo ? <img src={`${providers.APIUrl}/images/${u.Enterprise.logo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p>{u.Enterprise?.name}</p>}
-                                        </td>
-                                        <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.status ? <p className="bg-green-500 rounded-full py-2 text-white">Actif</p> : <p className='bg-red-500 rounded-full py-2 text-white'>Inactif</p>}</td>
-                                        <td className="text-center font-semibold border-b border-r   h-auto  border-gray-400 dark:border-gray-300">
-                                            <div className="relative top-0 text-center px-2 space-x-3 flex ">
-                                                <button onClick={() => {
-                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                        return Swal.fire({
-                                                            icon: 'warning',
-                                                            title: "Violation d'accès!",
-                                                            text: "Vous n'avez aucun droit d'effectuer cette action. Contacter votre administrateur de gestion",
-                                                        });
-                                                    }
-                                                    window.location.href = `/dashboard/RH/getUserProfile/${u.id}`;
-                                                }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                                    <p className="text-center">👁️</p>
-                                                </button>
-                                                <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
-                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                        return Swal.fire({
-                                                            icon: "warning",
-                                                            title: "Vioaltion d'accès!",
-                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                        });
-                                                    }
-                                                    window.location.href = `/dashboard/RH/updateUser/${u.id}`
-                                                }}>
-                                                    <p className="text-center">🖊️</p>
-                                                </button>
-                                                <button type="button" onClick={() => {
-                                                    if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                        return Swal.fire({
-                                                            icon: "warning",
-                                                            title: "Vioaltion d'accès!",
-                                                            text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                        })
-                                                    }
-                                                    Swal.fire({
-                                                        icon: "warning",
-                                                        title: "Voulez-vous supprimer ce collaborateur? ",
-                                                        showCancelButton: true,
-                                                        cancelButtonText: "Annuler",
-                                                        confirmButtonText: "Oui"
-                                                    }).then(async (confirmed) => {
-                                                        if (confirmed.isConfirmed) {
-                                                            const response = await providers.API.delete(providers.APIUrl, "deleteUser", u.id, {});
-                                                            providers.alertMessage(response.status, response.title, response.message, "/dashboard/RH/usersList")
-                                                        }
-                                                    })
-                                                }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                                    <p className="text-center">🗑️</p>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                )) :
-                                    <tr>
-                                        <td>
-                                            <p className="text-center absolute left-1/2 right-1/2 w-[200px] mt-3">
-                                                Aucune donnée trouvée
-                                            </p>
-                                        </td>
-                                    </tr>
-
-                            }
-
-                        </tbody>
-                    </table>
-
-                    {/* 🔄 Pagination */}
-                    <div className="flex items-center justify-center  gap-4 mt-10">
-                        <div className="flex flex-col">
-                            <p className="text-center">Page {page} / {maxPage}</p>
-                            <div className="flex flex-row mt-4 space-x-4">
-                                <button
-                                    className="px-4 py-3  font-semibold text-white ease duration-500 hover:bg-red-600 bg-red-500 rounded disabled:opacity-40"
-                                    onClick={() => {
-                                        setPage(page - 1);
-                                        setStart(start + 1)
-                                    }}
-                                    disabled={page === 1}
-                                >
-                                    <span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span> Précédent
-                                </button>
-                                <button
-                                    className="px-4 py-3 bg-green-500 ease duration-500 hover:bg-green-600 text-white font-semibold rounded disabled:opacity-40"
-                                    onClick={() => {
-                                        setPage(nextPage => nextPage + 1);
-                                        setStart(start - 1)
-                                    }}
-                                    disabled={page === maxPage}
-                                >
-                                    Suivant<span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronRight} /></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-            </div>
+  return (
+    <div className="w-full p-4 sm:p-6 text-slate-700 dark:text-slate-300">
+      {/* En-tête */}
+      {tablesModal.map((e, index) => (
+        <div
+          key={index}
+          className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-6 border-b border-slate-200 dark:border-slate-800"
+        >
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              {e.usersList.pageTitle}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Gestion et suivi des profils collaborateurs
+            </p>
+          </div>
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-2 sm:mt-0">
+            {e.usersList.path}
+          </p>
         </div>
-    )
+      ))}
+
+      {/* Barre d'actions (Recherche + Boutons d'ajout) */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="relative w-full sm:w-80">
+          <input
+            type="text"
+            placeholder="Rechercher un collaborateur..."
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+          />
+          <FontAwesomeIcon
+            icon={faSearch}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {tablesModal.map((e) =>
+            e.usersList.links.map((item, idx) => (
+              <Link
+                key={idx}
+                href={item.href}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors shadow-sm w-full sm:w-auto"
+              >
+                <FontAwesomeIcon icon={item.icon || faUserPlus} />
+                <span>{item.title}</span>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Tableau des utilisateurs */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <table className="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr className="bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+              {tablesModal.map((e) =>
+                e.usersList.table.titles.map((item, idx) => (
+                  <th key={idx} className="px-4 py-3.5 whitespace-nowrap">
+                    {item.title}
+                  </th>
+                ))
+              )}
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-blue-600 mb-2" />
+                  <p>Chargement des données...</p>
+                </td>
+              </tr>
+            ) : paginatedUsers.length > 0 ? (
+              paginatedUsers.map((user) => (
+                <tr
+                  key={user.id}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                >
+                  {/* Photo */}
+                  <td className="px-4 py-3">
+                    <img
+                      src={
+                        user.photo
+                          ? `${providers.APIUrl}/images/${user.photo}`
+                          : "/images/clientProfile.png"
+                      }
+                      alt={user.lastname || "Profil"}
+                      className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                    />
+                  </td>
+
+                  {/* Nom & Prénom */}
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    {user.lastname ?? "-"} {user.firstname ?? ""}
+                  </td>
+
+                  {/* Téléphone */}
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    {user.phone ?? "-"}
+                  </td>
+
+                  {/* Email */}
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    {user.email ?? "-"}
+                  </td>
+
+                  {/* Genre */}
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                    {user.gender ?? "-"}
+                  </td>
+
+                  {/* Entreprise */}
+                  <td className="px-4 py-3">
+                    {user.Enterprise?.logo ? (
+                      <img
+                        src={`${providers.APIUrl}/images/${user.Enterprise.logo}`}
+                        alt={user.Enterprise.name || "Entreprise"}
+                        className="w-8 h-8 rounded-md object-cover border border-slate-200"
+                      />
+                    ) : (
+                      <span className="text-sm font-semibold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        {user.Enterprise?.name || "N/A"}
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Statut */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${
+                        user.status
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                          : "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                      }`}
+                    >
+                      {user.status ? "Actif" : "Inactif"}
+                    </span>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        title="Consulter le profil"
+                        onClick={() =>
+                          checkAccessAndExecute(() => {
+                            window.location.href = `/dashboard/RH/getUserProfile/${user.id}`;
+                          })
+                        }
+                        className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faEye} />
+                      </button>
+
+                      <button
+                        title="Modifier"
+                        onClick={() =>
+                          checkAccessAndExecute(() => {
+                            window.location.href = `/dashboard/RH/updateUser/${user.id}`;
+                          })
+                        }
+                        className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-600 dark:text-amber-400 transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faPen} />
+                      </button>
+
+                      <button
+                        title="Supprimer"
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-slate-500">
+                  Aucun collaborateur trouvé.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Page <span className="font-semibold text-slate-700 dark:text-slate-200">{page}</span> sur{" "}
+          <span className="font-semibold text-slate-700 dark:text-slate-200">{totalPages}</span>
+        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
+            <span>Précédent</span>
+          </button>
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <span>Suivant</span>
+            <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

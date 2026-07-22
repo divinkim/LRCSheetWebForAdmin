@@ -1043,6 +1043,87 @@ export const formElements = [
                     alias: "CountriesTypeId"
                 },
             ],
+        },
+
+        addPlanning: {
+            titleForm: "Formulaire d'enregistrement d'un planning horaire",
+            inputs: [
+                // ---- Inputs classiques ----
+                {
+                    label: "Heure de début",
+                    placeholder: "Saisissez l'heure...",
+                    requireField: true,
+                    type: "time",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "startTime"
+                },
+                {
+                    label: "Heure de pause",
+                    placeholder: "Saisissez l'heure...",
+                    requireField: false,
+                    type: "time",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "breakingStartTime"
+                },
+                {
+                    label: "Heure de reprise",
+                    placeholder: "Saisissez l'heure...",
+                    requireField: false,
+                    type: "time",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "resumeEndTime"
+                },
+
+                {
+                    label: "Heure de départ",
+                    placeholder: "Saisissez l'heure...",
+                    requireField: true,
+                    type: "time",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "endTime"
+                },
+
+                {
+                    label: "Description",
+                    placeholder: "Saisissez une description...",
+                    requireField: true,
+                    type: "",
+                    selectedInput: false,
+                    textarea: true,
+                    alias: "description"
+                },
+                {
+                    label: "Entreprises",
+                    placeholder: "Sélectionner une entreprise...",
+                    requireField: true,
+                    type: "number",
+                    selectedInput: true,
+                    textarea: false,
+                    alias: "EnterpriseId",
+                    dynamicOptions: {
+                        status: true
+                    }
+                },
+
+                // ---- Select Inputs ----
+                // {
+
+                //     label: "pays",
+                //     placeholder: "Sélectionnez un pays...",
+                //     requireField: true,
+                //     type: "number",
+                //     selectedInput: true,
+                //     textarea: false,
+                //     dynamicOptions: {
+                //         status: true
+                //     },
+                //     alias: "CountriesTypeId"
+                // },
+            ],
         }
     }
 ];

@@ -12,7 +12,7 @@ export default function GetAnnualGain() {
     const { monthlyBalances, MonthlyLimit, YEARLY_LIMIT, setSelectedMonthIndex, selectedMonth, yearlySum, COLORS, lineData, barData, EnterpriseId, adminRole, attendances, selectedMonthIndex } = AnnualGainHook();
 
     return (
-        <main className="bg-gray-100 dark:bg-transparent">
+        <main className="dark:bg-transparent">
             <div className="flex min-w-0">
                 <div className="mx-4 mt-6 my-4 w-full min-w-0">
                     <div className="flex justify-between items-center mb-5">

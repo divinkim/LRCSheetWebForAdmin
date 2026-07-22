@@ -47,7 +47,7 @@ type WeekDaysPlannings = {
 
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
-
+import { useSession } from "next-auth/react"
 export default function useGetUsersInPlanningOfWeek() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);             // page courante
@@ -61,21 +61,14 @@ export default function useGetUsersInPlanningOfWeek() {
     const [getAdminRole, setAdminRole] = useState<string | null>(null);
     const [loading, setIsLoading] = useState(false);
     const requireRoles = ['Super-Admin', 'Supervisor-Admin'];
-
+    
+    const { data: session } = useSession()
     useEffect(() => {
-        if (typeof (window) === "undefined") return;
         (async () => {
-            const getAdminRole = window?.localStorage.getItem("adminRole");
-            setAdminRole(getAdminRole);
-
-            const authToken = window?.localStorage.getItem("authToken");
-            if (authToken === null) {
-                window.location.href = "/"
-            }
-
-            let EnterpriseId = window?.localStorage.getItem("EnterpriseId");
+            let EnterpriseId = session?.EnterpriseId
 
             const request = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getAllCollaboratorPlannings", null);
+            console.log("le requete", request)
             if (Number(EnterpriseId) === 1) {
                 const filterWeekDaysPlanningsByEnterpriseId = request.filter((item: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(item.EnterpriseId))
                 setWeekDaysPlannings(filterWeekDaysPlanningsByEnterpriseId);
@@ -94,5 +87,5 @@ export default function useGetUsersInPlanningOfWeek() {
         setWeekDaysPlanningsSaved(filtered)
     }
 
-    return {onSearch}
+    return { onSearch }
 }

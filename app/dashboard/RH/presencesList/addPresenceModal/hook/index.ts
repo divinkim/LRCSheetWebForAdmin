@@ -1,6 +1,7 @@
 import { providers } from "@/index";
 import { isResolvedLazyResult } from "next/dist/server/lib/lazy-result";
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/toast";
 
 type User = {
     lastname: string,
@@ -34,6 +35,7 @@ export default function useAddPresenceModal() {
         date: ""
     });
     const [isLoading, setIsLoading] = useState(false);
+    const toast = useToast();
 
     useEffect(() => {
         (async () => {
@@ -106,39 +108,32 @@ export default function useAddPresenceModal() {
     }
 
     const handleSubmit = async () => {
-        setIsLoading(true);
+        try {
+           
 
-        if (!inputs.arrivalTime || inputs.usersId.length < 0) {
-            return providers.alertMessage(false, "Champs invalides",
-                "Veuillez sélectionner au moins un utilisateur et une heure d'arrivée",
-                null
+            if (!inputs.arrivalTime || inputs.usersId.length < 0) {
+                toast.error("Champs invalides",
+                    "Veuillez sélectionner au moins un utilisateur et une heure d'arrivée"
+                )
+                return;
+            }
+            setIsLoading(true);
+            const response = await providers.API.post(
+                "https://vps118934.serveur-vps.net:4001",
+                "postAttendancesFromAdmin", null,
+                inputs
             );
-        }
-
-        const response = await providers.API.post(
-            "https://vps118934.serveur-vps.net:4001",
-            "postAttendancesFromAdmin", null,
-            inputs
-        );
-
-        setIsLoading(false);
-
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/RH/presencesList" : null
-        );
-
-        if (response.status) {
-            setInputs({
-                arrivalTime: "",
-                usersId: [],
-                enterprisesId: [],
-                planningsId: [],
-                salariesId: [],
-                date: ""
-            })
+            toast.success(response.title, response.message);
+            window.location.href = "/dashboard/RH/presencesList";
+        } catch (error) {
+            console.log(error)
+            toast.error("Erreur",
+                error instanceof Error
+                    ? error.message :
+                    "Erreur inconnue"
+            )
+        } finally {
+            setIsLoading(false)
         }
     }
 

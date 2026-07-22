@@ -19,7 +19,8 @@ import {
     faGlobe,
     faCity,
     faHouseChimney, faPenToSquare,
-    faMessage
+    faMessage,
+    faCalendarDays
 } from "@fortawesome/free-solid-svg-icons";
 import { getFirebaseMessaging } from "@/firebase/firebaseConfig";
 import { onMessage } from "firebase/messaging";
@@ -225,8 +226,14 @@ export default function SidebarHook() {
                 {
                     index: 4,
                     title: "Liste des collaborateurs au planning",
-                    href: "/dashboard/RH/getUsersInPlanningOfWeek",
+                    href: "/dashboard/RH/getCollaboratorPlannings",
                     icon: faCalendarCheck
+                },
+                {
+                    index: 5,
+                    title: "Ajouter un planning horaire",
+                    href: "/dashboard/RH/addPlanning",
+                    icon: faCalendarDays
                 },
             ]
         },

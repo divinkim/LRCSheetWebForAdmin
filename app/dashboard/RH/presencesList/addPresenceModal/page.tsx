@@ -1,6 +1,6 @@
 "use client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import useAddPresenceModal from "./hook";
 import { providers } from "@/index";
 import { ClipLoader } from "react-spinners";
@@ -9,82 +9,176 @@ import { useState } from "react";
 export default function AddPresenceModal() {
     const { usersArray, filterUserByName, onCheckBtnEvent, handleSubmit, isLoading, setInputs, inputs, selectAllProfile, deselectAllProfile } = useAddPresenceModal();
     return (
-        <div className=" bg-black/80 fixed w-screen h-[1200px] lg:h-screen overflow-hidden z-20">
-            <div className="flex-1 dark:bg-gray-800 shadow-md flex duration-500 rounded-xl ease  sm:top-[20%] w-[90%] lg:w-[35%] mx-auto xl:w-[35%]  z-20 overflow-hidden  p-5  bg-gray-100 lg:ml-[200px] xl:ml-[250px] 2xl:ml-[350px] mt-10">
-                <form action="" className="w-full mt-2">
-                    <div className="flex justify-center">
-                        <h1 className="text-center dark:text-gray-300  font-semibold text-xl mb-4">Ajouter une présence
-                        </h1>
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+
+            <div className="w-full max-w-2xl rounded-3xl  bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {/* Header */}
+                <div className="px-8 my-4">
+                    <h1 className="text-2xl font-bold text-slate-700 dark:text-white">
+                        Ajouter une présence
+                    </h1>
+
+                </div>
+                <form className="px-8">
+                    <p className="text-sm text-orange-500 font-medium my-4">
+                        * Champs obligatoires
+                    </p>
+                    {/* Recherche */}
+                    <div className="mb-6">
+
+                        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+                            Rechercher un collaborateur
+                        </label>
+
+                        <div className="relative">
+
+                            <input
+                                type="text"
+                                placeholder="Rechercher..."
+                                onChange={(e) => filterUserByName(e.target.value)}
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 pr-12 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                            />
+
+                            <FontAwesomeIcon
+                                icon={faSearch}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+
+                        </div>
+
                     </div>
 
-                    <span className="relative">
-                        <span className="text-red-500 mb-1">* Champs obligatoires</span>
-                    </span>
-                    <div className="w-full lg:flex mt-4 flex-col">
-                        <div className="flex flex-col mb-3 w-full relative">
-                            <label htmlFor="" className="mb-2 dark:text-gray-300">Rechercher un collaborateur</label>
-                            <input onChange={(input) => {
-                                filterUserByName(input.target.value);
-                            }} placeholder="Recherche..." className="border outline dark:bg-transparent border-gray-400 dark:placeholder-gray-300 dark:text-gray-300 rounded p-3 w-full outline-none" type="text" />
-                            <FontAwesomeIcon icon={faSearch} className="absolute text-gray-700 dark:text-gray-300 bottom-4 right-4 " />
-                        </div>
-                        <div className="flex flex-col space-x-3 lg:flex-row mb-3 w-full">
-                            <div className="w-full">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Arrivée <span className="text-red-500">* </span> </label>
-                                <input onChange={(e) => {
+                    {/* Heure + Date */}
+
+                    <div className="grid md:grid-cols-2 gap-5 mb-8">
+                        <div>
+                            <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+                                Arrivée
+                                <span className="text-orange-500"> *</span>
+                            </label>
+                            <input
+                                type="time"
+                                onChange={(e) =>
                                     setInputs({
                                         ...inputs,
-                                        arrivalTime: e.target.value
+                                        arrivalTime: e.target.value,
                                     })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full" type="time" />
-                            </div>
-                            <div className="w-full relative mt-4 lg:mt-0 right-2 lg:right-0">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Date<span className="text-red-500">* </span> </label>
-                                <input onChange={(e) => {
-                                    setInputs({
-                                        ...inputs,
-                                        date: e.target.value
-                                    })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full" type="date" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex mt-5 space-x-4 justify-between flex-row">
-                        <div className="flex flex-col overflow-y-auto space-y-4">
-                            <div className="flex space-x-2 mb-2">
-                                <div>
-                                    <button onClick={selectAllProfile} type="button" className="bg-blue-600 text-white font-semibold p-2.5  hover:scale-105 ease duration-500">Tout sélectionner</button>
-                                </div>
-
-                                <div>
-                                    <button onClick={deselectAllProfile} type="button" className="bg-orange-500 text-white font-semibold p-2.5  hover:scale-105 ease duration-500">Tout déselectionner</button>
-                                </div>
-                            </div>
-                            <div className='overflow-auto h-[50px]'>
-                                {
-                                    usersArray.map((user) => (
-                                        <div key={user.id} className="flex items-center space-x-4 mb-3">
-                                            <input onChange={() => {
-                                                onCheckBtnEvent(user.id, user.EnterpriseId, user.SalaryId, user.PlanningId);
-                                            }} type="checkbox" checked={inputs.usersId.includes(user.id)} />
-                                            <div className="flex items-center space-x-2">
-                                                <img src={user.photo ? `${providers.APIUrl}/images/${user.photo} ` : "/images/clientProfile.png"} alt="" className="w-10 h-10 object-cover rounded-full" />
-                                                <p>{user.firstname} {user.lastname}</p>
-                                            </div>
-                                        </div>
-                                    ))
-
                                 }
-                            </div>
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+                                Date
+                                <span className="text-orange-500"> *</span>
+                            </label>
+                            <input
+                                type="date"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        date: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                            />
                         </div>
                     </div>
-                    <button onClick={handleSubmit} className="bg-blue-700 ease hover:bg-blue-800 duration-500 text-white px-5 py-2 rounded mt-6" type="button">
-                        <p className={isLoading ? "hidden" : "font-semibold"}> + Ajouter</p>
-                        <p className={isLoading ? "block relative top-0.5" : "hidden"}>
-                            <ClipLoader size={16} color="#fff" />
-                        </p>
-                    </button>
+                    {/* Boutons */}
+                    <div className="flex flex-wrap gap-3 mb-5">
+                        <button
+                            type="button"
+                            onClick={selectAllProfile}
+                            className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105"
+                        >
+                            Tout sélectionner
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={deselectAllProfile}
+                            className="rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105"
+                        >
+                            Tout désélectionner
+                        </button>
+
+                    </div>
+
+                    {/* Liste */}
+
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+
+                        <div className="h-[200px] overflow-y-auto space-y-3 pr-2">
+
+                            {usersArray.map((user) => (
+
+                                <label
+                                    key={user.id}
+                                    className="flex cursor-pointer items-center justify-between rounded-xl border border-transparent bg-white dark:bg-slate-900 p-3 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 transition-all"
+                                >
+
+                                    <div className="flex items-center gap-3">
+
+                                        <input
+                                            type="checkbox"
+                                            checked={inputs.usersId.includes(user.id)}
+                                            onChange={() =>
+                                                onCheckBtnEvent(
+                                                    user.id,
+                                                    user.EnterpriseId,
+                                                    user.SalaryId,
+                                                    user.PlanningId
+                                                )
+                                            }
+                                            className="h-5 w-5 accent-blue-600"
+                                        />
+
+                                        <img
+                                            src={
+                                                user.photo
+                                                    ? `${providers.APIUrl}/images/${user.photo}`
+                                                    : "/images/clientProfile.png"
+                                            }
+                                            className="h-12 w-12 rounded-full object-cover border-2 border-slate-200"
+                                        />
+
+                                        <div>
+
+                                            <h3 className="font-semibold text-slate-700 dark:text-white">
+                                                {user.firstname} {user.lastname}
+                                            </h3>
+
+                                            <p className="text-sm text-slate-500">
+                                                Collaborateur
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="my-4 flex justify-end">
+
+                        <button
+                            type="button" disabled={isLoading}
+                            onClick={handleSubmit}
+                            className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105"
+                        >
+                            {isLoading ? (
+                                <p>
+                                    <FontAwesomeIcon icon={faSpinner} className="text-white animate-spin" />
+                                    <span className="left-1 relative">Traitement...</span>
+                                </p>
+                            ) : (
+                                "Soumettre"
+                            )}
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

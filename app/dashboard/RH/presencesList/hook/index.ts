@@ -78,14 +78,9 @@ export function PresencesListHookModal() {
     function onSearch(value: string, page: string) {
         const usersFiltered = presencesList.filter(user => user?.User?.firstname?.toString()?.toLowerCase()?.includes(value.toLowerCase()) || user?.User?.lastname?.toString()?.toLowerCase()?.includes(value.toLowerCase()));
 
-        // if (page === "addPresenceModal" || page === "updatePresenceModal") {
-        //     return setPresencesListCloned([usersFiltered[0]])
-        // }
-
         setPresencesListCloned(usersFiltered);
     }
-  
-
+    
     const onSelectAllUser = () => {
         const allIds = users.filter(item => item.id && item.EnterpriseId && item.PlanningId && item.SalaryId);
         const getEnterprisesId = allIds.map(item => item.EnterpriseId);

@@ -1,14 +1,10 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useSession } from "next-auth/react";
 import {
   faBuilding,
-  faCity,
-  faDollar,
-  faDollarSign,
-  faGlobe,
   faHandHoldingDollar,
-  faUserGroup,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
@@ -21,28 +17,25 @@ type Attendances = {
     dailySalary: string;
   };
   EnterpriseId: number | null;
-
   mounth: number;
-
   Planning: {
-    startTime: string,
-  },
-
+    startTime: string;
+  };
   Enterprise: {
-    toleranceTime: null,
-    maxToleranceTime: null,
-    pourcentageOfHourlyDeduction: null,
-    maxPourcentageOfHourlyDeduction: null
-  }
+    toleranceTime: null;
+    maxToleranceTime: null;
+    pourcentageOfHourlyDeduction: null;
+    maxPourcentageOfHourlyDeduction: null;
+  };
 };
 
 export default function HomeComponent() {
+  const { data: session, status } = useSession();
   const [attendances, setAttendances] = useState<Attendances[]>([]);
-  const [EnterpriseId, setEnterpriseId] = useState<string | null>(null);
   const [enterprise, setEnterprise] = useState({
     subscriptionStatus: "",
-    subscriptionType: ""
-  })
+    subscriptionType: "",
+  });
   const [loader, setLoader] = useState(true);
   const monthValue = new Date().getMonth();
 
@@ -64,23 +57,7 @@ export default function HomeComponent() {
       const finalMinutes = Number(minutes);
       let deductionAmount = 0;
       const finalDailySalary = Number(attendance?.Salary?.dailySalary) || 0;
-      // const toleranceTime = Number(attendance?.Enterprise?.toleranceTime) ?? 0;
-      // const maxToleranceTime = Number(attendance?.Enterprise?.maxToleranceTime) ?? 0;
-      // const pourcentageOfHourlyDeduction = parseFloat(String(attendance?.Enterprise?.pourcentageOfHourlyDeduction));
-      // const maxPourcentageOfHourlyDeduction = parseFloat(String(attendance?.Enterprise?.maxPourcentageOfHourlyDeduction ?? ""));
 
-      // const pourcent = pourcentageOfHourlyDeduction / 100;
-      // const maxPourcent = maxPourcentageOfHourlyDeduction / 100;
-      // const dailySalary = parseInt(attendance?.Salary?.dailySalary ?? 0);
-
-      // if ((status === "En retard" && arrivalTime > toleranceTime) && (arrivalTime < maxToleranceTime)) {
-      //   totalLates += dailySalary * pourcent;
-      // } else if (status === "En retard" && arrivalTime > maxToleranceTime) {
-      //   totalLates += dailySalary * maxPourcent;
-      // }
-      // else if (attendance.status === "Absent") {
-      //   totalAbsences += dailySalary;
-      // }
       if (status === "En retard" && finalMinutes <= 15) {
         deductionAmount = Math.round(0.1 * finalDailySalary);
         totalLates += deductionAmount;
@@ -92,8 +69,8 @@ export default function HomeComponent() {
         totalLates += deductionAmount;
       } else if (status === "Absent") {
         totalAbsences += finalDailySalary;
-      }else if(status==="A temps" && !attendance.departureTime){
-         deductionAmount = Math.round(0.1 * finalDailySalary);
+      } else if (status === "A temps" && !attendance.departureTime) {
+        deductionAmount = Math.round(0.1 * finalDailySalary);
         totalLates += deductionAmount;
       }
     }
@@ -101,76 +78,94 @@ export default function HomeComponent() {
   }
 
   useEffect(() => {
+    if (status !== "authenticated" || !session?.user) return;
+
+    const userEnterpriseId = Number(session.user.EnterpriseId);
+    const userId = Number(session.user.id);
+
+
     (async () => {
-      if (typeof (window) === "undefined") return;
-      const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-      const EnterpriseId = localStorage.getItem("EnterpriseId");
-      console.log("entrepriseId", EnterpriseId)
-      const UserId = localStorage.getItem("id");
-      const fcmToken = localStorage.getItem('adminFcmToken');
-      setEnterpriseId(EnterpriseId);
-      if (parseInt(EnterpriseId ?? "") !== 1) {
-        const filterUsersByEnterprisesId = users.filter((user: { EnterpriseId: number }) => user.EnterpriseId === parseInt(EnterpriseId ?? ""));
-        return setData({
-          ...data,
-          usersArray: filterUsersByEnterprisesId
-        })
-      }
-      setData({
-        ...data,
-        usersArray: users
-      })
-      const fcmTokenResponse = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendFcmToken", null, {
-        UserId: Number(UserId),
-        UserEnterpriseId: Number(EnterpriseId),
-        fcmToken
-      });
-      console.log(fcmTokenResponse)
+      try {
+        setLoader(true);
+        const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
+        let filteredUsers = users;
 
-    })()
-  }, []);
+        if (userEnterpriseId !== 1) {
+          filteredUsers = users.filter(
+            (u: { EnterpriseId: number }) => u.EnterpriseId === userEnterpriseId
+          );
+        }
+        const enterprises = await providers.API.getAll(
+          "https://vps118934.serveur-vps.net:4001",
+          "getEnterprises",
+          null
+        );
+        setData((prevData) => ({
+          ...prevData,
+          usersArray: filteredUsers,
+          enterprisesArray: enterprises,
+        }));
 
-  useEffect(() => {
-    (async () => {
-      const enterprises = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getEnterprises", null);
-      setData({
-        ...data,
-        enterprisesArray: enterprises
-      })
-    })()
-  }, [data.usersArray]);
+        const fcmToken = localStorage.getItem("adminFcmToken");
+        if (fcmToken) {
+          await providers.API.post(
+            "https://vps118934.serveur-vps.net:4001",
+            "sendFcmToken",
+            null,
+            {
+              UserId: userId,
+              UserEnterpriseId: userEnterpriseId,
+              fcmToken,
+            }
+          );
+        }
 
-  useEffect(() => {
-    (async () => {
-      const attendances = await providers.API.getAll(providers.APIUrl, "getAllAttendances", null);
-      if (parseInt(EnterpriseId ?? "") !== 1) {
-        const filterAttendancesByEnterpriseId = attendances.filter((attendance: { EnterpriseId: number, mounth: number, createdAt: string }) => attendance.EnterpriseId === parseInt(EnterpriseId ?? "") && attendance.mounth === monthValue && new Date(attendance.createdAt).getFullYear() === new Date().getFullYear());
-        return setAttendances(filterAttendancesByEnterpriseId);
-      }
-      const filterAttendancesByEnterpriseId = attendances.filter((attendance: { EnterpriseId: number, mounth: number, createdAt: string }) => [1, 2, 3, 4].includes(attendance.EnterpriseId) && attendance.mounth === monthValue && new Date(attendance.createdAt).getFullYear() === new Date().getFullYear());
-      return setAttendances(filterAttendancesByEnterpriseId);
-    })()
-  }, [data.enterprisesArray]);
+        const allAttendances = await providers.API.getAll(
+          providers.APIUrl,
+          "getAllAttendances",
+          null
+        );
 
-  useEffect(() => {
-    (() => {
-      setTimeout(() => {
+        const currentYear = new Date().getFullYear();
+        let filteredAttendances = [];
+
+        if (userEnterpriseId !== 1) {
+          filteredAttendances = allAttendances.filter(
+            (a: { EnterpriseId: number; mounth: number; createdAt: string }) =>
+              a.EnterpriseId === userEnterpriseId &&
+              a.mounth === monthValue &&
+              new Date(a.createdAt).getFullYear() === currentYear
+          );
+        } else {
+          filteredAttendances = allAttendances.filter(
+            (a: { EnterpriseId: number; mounth: number; createdAt: string }) =>
+              [1, 2, 3, 4].includes(a.EnterpriseId ?? 0) &&
+              a.mounth === monthValue &&
+              new Date(a.createdAt).getFullYear() === currentYear
+          );
+        }
+
+        setAttendances(filteredAttendances);
+
+        if (userEnterpriseId) {
+          const enterpriseRes = await providers.API.getOne(
+            "https://vps118934.serveur-vps.net:4001",
+            "getEnterprise",
+            userEnterpriseId
+          );
+
+          setEnterprise({
+            subscriptionStatus: enterpriseRes?.subscriptionStatus,
+            subscriptionType: enterpriseRes?.subscriptionType,
+          });
+        }
+      } catch (error) {
+        console.error("Erreur de chargement des données :", error);
+      } finally {
         setLoader(false);
-      }, 1500)
-    })()
-  }, [attendances])
-
-  useEffect(() => {
-    (async () => {
-      const EnterpriseId = localStorage.getItem("EnterpriseId");
-      const enterprise = await providers.API.getOne("https://vps118934.serveur-vps.net:4001", 'getEnterprise', Number(EnterpriseId));
-
-      setEnterprise({
-        subscriptionStatus: enterprise?.subscriptionStatus,
-        subscriptionType: enterprise?.subscriptionType
-      })
-    })()
-  }, [attendances])
+      }
+    })();
+  }, [status, session, monthValue]);
 
   const cardComponent = [
     {
@@ -178,23 +173,23 @@ export default function HomeComponent() {
       backgroundColor: "#6366f1",
       path: "/dashboard/RH/usersList",
       title: "Collaborateurs",
-      value: data.usersArray?.length || 0
+      value: data.usersArray?.length || 0,
     },
     {
       icon: faBuilding,
       backgroundColor: "#0ea5e9",
       path: "/dashboard/OTHERS/enterprisesList",
       title: "Entreprises",
-      value: data.enterprisesArray?.length || 0
+      value: data.enterprisesArray?.length || 0,
     },
     {
       icon: faHandHoldingDollar,
       backgroundColor: "#fb923c",
       path: "/dashboard/STATS/annualGain",
       title: "Gain mensuel actuel (FCFA)",
-      value: getTotalAttendanceDeductions(attendances)
-    }
+      value: getTotalAttendanceDeductions(attendances),
+    },
   ];
 
-  return { cardComponent, enterprise, loader }
+  return { cardComponent, enterprise, loader};
 }

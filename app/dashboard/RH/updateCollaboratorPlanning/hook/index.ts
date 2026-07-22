@@ -24,23 +24,25 @@ type Plannings = {
 type Datas = {
     usersId: number[],
     weekDaysId: number[],
-    PlanningId: number | null,
-    EnterpriseId: number|null
+    PlanningsId: number[],
+    EnterpriseId: number | null
 }
 
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
 import AddOrEditUserPlanningOfWeek from "@/components/addEditUserPlanningOfWeek";
+import { useToast } from "@/components/toast";
 
 export default function useAddUserInPlanningOfWeek() {
     const [usersArray, setUsersArray] = useState<Users[]>([]);
     const [usersArrayCloned, setUsersArrayCloned] = useState<Users[]>([]);
     const { users, addEditUserPlanningOfWeek, weekDays, plannings } = AddOrEditUserPlanningOfWeek();
     const [isLoading, setIsLoading] = useState(false);
+    const toast = useToast();
     const [datas, setDatas] = useState<Datas>({
         usersId: [],
         weekDaysId: [],
-        PlanningId: 0,
+        PlanningsId: [],
         EnterpriseId: 0
     });
 
@@ -51,36 +53,79 @@ export default function useAddUserInPlanningOfWeek() {
         })();
     }, [users]);
 
+
     function onSearch(value: string) {
-        const findUser = usersArray.filter(user => user.lastname?.toLowerCase().includes(value?.toLowerCase()) || user.firstname?.toLowerCase()?.includes(value?.toLocaleLowerCase()));
-        setUsersArrayCloned(findUser)
+        const valueToLowerCase = value.toLowerCase();
+        const users = usersArray.filter(user => {
+            const lastname = user.lastname?.toLowerCase() || "";
+            const firstname = user.firstname?.toLowerCase() || "";
+            return (
+                lastname.includes(valueToLowerCase) || firstname.includes(valueToLowerCase)
+            )
+        }
+        );
+        setUsersArrayCloned(users)
+    }
+
+    function getFormatTime(date: string) {
+        if (!date) {
+            return ""
+        }
+        const hour = new Date(date).toISOString().split("T")[1].slice(0, 5)
+        return hour;
     }
 
     async function handleSubmit() {
-        setIsLoading(true);
-        console.log(datas)
+        try {
+            console.log(datas)
 
-        if (datas.usersId.length === 0 || datas.weekDaysId.length === 0 || datas.PlanningId === 0) {
-            return setTimeout(() => {
-                providers.alertMessage(false, "Champs incorrectes", "Veuillez sélectionner au moins un utilisateur, un jour de la semaine y compris un planning", null);
-                setIsLoading(false)
-            }, 1000)
+            if (datas.usersId.length === 0 || datas.weekDaysId.length === 0 || datas.PlanningsId.length === 0) {
+                toast.error("Erreur",
+                    "Veuillez sélectionner un collaborateur, son planning ainsi qu'un jour de la semaine"
+                );
+                return;
+            }
+
+            setIsLoading(true);
+
+            const response = await providers.API.update("https://vps118934.serveur-vps.net:4001",
+                "updateCollaboratorPlanning",
+                null,
+                datas,
+                null
+            );
+            console.log(response)
+            if (response.status) {
+                const resetDatas = {
+                    usersId: [],
+                    weekDaysId: [],
+                    PlanningsId: [],
+                    EnterpriseId: null
+                }
+                setDatas(resetDatas)
+                toast.success(response.title,
+                    response.message
+                )
+            }
+        } catch (error) {
+            toast.error("Erreur", error instanceof Error
+                ? error.message : "Erreur inconnue"
+            )
+        } finally {
+            setIsLoading(false);
         }
-
-        const response = await providers.API.update("https://vps118934.serveur-vps.net:4001", "updateCollaboratorPlanning", null, datas, null);
-
-        if (response.status) {
-            setDatas({
-                usersId: [],
-                weekDaysId: [],
-                PlanningId: 0,
-                EnterpriseId:null
-            })
-        }
-
-        providers.alertMessage(response.status, response.title, response.message, response.status ? "/dashboard/RH/updateUserInPlanningOfWeek" : null);
-        setIsLoading(false);
     }
 
-    return { handleSubmit, onSearch, usersArrayCloned, addEditUserPlanningOfWeek, weekDays, plannings, isLoading, setDatas, datas }
+    return {
+        handleSubmit,
+        onSearch,
+        usersArrayCloned,
+        addEditUserPlanningOfWeek,
+        weekDays,
+        plannings,
+        isLoading,
+        setDatas,
+        datas,
+        getFormatTime
+    }
 }

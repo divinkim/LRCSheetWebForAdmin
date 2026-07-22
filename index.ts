@@ -155,12 +155,10 @@ export class Api {
             let body: BodyInit;
             const formData = new FormData();
 
-            // Construction de l'URL
             url = id ? `${url}/api/${methodName}/${id}` : `${url}/api/${methodName}`
 
             console.log(url)
 
-            // Vérifie si au moins un File ou Blob est présent dans data
             const isPresentFile = Object.values(data).some(
                 (value) => value instanceof File || value instanceof Blob
             );
@@ -185,15 +183,15 @@ export class Api {
             });
 
             const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message) ?? "Erreur inconnue";
+            }
             return result;
 
         } catch (error) {
             console.error(error);
-            return {
-                title: "Une erreur est survenue lors de l'exécution de cette opération!",
-                message: "Veuillez contacter le service technique pour plus d'infos",
-                status: false,
-            };
+            throw error
         }
     }
 
@@ -235,15 +233,14 @@ export class Api {
             });
 
             const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message) ?? "Erreur inconnue";
+            }
+
             return result;
 
         } catch (error) {
-            console.error({ message: "Une erreur est survenue lors de l'exécution de cette opération veuillez réessayer à nouveau!", error: error });
-            return {
-                title: "Une erreur est survenue lors de l'exécution de cette opération!",
-                message: "Veuillez contacter le service technique pour plus d'infos.",
-                status: false,
-            }
+           throw error
         }
     }
 

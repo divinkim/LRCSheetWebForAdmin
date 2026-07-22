@@ -46,11 +46,11 @@ export const tablesModal = [
             table: {
                 titles: [
                     { title: "Profils", alias: "" },
-                    { title: "Noms & prénoms", alias: "" },
-                    { title: "Arrivées & pauses", alias: "" },
-                    { title: "Reprises & départs", alias: "" },
+                    { title: "Noms", alias: "" },
+                    { title: "Arrivées-Pauses", alias: "" },
+                    { title: "Reprises-Départs", alias: "" },
                     //  { title: "Horaires", alias: "" },
-                    { title: "Jours et date", alias: "" },
+                    { title: "Dates", alias: "" },
                     { title: "Entreprises", alias: "" },
                     { title: "Statuts", alias: "" },
                     { title: "Actions", alias: "" },
@@ -88,7 +88,7 @@ export const tablesModal = [
             links: [
                 {
                     title: "Ajouter un collaborateur au planning",
-                    href: "/dashboard/RH/addCollaboratorPlanning",
+                    href: "/dashboard/RH/addUserInPlanningOfWeek",
                     icon: faCalendarPlus
                 },
                 {

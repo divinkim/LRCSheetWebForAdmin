@@ -9,7 +9,7 @@ import { ThemeToggleSwitch } from "./theme-toggle";
 import { UserInfo } from "./user-info";
 import { useEffect, useState } from "react";
 import { providers } from "@/index";
-
+import { useSession } from "next-auth/react";
 type User = {
   image: string | null,
   fullName: string | null

@@ -8,12 +8,21 @@ import {
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
 import Swal from "sweetalert2";
+import { signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 export function UserInfo() {
   const [isOpen, setIsOpen] = useState(false);
-  
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (session?.error === "RefreshAccessTokenError") {
+      signOut({ callbackUrl: "" });
+    }
+  }, [session]);
+
   return (
     <Dropdown isOpen={isOpen} setIsOpen={setIsOpen}>
       <DropdownTrigger className="rounded align-middle  outline-none ring-primary ring-offset-2 focus-visible:ring-1 dark:ring-offset-gray-dark">
@@ -99,25 +108,10 @@ export function UserInfo() {
         <div className="p-2 bg-white dark:bg-gray-900 border dark:border-gray-800 border-gray-400 shadow-md relative right-44 ease duration-500 rounded-md top-5 w-[200px] text-base text-[#4B5563] dark:text-dark-6">
           <button
             className="flex w-full items-center  gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
-            onClick={() => {
-              Swal.fire({
-                icon: "warning",
-                title: "Attention!",
-                text:"voulez-vous vous déconnecter ?",
-                confirmButtonText:"OUI",
-                cancelButtonText:"NON",
-                confirmButtonColor:"#ef4444",
-                cancelButtonColor:"#22c55e",
-                showCancelButton: true
-              }).then((confirm) => {
-                if (confirm.isConfirmed) {
-                  localStorage.clear();
-                  window.location.href = "/"
-                }
-              })
+            onClick={async () => {
+              await signOut({ callbackUrl: "/" })
             }}
           >
-
             <span className="text-base font-medium">Se déconnecter</span>
           </button>
         </div>

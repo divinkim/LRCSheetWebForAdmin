@@ -1,5 +1,5 @@
 "use client";
-
+import frLocale from "@fullcalendar/core/locales/fr";
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid/index.js";
@@ -28,7 +28,7 @@ const CalendarPage = () => {
     netSalary: "",
     photo: "",
     poste: "",
-    Enterprise: { name: "", logo: "" }
+    Enterprise: { name: "", logo: "", id: 0 }
   });
 
   const [presences, setPresences] = useState<number | null>(null);
@@ -46,7 +46,11 @@ const CalendarPage = () => {
     const fetchEvents = async () => {
       try {
         const id = window.location.pathname.split("/").pop();
-        const response = await providers.API.getAll(providers.APIUrl, "getAttendances", Number(id));
+        const response = await providers.API.getAll(
+          providers.APIUrl,
+          "getAttendances",
+          Number(id))
+          ;
 
         setAttendances(response);
 
@@ -109,7 +113,11 @@ const CalendarPage = () => {
   useEffect(() => {
     (async () => {
       const id = window.location.pathname.split("/").pop();
-      const response = await providers.API.getOne(providers.APIUrl, "getUser", Number(id));
+      const response = await providers.API.getOne(
+        providers.APIUrl,
+        "getUser",
+        Number(id)
+      );
 
       setData({
         firstname: response.firstname,
@@ -120,7 +128,8 @@ const CalendarPage = () => {
         photo: response.photo,
         Enterprise: {
           name: response?.Enterprise?.name,
-          logo: response?.Enterprise?.logo
+          logo: response?.Enterprise?.logo,
+          id: response?.Enterprise?.id
         }
       });
     })();
@@ -129,69 +138,83 @@ const CalendarPage = () => {
   /* ------------------------------------------------------
     Calcul salaire
   ------------------------------------------------------ */
-  function getTotalSalary(attendances: any[], monthIndex: number, dailySalary: any) {
-    let totalAmount: number = 0;
-    let totalLates: number = 0;
-    let totalePresences: number = 0;
+  function getDeductionPercent(
+    status: string,
+    arrivalTime: string,
+    departureTime: string,
+    startTime: string,
+    endTime: string,
+    currentMonth: number,
+  ): number {
+    const minutes = Number(arrivalTime.split(":")[1] || 0);
+    const hour = startTime
+    if (status === "Absent") return 100;
 
-    const filterAttendance = attendances.filter(
-      (attendance: {
-        mounth: number, createdAt: string
-      }) => attendance.mounth === monthIndex
-    )
-
-    for (const attendance of filterAttendance) {
-      const status = attendance.status;
-      const minutes = parseInt(attendance.arrivalTime.split(":")?.pop() ?? "");
-      const endTime = attendance.Planning.endTime?.slice(0, 5) || "";
-      const departureTime = attendance.departureTime?.slice(0, 5) || ""
-      const finalMinutes = Number(minutes);
-      const finalDailySalary = Number(dailySalary);
-      let deductionAmount = 0;
-
-      if (currentMonth < 4) {
-        if (status === "En retard" && finalMinutes <= 15) {
-          deductionAmount = Math.round(0.1 * finalDailySalary);
-          totalLates += finalDailySalary - deductionAmount;
-        } else if (status === "En retard" && finalMinutes > 15 && finalMinutes <= 30) {
-          deductionAmount = Math.round(0.15 * finalDailySalary);
-          totalLates += finalDailySalary - deductionAmount;
-        } else if (status === "En retard" && finalMinutes > 30) {
-          deductionAmount = Math.round(0.5 * finalDailySalary);
-          totalAmount += finalDailySalary - deductionAmount;
-        } else if (status === "A temps") {
-          totalePresences += finalDailySalary;
-        }
-      } else {
-        if (status === "En retard" && finalMinutes <= 15) {
-          deductionAmount = Math.round(0.1 * finalDailySalary);
-          totalLates += finalDailySalary - deductionAmount;
-        } else if (status === "En retard" && finalMinutes > 15 && finalMinutes <= 30) {
-          deductionAmount = Math.round(0.15 * finalDailySalary);
-          totalLates += finalDailySalary - deductionAmount;
-        } else if (status === "En retard" && finalMinutes > 30) {
-          deductionAmount = Math.round(0.5 * finalDailySalary);
-          totalAmount += finalDailySalary - deductionAmount;
-        } else if ((status === "A temps" && departureTime < endTime) || (status === "A temps" && !departureTime)) {
-          deductionAmount = Math.round(0.1 * finalDailySalary);
-          totalePresences += finalDailySalary - deductionAmount;
-        } else {
-          totalePresences += finalDailySalary;
-        }
-      }
+    if (status === "En retard") {
+      if (minutes <= 15 && arrivalTime < `${hour}:30`) return 10;
+      if (minutes > 15 && arrivalTime < `${hour}:30`) return 15;
+      if (arrivalTime > `${hour}:30`) return 50
     }
 
-    totalAmount = totalLates + totalePresences;
-    setTotalSalary(totalAmount.toString());
+    if (
+      currentMonth >= 4 &&
+      status === "A temps" &&
+      (!departureTime || departureTime < endTime)
+    ) {
+      return 10;
+    }
+
+    return 0;
   }
 
-  // console.log("Le salaire", totalSalary)
+  function getTotalSalary(
+    attendances: any[],
+    monthIndex: number,
+    year: number,
+    dailySalary: number
+  ) {
+    const filteredAttendances = attendances.filter((item) => {
+      const date = new Date(item.createdAt);
 
-  function getAttendancesStats(attendances: any[], monthIndex: number) {
+      return (
+        date.getMonth() === monthIndex &&
+        date.getFullYear() === year
+      );
+    });
+
+    const totalSalary = filteredAttendances.reduce((total, attendance) => {
+      const deductionPercent = getDeductionPercent(
+        attendance.status,
+        attendance.arrivalTime,
+        attendance.departureTime?.slice(0, 5) || "",
+        attendance.Planning?.startTime?.slice(0, 2) || "",
+        attendance.Planning?.endTime?.slice(0, 5) || "",
+        monthIndex
+      );
+
+      const deductionAmount = Math.round(
+        (deductionPercent / 100) * dailySalary
+      );
+
+      return total + (dailySalary - deductionAmount);
+    }, 0);
+
+    setTotalSalary(totalSalary.toString());
+  }
+
+
+  // console.log("Le salaire", totalSalary)
+  function getStatsByAttendances(attendances: any[], monthIndex: number, year: number) {
+    const monthlyAttendances = attendances.filter((item: { createdAt: string }) => {
+      const date = new Date(item.createdAt);
+      return (date.getMonth() === monthIndex
+        && date.getFullYear() === year
+      )
+    })
     return {
-      presencesCount: attendances.filter(a => a.mounth === monthIndex && a.status === "A temps").length,
-      latesCount: attendances.filter(a => a.mounth === monthIndex && a.status === "En retard").length,
-      absencesCount: attendances.filter(a => a.mounth === monthIndex && a.status === "Absent").length,
+      presencesCount: monthlyAttendances.filter(a => a.status === "A temps").length,
+      latesCount: monthlyAttendances.filter(a => a.status === "En retard").length,
+      absencesCount: monthlyAttendances.filter(a => a.status === "Absent").length,
     };
   }
 
@@ -199,86 +222,239 @@ const CalendarPage = () => {
      📌 Rendu
   ------------------------------------------------------ */
   return (
-    <div>
-      <div className="flex">
-        <div className="rounded-2xl border w-full m-4 border-gray-200 dark:border-gray-300 dark:bg-gray-900 bg-white py-6 px-4">
-          {/* Header Infos Employé */}
-          <div className="flex mb-6 flex-wrap  p-10 bg-gray-800 rounded shadow-sm justify-between">
-            <div className="w-[200px] h-[200px]">
-              <img src={data.photo ? `${providers.APIUrl}/images/${data.photo}` : "/images/clientProfile.png"} alt="" className="w-full h-full object-cover rounded-full" />
-            </div>
-            <div className="flex flex-col space-y-2 font-semibold text-gray-300">
-              <p><span className="font-bold">Nom:</span> {data.firstname}</p>
-              <p><span className="font-bold">Prénom:</span> {data.lastname}</p>
-              <p><span className="font-bold">Poste:</span> {data.poste}</p>
-              <p><span className="font-bold">Salaire journalier:</span> {data.dailySalary?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " XAF"}</p>
-              <p><span className="font-bold">Salaire net:</span> {data.netSalary?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " XAF"}</p>
+    <div className="p-6">
 
-              <div className="flex items-center space-x-3">
-                <span className="font-bold">Entreprise:</span>
+      {/* Carte principale */}
+
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-800 to-blue-800 px-8 py-8">
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
+            {/* Profil */}
+            <div className="flex items-center gap-6">
+              <img
+                src={
+                  data.photo
+                    ? `${providers.APIUrl}/images/${data.photo}`
+                    : "/images/clientProfile.png"
+                }
+                className="h-40 w-40 rounded-full border-4 border-white object-cover shadow-2xl"
+              />
+
+              <div>
+
+                <h1 className="text-3xl font-bold text-white">
+                  {data.lastname} {data.firstname}
+                </h1>
+
+                <p className="mt-2 text-blue-100">
+                  {data.poste}
+                </p>
+
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+
+                  <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur">
+
+                    <p className="text-sm text-blue-100">
+                      Salaire journalier
+                    </p>
+
+                    <h3 className="mt-1 text-lg font-bold text-white">
+                      {Number(data.dailySalary).toLocaleString("fr-FR")} FCFA
+                    </h3>
+
+                  </div>
+
+                  <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur">
+
+                    <p className="text-sm text-blue-100">
+                      Salaire net
+                    </p>
+
+                    <h3 className="mt-1 text-lg font-bold text-white">
+                      {Number(data.netSalary).toLocaleString("fr-FR")} FCFA
+                    </h3>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Entreprise */}
+
+            <div className="rounded-2xl bg-white/10 p-5 backdrop-blur">
+
+              <p className="mb-4 text-sm uppercase tracking-wider text-blue-100">
+                Entreprise
+              </p>
+
+              <div className="flex items-center gap-4">
+
                 <img
                   src={`${providers.APIUrl}/images/${data.Enterprise.logo}`}
-                  className="h-10 w-10 rounded-full object-cover"
+                  className="h-14 w-14 rounded-full border-2 border-white object-cover"
                 />
-                <p>{data.Enterprise.name}</p>
+
+                <div>
+
+                  <h3 className="font-bold text-white">
+                    {data.Enterprise.name}
+                  </h3>
+
+                </div>
+
               </div>
+
             </div>
 
-            {/* Statistiques */}
-            <div>
-              <h1 className="text-lg font-bold mb-2.5 text-gray-200">Statistiques du mois</h1>
-              <div className="flex flex-col space-y-2 font-semibold">
-                <p className="text-red-400">❌ Absences: {absences ?? "0"}</p>
-                <p className="text-green-400">✅ Présences: {presences ?? "0"}</p>
-                <p className="text-yellow-400">⏳ Retards: {lates ?? "0"}</p>
-                <p className="text-white">💵 Total : {totalSalary.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA"}</p>
-              </div>
-            </div>
-
-            <button className="bg-green-600 mt-3 ease duration-500 hover:bg-green-700 h-[55px] font-semibold px-12 text-white rounded-full">
-              Payer via DTMoney
-            </button>
           </div>
 
-          {/* Calendrier */}
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            eventContent={(eventInfo) => renderEventContent(eventInfo, currentMonth)}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
-            }}
-            events={events}
-            hiddenDays={[0]}
-            datesSet={() => {
-              const calendarApi = calendarRef.current?.getApi();
-              if (!calendarApi) return;
-
-              const month = calendarApi.getDate().getMonth();
-              setCurrentMonth(month);
-
-              getTotalSalary(attendances, month, data.dailySalary);
-
-              const stats = getAttendancesStats(attendances, month);
-              setPresences(stats.presencesCount);
-              setLates(stats.latesCount);
-              setAbsences(stats.absencesCount);
-            }}
-          />
         </div>
+
+        {/* Statistiques */}
+
+        <div className="grid gap-6 p-8 md:grid-cols-2 xl:grid-cols-4">
+
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
+
+            <p className="text-sm font-medium text-green-600">
+              Présences
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-green-700">
+              {presences ?? 0}
+            </h2>
+
+          </div>
+
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6">
+
+            <p className="text-sm font-medium text-orange-600">
+              Retards
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-orange-700">
+              {lates ?? 0}
+            </h2>
+
+          </div>
+
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+
+            <p className="text-sm font-medium text-red-600">
+              Absences
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-red-700">
+              {absences ?? 0}
+            </h2>
+
+          </div>
+
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
+
+            <p className="text-sm font-medium text-blue-600">
+              Salaire calculé
+            </p>
+
+            <h2 className="mt-3 text-2xl font-bold text-blue-700">
+              {totalSalary.replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA
+            </h2>
+
+          </div>
+
+        </div>
+
+        {/* Action */}
+
+        <div className="flex justify-end border-t border-slate-200 px-8 py-6 dark:border-slate-700">
+
+          <button
+            className="
+                    rounded-xl
+                    bg-gradient-to-r
+                    from-blue-700
+                    to-blue-600
+                    px-8
+                    py-3
+                    font-semibold
+                    text-white
+                    shadow-lg
+                    transition-all
+                    duration-300
+                    hover:-translate-y-1
+                    hover:shadow-xl
+                    hover:from-blue-800
+                    hover:to-blue-700
+                "
+          >
+            💳 Payer via DTMoney
+          </button>
+
+        </div>
+
+      </div>
+
+      {/* Calendrier */}
+
+      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          locale={frLocale}
+          eventContent={(eventInfo) =>
+            renderEventContent(eventInfo, currentMonth)
+          }
+          initialView="dayGridMonth"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
+          }}
+          events={events}
+          hiddenDays={data.Enterprise.id === 2 ? [] : [0]}
+          datesSet={() => {
+            const calendarApi = calendarRef.current?.getApi();
+            if (!calendarApi) return;
+
+            const month = calendarApi.getDate().getMonth();
+            const year = calendarApi.getDate().getFullYear();
+
+            setCurrentMonth(month);
+
+            getTotalSalary(
+              attendances,
+              month,
+              year,
+              Number(data.dailySalary)
+            );
+
+            const stats = getStatsByAttendances(
+              attendances,
+              month,
+              year
+            );
+
+            setPresences(stats.presencesCount);
+            setLates(stats.latesCount);
+            setAbsences(stats.absencesCount);
+          }}
+        />
+
       </div>
 
     </div>
-
   );
 };
 
 function getData(
   arrivalTime: string,
   departureTime: string,
+  startTime: string,
   endTime: string,
   status: string,
   dailySalary: number,
@@ -286,42 +462,33 @@ function getData(
 ) {
   let deductionAmount = 0;
   let deductionPercent = 0;
-
+  const finalEndTime = endTime?.slice(0, 5);
+  const hour = startTime?.slice(0, 2);
   const minutes = parseInt(arrivalTime.split(":")?.[1] || "0");
+
+  console.log("l'heure", hour)
+
   if (currentMonth >= 4) {
     if (status === "En retard") {
-      if (minutes <= 15) {
+      if (minutes <= 15 && arrivalTime < `${hour}:30`) {
         deductionPercent = 10;
-      } else if (minutes <= 30) {
+      } else if (minutes > 15 && arrivalTime <= `${hour}:30`) {
         deductionPercent = 15;
-      } else {
-        deductionPercent = 50;
-      }
-    } else if ((status === "A temps" && !departureTime) || (status === "A temps" && departureTime < endTime)) {
-      deductionPercent = 10;
-    } else if (status === "Absent") {
-      deductionPercent = 100;
-    } else {
-      deductionPercent = 0
-    }
-  } else {
-    if (status === "En retard") {
-      if (minutes <= 15) {
-        deductionPercent = 10;
-      } else if (minutes <= 30) {
-        deductionPercent = 15;
-      } else {
+      } else if (arrivalTime > `${hour}:30`) {
         deductionPercent = 50;
       }
     } else if (status === "A temps") {
-      deductionPercent = 0;
-    } else if (status === "Absent") {
+      if (!departureTime || departureTime < finalEndTime) {
+        deductionPercent = 10;
+      }
+    } else {
       deductionPercent = 100;
     }
   }
 
-
-  deductionAmount = Math.round((deductionPercent / 100) * dailySalary);
+  deductionAmount = Math.round(
+    (deductionPercent / 100) * dailySalary
+  );
 
   return {
     deductionAmount,
@@ -332,99 +499,151 @@ function getData(
 
 
 const renderEventContent = (eventInfo: any, currentMonth: number) => {
-    const props = eventInfo.event.extendedProps;
+  const props = eventInfo.event.extendedProps;
 
-    // Sécurisation des données
-    const arrivalTime = props.arrivalTime || "";
-    const departureTime = props.departureTime || "";
-    const endTime = props.endTime || "";
-    const status = props.status || "";
-    const startTime = props.startTime || "";
+  // Sécurisation des données
+  const arrivalTime = props.arrivalTime || "";
+  const departureTime = props.departureTime || "";
+  const endTime = props.endTime || "";
+  const status = props.status || "";
+  const startTime = props.startTime || "";
 
-    const dailySalary = Number(props.dailySalary);
+  const dailySalary = Number(props.dailySalary);
 
-    console.log("props", currentMonth)
-    // Calcul
-    const result = getData(
-        arrivalTime,
-        departureTime,
-        endTime,
-        status,
-        dailySalary,
-        currentMonth
-    );
+  console.log("props", currentMonth)
+  // Calcul
+  const result = getData(
+    arrivalTime,
+    departureTime,
+    startTime,
+    endTime,
+    status,
+    dailySalary,
+    currentMonth
+  );
 
-    const colorMap: Record<string, string> = {
-        Success: "text-green-600",
-        Danger: "text-red-600",
-        Warning: "text-yellow-500",
-        Primary: "text-blue-500"
-    };
+  const colorMap: Record<string, string> = {
+    Success: "text-green-600",
+    Danger: "text-red-600",
+    Warning: "text-yellow-500",
+    Primary: "text-blue-500"
+  };
 
-    const statusColor = colorMap[props.calendar] || "text-gray-700";
+  const statusColor = colorMap[props.calendar] || "text-gray-700";
 
-    return (
-        <div className="rounded-sm lg:text-[11.5px] 2xl:text-[14px] relative mb-5 ml-3">
-            {/* Statut */}
-            <div className="flex flex-row mb-2 space-x-2">
-                <p className="text-gray-600 dark:text-gray-300 font-semibold">
-                    Statut:
-                </p>
-                <div className={`${statusColor} font-semibold`}>
-                    {status === "A temps"
-                        ? "✅ A temps"
-                        : status === "En retard"
-                            ? "⏳ En retard"
-                            : "❌ Absent"}
-                </div>
-            </div>
+  return (
+    <div className="rounded-xl border w-full border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
 
-            {/* Arrivée */}
-            <div className="text-gray-700 mb-2 dark:text-white">
-                <span className="font-semibold">Arrivée:</span>{" "}
-                {arrivalTime ? arrivalTime.slice(0, 5) : "-"}
-            </div>
+      {/* Badge statut */}
 
-            {/* Départ */}
-            <div className="text-gray-700 mb-2 dark:text-white">
-                <span className="font-semibold">Départ:</span>{" "}
-                {departureTime ? departureTime.slice(0, 5) : "-"}
-            </div>
+      <div className="mb-3">
 
-            <div className="text-gray-700 mb-2 dark:text-white">
-                <span className="font-semibold">Heure de début:</span>{" "}
-                {startTime ? startTime.slice(0, 5) : "-"}
-            </div>
+        <span
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold
+                ${status === "A temps"
+              ? "bg-green-100 text-green-700"
+              : status === "En retard"
+                ? "bg-orange-100 text-orange-700"
+                : "bg-red-100 text-red-700"
+            }`}
+        >
+          {status}
+        </span>
 
-            {/* Départ */}
-            <div className="text-gray-700 mb-2 dark:text-white">
-                <span className="font-semibold">Heure de fin:</span>{" "}
-                {endTime ? endTime.slice(0, 5) : "-"}
-            </div>
-            {
-                <div className={currentMonth >= 4 ? "block" : "hidden"}>
-                    {/* Déduction */}
-                    <div className="text-gray-700 mb-2 dark:text-white">
-                        <span className="font-semibold">
-                            Déduction: <span className='text-red-500 font-bold'>{result.deductionAmount.toLocaleString()} XAF</span>
-                        </span>
-                    </div>
-                    <div className="text-gray-700 mb-2 dark:text-white">
-                        <span className="font-semibold">
-                            Déduction en %: {" "}
-                            ({result.deductionPercent}%)
-                        </span>
-                    </div>
-                    {/* Salaire du jour */}
-                </div>
-            }
-            <div className="text-gray-700 dark:text-white">
-                <span className="font-semibold">
-                    Salaire du jour: <span className="bold text-blue-600">{result.dailySalary.toLocaleString()} XAF</span>
-                </span>
-            </div>
+      </div>
+
+      <div className="space-y-2 text-sm">
+
+        <div className="flex justify-between">
+          <span className="font-semibold text-slate-500">
+            Arrivée
+          </span>
+
+          <span className="text-slate-700 dark:text-white">
+            {arrivalTime?.slice(0, 5) || "--"}
+          </span>
         </div>
-    );
+
+        <div className="flex justify-between">
+          <span className="font-semibold text-slate-500">
+            Départ
+          </span>
+
+          <span className="text-slate-700 dark:text-white">
+            {departureTime?.slice(0, 5) || "--"}
+          </span>
+        </div>
+
+        <div className="flex justify-between">
+          <span className="font-semibold text-slate-500">
+            Début
+          </span>
+
+          <span className="text-slate-700 dark:text-white">
+            {startTime?.slice(0, 5) || "--"}
+          </span>
+        </div>
+
+        <div className="flex justify-between">
+          <span className="font-semibold text-slate-500">
+            Fin
+          </span>
+
+          <span className="text-slate-700 dark:text-white">
+            {endTime?.slice(0, 5) || "--"}
+          </span>
+        </div>
+
+      </div>
+
+      {currentMonth >= 4 && (
+        <div className="mt-3 rounded-lg bg-orange-50 p-3">
+
+          <div className="flex justify-between text-sm">
+
+            <span className="font-semibold text-xs text-orange-700">
+              Déduction
+            </span>
+
+            <span className="font-bold text-red-600">
+              {result.deductionAmount.toLocaleString()} XAF
+            </span>
+
+          </div>
+
+          <div className="mt-2 flex justify-between text-sm">
+
+            <span className="font-semibold text-orange-700">
+              %
+            </span>
+
+            <span className="font-bold text-orange-600">
+              {result.deductionPercent}%
+            </span>
+
+          </div>
+
+        </div>
+      )}
+
+      <div className="mt-3 rounded-lg bg-blue-50 p-3">
+
+        <div className="flex justify-between">
+
+          <span className="font-semibold text-blue-700">
+            Solde
+          </span>
+
+          <span className="font-bold text-blue-700">
+            {result.dailySalary.toLocaleString()} XAF
+          </span>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
 };
 
 export default CalendarPage;

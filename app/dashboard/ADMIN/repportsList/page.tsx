@@ -7,9 +7,10 @@ import { ClipLoader } from "react-spinners";
 import socket from "@/socket";
 
 export default function Repports() {
-    const { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader } = RepportsListHook();
-    console.log("le tableau", repportsArrayCloned)
-    console.log(loader)
+    const { itemIndex, setItemIndex, isVisible, setIsVisible, itemIndexOnWriting, setItemIndexOnWriting, setAdminResponse, setMonthIndice, monthIndice, repportsArrayCloned, EnterpriseId, ComponentModal, filterRepportsByUsersNames, navigateBetweenMonths, adminResponse, monthsOfYear, RepportsArray, adminReportComment, isLoading, setIsLoading, adminReportCommentArray, loader, getAdminResponse } = RepportsListHook();
+    // console.log("le tableau", repportsArrayCloned)
+    // console.log(loader)
+
     return (
         <main className="bg-white dark:bg-transparent">
             <div className="flex">
@@ -141,13 +142,13 @@ export default function Repports() {
                                                         console.log(notification);
                                                         console.log(chat);
                                                         console.log(comment);
-
-                                                        providers.alertMessage(chat.status, chat.title, chat.message, chat.status ? "/dashboard/ADMIN/repportsList" : null);
+                                                        getAdminResponse()
+                                                        // providers.alertMessage(chat.status, chat.title, chat.message, chat.status ? "/dashboard/ADMIN/repportsList" : null);
                                                     }} type="button" className="text-white bg-blue-600 rounded-md hover:bg-blue-600 w-[100px] py-2">
                                                         {isLoading ? <ClipLoader size={16} color="#fff" /> : "Envoyer"}
                                                     </button>
                                                 </div>
-                                                <div className={repport.files !== null ? "block" : "hidden"}>
+                                                <div className={repport.files ? "block" : "hidden"}>
                                                     <a href={`${providers.APIUrl}/images/${repport.files}`} target="_blank">
                                                         <img src="/images/fileIcone.png" className="w-[50px] h-[50px] object-contain" />
                                                         <p className="mb-1 text-blue-700  underline">Fichier joint!</p>

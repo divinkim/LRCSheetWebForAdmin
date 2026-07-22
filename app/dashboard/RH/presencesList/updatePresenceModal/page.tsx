@@ -1,11 +1,11 @@
 "use client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { PresencesListHookModal } from "../hook";
 import { providers } from "@/index";
 import { ClipLoader } from "react-spinners";
 import { useState, useEffect } from "react";
-
+import { useToast } from "@/components/toast";
 type UpdatePresence = {
     usersId: number[],
     arrivalTime: string | null,
@@ -21,7 +21,7 @@ type UpdatePresence = {
 export default function UpdatePresenceModal() {
     const { onSelectAllUser, users, usersCloned, setUsersCloned } = PresencesListHookModal();
     const [isLoading, setIsLoading] = useState(false);
-
+    const toast = useToast();
     const [inputs, setInputs] = useState<UpdatePresence>({
         usersId: [],
         arrivalTime: null,
@@ -76,152 +76,269 @@ export default function UpdatePresenceModal() {
     }
 
     const handleSubmit = async () => {
-        setIsLoading(true);
+        try {
+            if (!inputs.date) {
+                toast.error("Champs invalides", "Veuillez saisir la date à modifier")
+                return;
+            }
+            setIsLoading(true)
+            const response = await providers.API.post("https://vps118934.serveur-vps.net:4001",
+                "postAttendancesFromAdmin",
+                null,
+                inputs,
+            );
 
-        console.log(inputs)
+            const status = response.status;
+            const title = response.title;
+            const message = response.message;
 
-        if (!inputs.date) {
-            return setTimeout(() => {
-                providers.alertMessage(
-                    false, "Champs invalides", "Veuillez saisir la date à modifier", null
-                );
-                setIsLoading(false);
-            }, 1000)
+            if (status) {
+                toast.success(title, message);
+                return window.location.href = "/dashboard/RH/presencesList";
+            }
+        } catch (error) {
+            console.log(error)
+            toast.error("Erreur",
+                error instanceof Error
+                    ? error.message :
+                    "Erreur inconnue"
+            )
+        } finally {
+            setIsLoading(false)
         }
 
-        const response = await providers.API.post("https://vps118934.serveur-vps.net:4001",
-            "postAttendancesFromAdmin",
-            null,
-            inputs,
-        );
-
-        const status = response.status;
-        const title = response.title;
-        const message = response.message;
-        const path = status ? "/dashboard/RH/presencesList" : null;
-
-        setIsLoading(false);
-
-        providers.alertMessage(status, title, message, path);
-
-        if (status) {
-            setInputs({
-                usersId: [],
-                arrivalTime: null,
-                breakStartTime: null,
-                resumeTime: null,
-                departureTime: null,
-                salariesId: [],
-                enterprisesId: [],
-                planningsId: [],
-                date: "",
-            })
-        }
     }
 
     return (
-        <div className=" bg-black/80 fixed w-screen h-[1200px] lg:h-screen overflow-hidden z-20">
-            <div className="flex-1 dark:bg-gray-800 mt-5 shadow-md flex duration-500 rounded-xl ease sm:top-[20%] 2xl:top-[15%] w-[90%] lg:w-[35%] mx-auto xl:w-[35%]  z-20 overflow-hidden lg:ml-[200px] xl:ml-[250px] 2xl:ml-[350px] p-5  bg-gray-100 2">
-                <form action="" className="w-full mt-2">
-                    <h1 className="text-center dark:text-gray-300  font-semibold text-xl mb-4">Modifier une présence
-                    </h1>
-                    <div className="flex flex-col mb-3 w-full relative">
-                        <label htmlFor="" className="mb-2 dark:text-gray-300">Rechercher un collaborateur</label>
-                        <input placeholder="Recherche..." className="border outline dark:bg-transparent border-gray-400 dark:placeholder-gray-300 dark:text-gray-300 rounded p-3 w-full outline-none" onChange={(e) => {
-                            onSearch(e.target.value)
-                        }} type="text" />
-                    </div>
-                    <div className="w-full lg:flex mt-4 flex-col">
-                        <div className="flex flex-col space-x-3 lg:flex-row mb-3 w-full">
-                            <div className="w-full">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Arrivée </label>
-                                <input onChange={(e) => {
-                                    setInputs({
-                                        ...inputs,
-                                        arrivalTime: e.target.value
-                                    })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full"
-                                    type="time" />
-                            </div>
-                            <div className="w-full relative right-2 lg:right-0 mt-4 lg:mt-0">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Pause</label>
-                                <input onChange={(e) => {
-                                    setInputs({
-                                        ...inputs,
-                                        breakStartTime: e.target.value
-                                    })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full"
-                                    type="time" />
-                            </div>
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+
+            <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+
+                {/* Header */}
+                <div className="px-8 my-5">
+
+                    <h2 className="text-2xl font-bold text-slate-700 dark:text-white">
+                        Modifier une présence
+                    </h2>
+                </div>
+
+                <form className="px-8">
+                    {/* Recherche */}
+                    <div className="mb-6">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Recherchez un collaborateur..."
+                                onChange={(e) => onSearch(e.target.value)}
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 pr-12 outline-none transition-all focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+
+                            <FontAwesomeIcon
+                                icon={faSearch}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+
                         </div>
-                        <div className="flex flex-col space-x-3 lg:flex-row mb-3 w-full">
-                            <div className="w-full">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Reprise </label>
-                                <input onChange={(e) => {
-                                    setInputs({
-                                        ...inputs,
-                                        resumeTime: e.target.value
-                                    })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full" type="time" />
-                            </div>
-                            <div className="w-full relative right-2 lg:right-0 mt-4 lg:mt-0">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Départ</label>
-                                <input onChange={(e) => {
-                                    setInputs({
-                                        ...inputs,
-                                        departureTime: e.target.value
-                                    })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full"
-                                    type="time" />
-                            </div>
-                            <div className="w-full relative right-2 lg:right-0 mt-4 lg:mt-0">
-                                <label htmlFor="" className="mb-2 dark:text-gray-300">Date</label>
-                                <input onChange={(e) => {
-                                    setInputs({
-                                        ...inputs,
-                                        date: e.target.value
-                                    })
-                                }} className="border dark:bg-transparent border-gray-400 outline-none dark:text-gray-300 rounded p-3 w-full" type="date" />
-                            </div>
-                        </div>
+
                     </div>
 
-                    <div className="flex mt-5 space-x-4 justify-between flex-row">
-                        <div className="flex flex-col overflow-y-auto space-y-4">
-                            <div className="flex space-x-2 mb-2 font-semibold">
-                                <div>
-                                    <button onClick={selectAllUser} type="button" className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md ease duration-500 font-semibold">Tout sélectionner</button>
-                                </div>
+                    {/* Horaires */}
 
-                                <div>
-                                    <button onClick={deselectAllUser} type="button" className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-md ease duration-500 font-semibold">Tout déselectionner</button>
-                                </div>
-                            </div>
-                            <div className='h-[50px]'>
-                                {
-                                    usersCloned.map((user) => (
-                                        <div className="flex flex-row space-y-4 mb-4 dark:text-gray-300 items-center space-x-3">
-                                            <img src={user?.photo ? `${providers.APIUrl}/images/${user?.photo}` : "/images/clientProfile.png"} className="w-10 h-10 object-cover rounded-full" alt="" />
-                                            <p>{providers.reduceLengthOfText(String(user?.firstname), 5)} {user?.lastname}</p>
-                                            <input checked={inputs.usersId.includes(user.id)} className="dark:bg-transparent" type="checkbox" value={user.id ?? ""} onChange={() => {
-                                                onSelect(user.id, user.SalaryId, user.PlanningId, user.EnterpriseId);
-                                            }} />
-                                        </div>
-                                    ))
+                    <div className="grid gap-5 md:grid-cols-3">
+
+                        <div>
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                                Arrivée
+                            </label>
+
+                            <input
+                                type="time"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        arrivalTime: e.target.value,
+                                    })
                                 }
-                            </div>
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+
                         </div>
 
+                        <div>
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                                Pause
+                            </label>
+
+                            <input
+                                type="time"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        breakStartTime: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+
+                        </div>
+
+                        <div>
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                                Reprise
+                            </label>
+
+                            <input
+                                type="time"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        resumeTime: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+
+                        </div>
+
+                        <div>
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                                Départ
+                            </label>
+
+                            <input
+                                type="time"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        departureTime: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+
+                        </div>
+                        <div className="">
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                                Date
+                            </label>
+
+                            <input
+                                type="date"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        date: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                            />
+
+                        </div>
+                    </div>
+
+                    {/* Boutons */}
+
+                    <div className="mt-8 flex flex-wrap gap-3">
+
+                        <button
+                            type="button"
+                            onClick={selectAllUser}
+                            className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-blue-700"
+                        >
+                            Tout sélectionner
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={deselectAllUser}
+                            className="rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-orange-600"
+                        >
+                            Tout désélectionner
+                        </button>
 
                     </div>
-                    <button className="bg-blue-700 ease hover:bg-blue-800 duration-500 text-white px-5 py-2 rounded mt-6" type="button" onClick={() => {
-                        handleSubmit()
-                    }}>
-                        <p className={isLoading ? "hidden" : "block font-semibold"}>Modifier</p>
-                        <p className={isLoading ? "block relative top-0.5" : "hidden"}>
-                            <ClipLoader size={16} color="#fff" />
-                        </p>
-                    </button>
+
+                    {/* Liste collaborateurs */}
+
+                    <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+
+                        <div className="h-[150px] space-y-3 overflow-y-auto pr-2">
+
+                            {usersCloned.map((user) => (
+
+                                <label
+                                    key={user.id}
+                                    className="flex cursor-pointer items-center justify-between rounded-xl border border-transparent bg-white p-3 transition-all hover:border-blue-500 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-700"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={
+                                                user.photo
+                                                    ? `${providers.APIUrl}/images/${user.photo}`
+                                                    : "/images/clientProfile.png"
+                                            }
+                                            className="h-12 w-12 rounded-full border-2 border-slate-200 object-cover"
+                                        />
+                                        <div>
+                                            <h3 className="font-semibold text-slate-700 dark:text-white">
+                                                {providers.reduceLengthOfText(
+                                                    String(user.firstname),
+                                                    10
+                                                )}{" "}
+                                                {user.lastname}
+                                            </h3>
+
+                                            <p className="text-sm text-slate-500">
+                                                Collaborateur
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                    <input
+                                        type="checkbox"
+                                        checked={inputs.usersId.includes(user.id)}
+                                        onChange={() =>
+                                            onSelect(
+                                                user.id,
+                                                user.SalaryId,
+                                                user.PlanningId,
+                                                user.EnterpriseId
+                                            )
+                                        }
+                                        className="h-5 w-5 accent-blue-600"
+                                    />
+
+                                </label>
+
+                            ))}
+
+                        </div>
+
+                    </div>
+                    {/* Footer */}
+                    <div className="my-4 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105 hover:from-blue-800 hover:to-blue-700"
+                        >
+                            {isLoading ? (
+                                <p>
+                                    <FontAwesomeIcon icon={faSpinner} className="text-white animate-spin" />
+                                    <span className="left-1 relative">Traitement...</span>
+                                </p>
+                            ) : (
+                                "Soumettre"
+                            )}
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
