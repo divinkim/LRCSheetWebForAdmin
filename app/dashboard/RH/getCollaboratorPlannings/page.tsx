@@ -252,16 +252,6 @@ export default function WeekDaysPlanningsList() {
                 Vue d'ensemble et orchestration du temps de travail des équipes.
               </p>
             </div>
-
-            <div className="hidden items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 xl:flex">
-              <span className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">Dashboard</span>
-              <span className="text-slate-300 dark:text-slate-700">/</span>
-              <span className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">RH</span>
-              <span className="text-slate-300 dark:text-slate-700">/</span>
-              <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400 border border-blue-500/20">
-                Plannings Semaine
-              </span>
-            </div>
           </div>
         ))}
 
@@ -269,7 +259,7 @@ export default function WeekDaysPlanningsList() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Total Plannings
               </p>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
@@ -283,7 +273,7 @@ export default function WeekDaysPlanningsList() {
 
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Collaborateurs
               </p>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
@@ -297,7 +287,7 @@ export default function WeekDaysPlanningsList() {
 
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Types de Service
               </p>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
@@ -345,7 +335,7 @@ export default function WeekDaysPlanningsList() {
               </select>
               <FontAwesomeIcon
                 icon={faFilter}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none"
               />
             </div>
           </div>
@@ -369,7 +359,7 @@ export default function WeekDaysPlanningsList() {
                   href={item.href || "#"}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-all dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
-                  <FontAwesomeIcon icon={item.icon} className="text-xs" />
+                  <FontAwesomeIcon icon={item.icon} className="text-sm" />
                   <span>{item.title}</span>
                 </Link>
               ))
@@ -450,7 +440,7 @@ export default function WeekDaysPlanningsList() {
                                 />
                               </div>
                             ) : (
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-xs text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-sm text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                                 {userInitials}
                               </div>
                             )}
@@ -458,7 +448,7 @@ export default function WeekDaysPlanningsList() {
                               <p className="font-bold text-slate-900 dark:text-slate-100">
                                 {u.User?.firstname} {u.User?.lastname}
                               </p>
-                              <p className="text-xs text-slate-400 font-mono">ID: #{u.UserId}</p>
+                              {/* <p className="text-sm text-slate-400 font-mono">ID: #{u.UserId}</p> */}
                             </div>
                           </div>
                         </td>
@@ -466,7 +456,7 @@ export default function WeekDaysPlanningsList() {
                         {/* Jour de la semaine (Color-coded) */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${dayBadgeColor}`}
+                            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-semibold border ${dayBadgeColor}`}
                           >
                             {u.WeekDays?.name || "Non spécifié"}
                           </span>
@@ -481,7 +471,7 @@ export default function WeekDaysPlanningsList() {
 
                         {/* Horaires */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 text-xs font-semibold text-slate-700 border border-slate-200/60 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 text-sm font-semibold text-slate-700 border border-slate-200/60 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                             <FontAwesomeIcon icon={faClock} className="text-blue-500" />
                             <span>
                               {startTime} - {hasBreak ? breakStart : endTime}
@@ -511,9 +501,9 @@ export default function WeekDaysPlanningsList() {
                                 />
                               </div>
                             ) : (
-                              <FontAwesomeIcon icon={faBuilding} className="text-slate-400 text-xs" />
+                              <FontAwesomeIcon icon={faBuilding} className="text-slate-400 text-sm" />
                             )}
-                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                               {u.Enterprise?.name || "N/A"}
                             </span>
                           </div>
@@ -544,7 +534,7 @@ export default function WeekDaysPlanningsList() {
                         <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                           Aucun résultat trouvé
                         </h3>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                           Essayez de réinitialiser la recherche ou de modifier votre filtre par jour.
                         </p>
                       </div>
@@ -557,7 +547,7 @@ export default function WeekDaysPlanningsList() {
 
           {/* Footer & Pagination */}
           <div className="px-6 py-4 flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 bg-slate-50/30 dark:border-slate-800 dark:bg-slate-900/50 sm:flex-row">
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-sm text-slate-500 dark:text-slate-400">
               Affichage de <span className="font-bold text-slate-800 dark:text-slate-200">{filteredPlannings.length === 0 ? 0 : (page - 1) * limit + 1}</span> à{" "}
               <span className="font-bold text-slate-800 dark:text-slate-200">{Math.min(page * limit, filteredPlannings.length)}</span> sur{" "}
               <span className="font-bold text-slate-800 dark:text-slate-200">{filteredPlannings.length}</span> résultats
@@ -567,7 +557,7 @@ export default function WeekDaysPlanningsList() {
               <button
                 disabled={page === 1}
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
                 <span>Précédent</span>
@@ -576,7 +566,7 @@ export default function WeekDaysPlanningsList() {
               <button
                 disabled={page >= maxPage}
                 onClick={() => setPage((prev) => Math.min(prev + 1, maxPage))}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 <span>Suivant</span>
                 <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />

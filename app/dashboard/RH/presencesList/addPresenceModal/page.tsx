@@ -9,7 +9,7 @@ import { useState } from "react";
 export default function AddPresenceModal() {
     const { usersArray, filterUserByName, onCheckBtnEvent, handleSubmit, isLoading, setInputs, inputs, selectAllProfile, deselectAllProfile } = useAddPresenceModal();
     return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm p-4">
 
             <div className="w-full max-w-2xl rounded-3xl  bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {/* Header */}
@@ -167,7 +167,7 @@ export default function AddPresenceModal() {
                         <button
                             type="button" disabled={isLoading}
                             onClick={handleSubmit}
-                            className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105"
+                            className={`rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105 ${isLoading ? "opacity-50" : "opacity-100"}`}
                         >
                             {isLoading ? (
                                 <p>

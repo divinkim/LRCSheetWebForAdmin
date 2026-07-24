@@ -1,22 +1,23 @@
 "use client";
+
 import { providers } from "@/index";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import SidebarHook from "@/components/Layouts/sidebar/hook";
-import { useRef } from "react";
 import socket from "@/socket";
+import { useSession } from "next-auth/react";
 
 type Users = {
-    fcmToken: string,
-    UserId: number,
-    UserEnterpriseId: number,
-    adminRole: string | null,
+    fcmToken: string;
+    UserId: number;
+    UserEnterpriseId: number;
+    adminRole: string | null;
     User: {
-        firstname: string,
-        lastname: string,
-        photo: string | null,
-        email: string
-    }
-}
+        firstname: string;
+        lastname: string;
+        photo: string | null;
+        email: string;
+    };
+};
 
 type ChatMessage = {
     role: string;
@@ -25,15 +26,21 @@ type ChatMessage = {
     content: string;
     file: string;
     createdAt: string;
-    title: string | null
+    title: string | null;
 };
 
 export function useChat() {
+    const { data: session } = useSession();
+
+    const sessionUserId = session?.user?.id ? Number(session.user.id) : null;
+    const sessionEnterpriseId = session?.user?.EnterpriseId ? Number(session.user.EnterpriseId) : null;
+
     const [users, setUsers] = useState<Users[]>([]);
     const [usersCloned, setUsersCloned] = useState<Users[]>([]);
-    const [AdminId, setAdminId] = useState<number | null>(null)
-    const { storedNotificationsArray, setStoredNotificationsArray } = SidebarHook();
+    const [AdminId, setAdminId] = useState<number | null>(null);
+    const { storedNotificationsArray } = SidebarHook();
     const [usersOnLine, setUsersOnline] = useState<number[]>([]);
+
     const [userData, setUserData] = useState({
         fcmToken: "",
         UserId: 0,
@@ -53,579 +60,390 @@ export function useChat() {
         senderId: 0,
         EnterpriseId: 0,
         files: "",
-    })
+    });
+
     const [notificationsCountLive, setNotificationCountLive] = useState({
         status: false,
         count: 0,
-        UserId: 0
-    })
+        UserId: 0,
+    });
+
     const [chatMessage, setChatMessage] = useState<ChatMessage[]>([]);
 
+    // WEBRTC & CALL STATES
     const [isCalling, setIsCalling] = useState(false);
     const [incomingCall, setIncomingCall] = useState<any>(null);
     const [callAccepted, setCallAccepted] = useState(false);
-    const localVideo = useRef<HTMLVideoElement | null>(null);
-    const remoteVideo = useRef<HTMLVideoElement | null>(null);
-
     const [callType, setCallType] = useState<"audio" | "video">("audio");
-    const peerConnection = useRef<RTCPeerConnection | null>(null);
-    const localStream = useRef<MediaStream | null>(null);
-    const remoteAudio = useRef<HTMLAudioElement | null>(null);
-
-    // STATUS APPEL
-    const [callStatus, setCallStatus] = useState<
-        "idle" | "ringing" | "accepted" | "rejected" | "ended"
-    >("idle");
-
-    // DURÉE APPEL
+    const [callStatus, setCallStatus] = useState<"idle" | "ringing" | "accepted" | "rejected" | "ended">("idle");
     const [callDuration, setCallDuration] = useState(0);
 
-    // TIMER
+    // REFS WEBRTC
+    const localVideo = useRef<HTMLVideoElement | null>(null);
+    const remoteVideo = useRef<HTMLVideoElement | null>(null);
+    const remoteAudio = useRef<HTMLAudioElement | null>(null);
+    const peerConnection = useRef<RTCPeerConnection | null>(null);
+    const localStream = useRef<MediaStream | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // FORMAT TEMPS
+    const currentUserId = sessionUserId ?? AdminId;
+
+    // ==========================================
+    // CALCUL DES NOTIFICATIONS PAR UTILISATEUR
+    // ==========================================
+    const notificationsCompter = useCallback((senderId: number) => {
+        if (typeof window === "undefined") return 0;
+        const local = localStorage.getItem("storedNotificationsArray");
+        const stored = local ? JSON.parse(local) : (storedNotificationsArray || []);
+        return stored.filter((item: any) => Number(item.senderId) === senderId).length;
+    }, [storedNotificationsArray]);
+
+    // ==========================================
+    // 1. ENREGISTREMENT AUTOMATIQUE DU SOCKET
+    // ==========================================
+    useEffect(() => {
+        if (!currentUserId) return;
+
+        setAdminId(currentUserId);
+
+        const registerSocket = () => {
+            socket.emit("register", currentUserId);
+        };
+
+        if (socket.connected) {
+            registerSocket();
+        }
+
+        socket.on("connect", registerSocket);
+
+        return () => {
+            socket.off("connect", registerSocket);
+        };
+    }, [currentUserId]);
+
+    // ==========================================
+    // 2. TIMERS & UTILITAIRES DE TEMPS
+    // ==========================================
+    const startCallTimer = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => {
+            setCallDuration((prev) => prev + 1);
+        }, 1000);
+    }, []);
+
+    const stopCallTimer = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+    }, []);
+
     function formatCallDuration(seconds: number) {
-
         const hrs = Math.floor(seconds / 3600);
-
         const mins = Math.floor((seconds % 3600) / 60);
-
         const secs = seconds % 60;
 
         return [
             hrs.toString().padStart(2, "0"),
             mins.toString().padStart(2, "0"),
-            secs.toString().padStart(2, "0")
+            secs.toString().padStart(2, "0"),
         ].join(":");
     }
 
-    // START TIMER
-    function startCallTimer() {
+    // ==========================================
+    // 3. WEBRTC ENGINE (Appels Audio & Vidéo)
+    // ==========================================
+    const cleanupWebRTC = useCallback(() => {
+        peerConnection.current?.close();
+        peerConnection.current = null;
 
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-        }
+        localStream.current?.getTracks().forEach((track) => track.stop());
+        localStream.current = null;
 
-        timerRef.current = setInterval(() => {
-            setCallDuration(prev => prev + 1);
-        }, 1000);
-    }
+        if (localVideo.current) localVideo.current.srcObject = null;
+        if (remoteVideo.current) remoteVideo.current.srcObject = null;
+        if (remoteAudio.current) remoteAudio.current.srcObject = null;
+    }, []);
 
-    // STOP TIMER
-    function stopCallTimer() {
-
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-        }
-    }
-
-    const startVideoCall = async () => {
-        try {
-
-            setIsCalling(true);
-            setCallType("video");
-            setCallStatus("ringing");
-
-
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: true
-            });
-
-            localStream.current = stream;
-
-            // afficher ma vidéo
-            if (localVideo.current) {
-                localVideo.current.srcObject = stream;
-            }
-
-            const pc = new RTCPeerConnection({
-                iceServers: [
-                    {
-                        urls: "stun:stun.l.google.com:19302"
-                    }
-                ]
-            });
-
-            peerConnection.current = pc;
-
-            stream.getTracks().forEach(track => {
-                pc.addTrack(track, stream);
-            });
-
-            pc.ontrack = async (event) => {
-
-                console.log("TRACK REÇU", event);
-
-                const remoteStream = event.streams[0];
-
-                if (remoteAudio.current) {
-
-                    remoteAudio.current.srcObject = remoteStream;
-
-                    remoteAudio.current.volume = 1;
-
-                    remoteAudio.current.muted = false;
-
-                    try {
-                        await remoteAudio.current.play();
-                        console.log("audio play ok");
-                    } catch (err) {
-                        console.log("play bloqué", err);
-                    }
-                }
-            };
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit("iceCandidate", {
-                        candidate: event.candidate,
-                        to: userData.UserId
-                    });
-                }
-            };
-
-            const offer = await pc.createOffer();
-
-            await pc.setLocalDescription(offer);
-
-            socket.emit("callUser", {
-                to: userData.UserId,
-                from: AdminId,
-                offer,
-                type: "video"
-            });
-
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
-    //Fonction pour lancer un appel
-    const startAudioCall = async () => {
-        try {
-
-            setIsCalling(true);
-            setCallStatus("ringing");
-
-            // récupération micro
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true
-            });
-
-            localStream.current = stream;
-
-            // création connexion WebRTC
-            const pc = new RTCPeerConnection({
-                iceServers: [
-                    {
-                        urls: "stun:stun.l.google.com:19302"
-                    }
-                ]
-            });
-
-            peerConnection.current = pc;
-
-            // ajouter audio
-            stream.getTracks().forEach(track => {
-                pc.addTrack(track, stream);
-            });
-
-            // audio distant
-            pc.ontrack = (event) => {
-                if (remoteAudio.current) {
-                    remoteAudio.current.srcObject = event.streams[0];
-                }
-            };
-
-            // ICE candidate
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit("iceCandidate", {
-                        candidate: event.candidate,
-                        to: userData.UserId
-                    });
-                }
-            };
-
-            // créer offre
-            const offer = await pc.createOffer();
-
-            await pc.setLocalDescription(offer);
-
-            socket.emit("callUser", {
-                to: userData.UserId,
-                from: AdminId,
-                offer
-            });
-
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
-    //Fonction pour recevoir un appel
-    socket.on("incomingCall", async (data) => {
-        if (data.to === Number(AdminId)) {
-            console.log("appel entrant", data)
-            setCallType(data.type || "audio");
-            setIncomingCall(data);
-        }
-    });
-
-    const acceptCall = async () => {
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: callType === "video"
-        });
-
-        localStream.current = stream;
-
-        if (callType === "video" && localVideo.current) {
-            localVideo.current.srcObject = stream;
-        }
-
+    const initPeerConnection = useCallback((targetUserId: number) => {
         const pc = new RTCPeerConnection({
-            iceServers: [
-                {
-                    urls: "stun:stun.l.google.com:19302"
-                }
-            ]
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
         });
-
-        peerConnection.current = pc;
-
-        stream.getTracks().forEach(track => {
-            pc.addTrack(track, stream);
-        });
-
-        pc.ontrack = (event) => {
-
-            if (remoteAudio.current) {
-                remoteAudio.current.srcObject = event.streams[0];
-            }
-
-            if (remoteVideo.current) {
-                remoteVideo.current.srcObject = event.streams[0];
-            }
-        };
 
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit("iceCandidate", {
                     candidate: event.candidate,
-                    to: incomingCall.from
+                    to: targetUserId,
                 });
             }
         };
 
-        await pc.setRemoteDescription(
-            new RTCSessionDescription(incomingCall.offer)
-        );
-
-        const answer = await pc.createAnswer();
-
-        await pc.setLocalDescription(answer);
-
-        socket.emit("answerCall", {
-            to: incomingCall.from,
-            answer
-        });
-
-        setIsCalling(true);
-        setCallAccepted(true);
-        setCallStatus("ringing");
-    };
-
-    //Réponse à l'appel
-    useEffect(() => {
-        socket.on("callAnswered", async (data) => {
-
-            await peerConnection.current?.setRemoteDescription(
-                new RTCSessionDescription(data.answer)
-            );
-
-            setCallAccepted(true);
-
-            setCallStatus("accepted");
-
-            setCallStatus("accepted");
-            startCallTimer();
-            startCallTimer();
-
-        });
-
-        return () => {
-            socket.off("callAnswered");
-        }
-
-    }, []);
-
-    //Appel réjeté
-    useEffect(() => {
-
-        socket.on("callRejected", () => {
-
-            setCallStatus("rejected");
-
-            setIsCalling(false);
-
-            stopCallTimer();
-        });
-
-        return () => {
-            socket.off("callRejected");
+        pc.ontrack = (event) => {
+            const remoteStream = event.streams[0];
+            if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+            if (remoteAudio.current) {
+                remoteAudio.current.srcObject = remoteStream;
+                remoteAudio.current.play().catch((err) => console.log("Audio play error", err));
+            }
         };
 
+        peerConnection.current = pc;
+        return pc;
     }, []);
 
-    //
-    useEffect(() => {
-        socket.on("iceCandidate", async (data) => {
-            try {
+    const startCall = async (type: "audio" | "video") => {
+        try {
+            setIsCalling(true);
+            setCallType(type);
+            setCallStatus("ringing");
 
-                await peerConnection.current?.addIceCandidate(
-                    new RTCIceCandidate(data.candidate)
-                );
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: type === "video",
+            });
 
-            } catch (err) {
-                console.log(err);
+            localStream.current = stream;
+            if (type === "video" && localVideo.current) {
+                localVideo.current.srcObject = stream;
             }
 
-        });
+            const pc = initPeerConnection(userData.UserId);
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-        return () => {
-            socket.off("iceCandidate");
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            socket.emit("callUser", {
+                to: userData.UserId,
+                from: currentUserId,
+                offer,
+                type,
+            });
+        } catch (error) {
+            console.error("Erreur lors de l'appel:", error);
+            endCall();
         }
+    };
 
-    }, []);
+    const acceptCall = async () => {
+        if (!incomingCall) return;
+
+        try {
+            const isVideo = incomingCall.type === "video";
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: isVideo,
+            });
+
+            localStream.current = stream;
+            if (isVideo && localVideo.current) {
+                localVideo.current.srcObject = stream;
+            }
+
+            const pc = initPeerConnection(incomingCall.from);
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+            await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            socket.emit("answerCall", {
+                to: incomingCall.from,
+                answer,
+            });
+
+            setIsCalling(true);
+            setCallAccepted(true);
+            setCallStatus("accepted");
+            startCallTimer();
+        } catch (err) {
+            console.error("Erreur acceptation appel:", err);
+            rejectCall();
+        }
+    };
 
     const rejectCall = () => {
-
-        socket.emit("rejectCall", {
-            to: incomingCall.from
-        });
-
+        if (incomingCall) {
+            socket.emit("rejectCall", { to: incomingCall.from });
+        }
         setIncomingCall(null);
-
         setCallStatus("rejected");
-
         setIsCalling(false);
-
         stopCallTimer();
     };
 
     const endCall = () => {
-
-        peerConnection.current?.close();
-
-        localStream.current?.getTracks().forEach(track => {
-            track.stop();
-        });
-
+        if (userData.UserId) {
+            socket.emit("endCall", { to: userData.UserId });
+        }
+        cleanupWebRTC();
         stopCallTimer();
         setCallStatus("ended");
         setCallDuration(0);
-
         setCallAccepted(false);
         setIncomingCall(null);
         setIsCalling(false);
-
-        if (localVideo.current) {
-            localVideo.current.srcObject = null;
-        }
-
-        if (remoteVideo.current) {
-            remoteVideo.current.srcObject = null;
-        }
     };
 
-    function getNotificationCount(UserId: number) {
-        const count = storedNotificationsArray.filter((item: { senderId: string }) => Number(item.senderId) === UserId);
-        return count.length;
-    }
-
-    function removeNotificationCount(senderId: number) {
-        const deleteItem = storedNotificationsArray.filter(item => Number(item.senderId) !== senderId && item.receiverId === Number(AdminId));
-
-        console.log(deleteItem)
-
-        setNotificationCountLive({
-            status: false,
-            count: 0,
-            UserId: 0
-        })
-        localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem))
-    }
-    function sortUsersByFrequency(users: Users[], messages: ChatMessage[]) {
-        const map = new Map();
-        messages.forEach((msg) => {
-            const time = new Date(msg.createdAt).getTime();
-            if (msg.senderId) {
-                const prev = map.get(msg.senderId) || 0
-                if (time > prev) {
-                    map.set(msg.senderId, time)
-                }
-            }
-            if (msg.receiverId) {
-                const prev = map.get(msg.receiverId) || 0
-                if (time > prev) {
-                    map.set(msg.receiverId, time);
-                }
-
-            }
-        });
-        return [...users].sort((a, b) => {
-            const countA = map.get(a.UserId) || 0;
-            const countB = map.get(b.UserId) || 0;
-            return countB - countA
-        })
-    }
-
+    // ==========================================
+    // 4. LISTENERS WEBSOCKET TEMPS RÉEL
+    // ==========================================
     useEffect(() => {
-        (async () => {
-            if (typeof (window) === "undefined") return;
-            if (ref.current) {
-                ref.current.scrollIntoView({ behavior: "smooth" })
-            }
-            const EnterpriseId = localStorage.getItem("EnterpriseId");
-            const AdminId = localStorage.getItem("id");
-
-            const usersFcmTokens = await providers.API.getAll(providers.APIUrl, "getFcmTokens", null);
-            const usersFcmTokensByEnterpriseId = usersFcmTokens.filter((item: { UserEnterpriseId: number }) => item.UserEnterpriseId === Number(EnterpriseId));
-
-            const chatMessage = await providers.API.getAll(providers.APIUrl, "getChatMessage", null);
-
-            const newUsersArray = sortUsersByFrequency(usersFcmTokensByEnterpriseId, chatMessage);
-
-            setUsers(newUsersArray);
-            setUsersCloned(newUsersArray);
-            setChatMessage(chatMessage);
-            setAdminId(Number(AdminId))
-        })()
-    }, []);
-
-    useEffect(() => {
-        (async () => {
-            const chatMessage = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getChatMessage", null);
-            setChatMessage(chatMessage);
-        })()
-    }, [storedNotificationsArray])
-
-    useEffect(() => {
-        (() => {
-            if (ref.current) {
-                ref.current.scrollIntoView({ behavior: "smooth" })
-            }
-            const newUsersArray = sortUsersByFrequency(users, chatMessage);
-            const unique = Array.from(
-                new Map(newUsersArray.map(item => [item.UserId, item])).values()
-            );
-            setUsersCloned(unique);
-        })();
-    }, [chatMessage])
-
-    useEffect(() => {
-        (() => {
-            if (ref.current) {
-                ref.current.scrollIntoView({ behavior: "smooth" })
-            }
-        })()
-    }, [userData.fcmToken])
-
-    useEffect(() => {
-        (() => {
-            setLoader(false)
-        })()
-    }, [users])
-
-    function onSearch(value: string) {
-        const searchUsers = users.filter(item => item.User?.firstname.toLowerCase().includes(value.toLowerCase()) || item.User?.lastname.toLowerCase().includes(value.toLowerCase()));
-        const unique = Array.from(
-            new Map(searchUsers.map(item => [item.UserId, item])).values()
-        );
-        setUsersCloned(unique);
-    }
-
-    //Ecoute en temps réel des donnée du chat
-    useEffect(() => {
-        const handle = (datas: any) => {
-            const UserId = localStorage.getItem("id")
-            if (datas.receiverId === String(UserId)) {
-                console.log(datas)
-
-                const local = localStorage.getItem("storedNotificationsArray");
-                const storedNotificationsArray = local ? JSON.parse(local) : [];
-
-                const notificationCount = [...storedNotificationsArray, datas].filter(item => item.senderId === datas.senderId).length;
-
-                setNotificationCountLive({
-                    status: true,
-                    count: notificationCount,
-                    UserId: Number(datas.senderId)
-                })
-
-                // setStoredNotificationsArray([...storedNotificationsArray, datas])
-                // localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, datas]))
+        const handleIncomingCall = (data: any) => {
+            if (Number(data.to) === Number(currentUserId)) {
+                setCallType(data.type || "audio");
+                setIncomingCall(data);
+                setCallStatus("ringing");
             }
         };
 
-        socket.off("getChatData", handle);
+        const handleCallAnswered = async (data: any) => {
+            if (peerConnection.current) {
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+                setCallAccepted(true);
+                setCallStatus("accepted");
+                startCallTimer();
+            }
+        };
 
-        socket.on("getChatData", handle);
+        const handleIceCandidate = async (data: any) => {
+            if (peerConnection.current && data.candidate) {
+                try {
+                    await peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } catch (err) {
+                    console.error("ICE error:", err);
+                }
+            }
+        };
+
+        const handleCallRejected = () => {
+            setCallStatus("rejected");
+            setIsCalling(false);
+            cleanupWebRTC();
+            stopCallTimer();
+        };
+
+        const handleCallEnded = () => {
+            cleanupWebRTC();
+            stopCallTimer();
+            setCallStatus("ended");
+            setCallDuration(0);
+            setCallAccepted(false);
+            setIncomingCall(null);
+            setIsCalling(false);
+        };
+
+        const handleGetChatData = (datas: any) => {
+            if (datas.receiverId === String(currentUserId)) {
+                const local = localStorage.getItem("storedNotificationsArray");
+                const stored = local ? JSON.parse(local) : [];
+                const count = [...stored, datas].filter((item) => item.senderId === datas.senderId).length;
+
+                setNotificationCountLive({
+                    status: true,
+                    count,
+                    UserId: Number(datas.senderId),
+                });
+            }
+        };
+
+        const handleUsersOnline = (onlineIds: number[]) => {
+            setUsersOnline(onlineIds);
+        };
+
+        socket.on("incomingCall", handleIncomingCall);
+        socket.on("callAnswered", handleCallAnswered);
+        socket.on("iceCandidate", handleIceCandidate);
+        socket.on("callRejected", handleCallRejected);
+        socket.on("callEnded", handleCallEnded);
+        socket.on("getChatData", handleGetChatData);
+        socket.on("usersOnline", handleUsersOnline);
 
         return () => {
-            socket.off("getChatData", handle)
-        }
-    }, [])
+            socket.off("incomingCall", handleIncomingCall);
+            socket.off("callAnswered", handleCallAnswered);
+            socket.off("iceCandidate", handleIceCandidate);
+            socket.off("callRejected", handleCallRejected);
+            socket.off("callEnded", handleCallEnded);
+            socket.off("getChatData", handleGetChatData);
+            socket.off("usersOnline", handleUsersOnline);
+        };
+    }, [currentUserId, cleanupWebRTC, startCallTimer, stopCallTimer]);
 
-    useEffect(() => {
-        const event = (data: number[]) => {
-            console.log("utilisateurs connecté", data)
-            setUsersOnline(data);
-            return;
-        }
-        socket.off("usersOnline", event);
-        socket.on("usersOnline", event);
+    // ==========================================
+    // 5. FONCTIONS MESSAGERIE & RECHERCHE
+    // ==========================================
+    function sortUsersByFrequency(usersList: Users[], messages: ChatMessage[]) {
+        const map = new Map();
+        messages.forEach((msg) => {
+            const time = new Date(msg.createdAt).getTime();
+            if (msg.senderId) map.set(msg.senderId, Math.max(map.get(msg.senderId) || 0, time));
+            if (msg.receiverId) map.set(msg.receiverId, Math.max(map.get(msg.receiverId) || 0, time));
+        });
 
-        return () => {
-            socket.off("usersOnline", event);
-        }
-    }, [])
-
-    function notificationsCompter(UserId: number) {
-        const local = localStorage.getItem("storedNotificationsArray");
-        const storedNotificationsArray: any[] = local ? JSON.parse(local) : [];
-        const result = storedNotificationsArray.filter(item => Number(item.senderId) === UserId);
-        return result.length
+        return [...usersList].sort((a, b) => (map.get(b.UserId) || 0) - (map.get(a.UserId) || 0));
     }
 
+    // ==========================================
+    // 5. FONCTIONS MESSAGERIE & RECHERCHE
+    // ==========================================
+    useEffect(() => {
+        (async () => {
+            if (typeof window === "undefined" || !sessionEnterpriseId) return;
+
+            const usersFcmTokens = await providers.API.getAll(providers.APIUrl, "getFcmTokens", null);
+
+            // 1. Filtrer par entreprise
+            const filteredByEnterprise = usersFcmTokens.filter(
+                (item: { UserEnterpriseId: number }) => item.UserEnterpriseId === sessionEnterpriseId
+            );
+
+            // 2. DÉDOUBLONNER la liste des utilisateurs par leur UserId
+            const uniqueUsersMap = new Map<number, Users>();
+            filteredByEnterprise.forEach((item: Users) => {
+                if (!uniqueUsersMap.has(item.UserId)) {
+                    uniqueUsersMap.set(item.UserId, item);
+                }
+            });
+            const uniqueUsers = Array.from(uniqueUsersMap.values());
+
+            // 3. Charger les messages et trier
+            const messages = await providers.API.getAll(providers.APIUrl, "getChatMessage", null);
+            const sortedUsers = sortUsersByFrequency(uniqueUsers, messages);
+
+            // 4. Mettre à jour le state avec la liste sans doublons
+            setUsers(sortedUsers);
+            setUsersCloned(sortedUsers);
+            setChatMessage(messages);
+            setLoader(false);
+        })();
+    }, [sessionEnterpriseId]);
+    
     async function sendChatMessage() {
-        if (!data.content)
-            return providers.alertMessage(false, "Champs incorrecte",
+        if (!data.content) {
+            return providers.alertMessage(
+                false,
+                "Champ incorrect",
                 "Veuillez saisir un contenu!",
                 "/dashboard/NOTIF/chat"
             );
+        }
 
-        setChatMessage(prevMessage => [
-            ...prevMessage,
-            {
-                role: "Super-Admin",
-                receiverId: userData.UserId,
-                senderId: Number(AdminId),
-                content: data.content,
-                file: data.files,
-                createdAt: new Date().toISOString(),
-                title: ""
-            }
-        ]);
+        const newMessage: ChatMessage = {
+            role: "Super-Admin",
+            receiverId: userData.UserId,
+            senderId: Number(currentUserId),
+            content: data.content,
+            file: data.files,
+            createdAt: new Date().toISOString(),
+            title: "",
+        };
+
+        setChatMessage((prev) => [...prev, newMessage]);
 
         const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
             content: data.content,
             receiverId: userData.UserId,
-            senderId: AdminId,
-            EnterpriseId: 1,
+            senderId: currentUserId,
+            EnterpriseId: sessionEnterpriseId || 1,
             file: data.files,
             role: "Super-Admin",
         });
@@ -635,48 +453,82 @@ export function useChat() {
             adminSectionIndex: "0",
             adminPageIndex: "0",
             receiverId: [userData.UserId],
-            senderId: String(AdminId),
-        })
+            senderId: String(currentUserId),
+        });
 
-        setData({
-            ...data,
-            content: "",
-            files: ""
-        })
+        setData((prev) => ({ ...prev, content: "", files: "" }));
 
         if (response) {
-            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
+            await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
                 path: "/dashboard/NOTIF/chat",
                 EnterpriseId: userData.EnterpriseId.toString(),
                 messagingType: "notification",
                 adminSectionIndex: "0",
                 adminPageIndex: "0",
-                senderId: String(AdminId),
-                receiverId: String(userData.UserId)
+                senderId: String(currentUserId),
+                receiverId: String(userData.UserId),
             });
-            const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
-                senderEmail: "lrcsheet@gmail.com",
-                subject: "Notification entrante!",
-                content: "Veuillez consulter votre messagerie sur l'espace LRCSheet Web https://vps118934.serveur-vps.net:4000/Dashboard/NOTIF/chat",
-                emails: [userData.email],
-            })
-            console.log(notification);
-            console.log(sendMail)
         }
     }
 
-    console.log("le tableau", storedNotificationsArray)
-    // formatCallDuration(callDuration)
+    function removeNotificationCount(senderId: number) {
+        socket.emit("onReadMessage", {
+            senderId: senderId,
+            receiverId: Number(currentUserId),
+        });
+
+        const local = localStorage.getItem("storedNotificationsArray");
+        const stored = local ? JSON.parse(local) : [];
+        const deleteItem = stored.filter((item: any) => Number(item.senderId) !== senderId);
+
+        setNotificationCountLive({ status: false, count: 0, UserId: 0 });
+        localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem));
+    }
+
+    function onSearch(value: string) {
+        const searchUsers = users.filter(
+            (item) =>
+                item.User?.firstname.toLowerCase().includes(value.toLowerCase()) ||
+                item.User?.lastname.toLowerCase().includes(value.toLowerCase())
+        );
+        const unique = Array.from(new Map(searchUsers.map((item) => [item.UserId, item])).values());
+        setUsersCloned(unique);
+    }
 
     return {
-        users, userData, setUserData, sendChatMessage, data, setData, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
-        remoteVideo,
-        startVideoCall,
-        callType, setIsCalling, setCallType,
+        users,
+        userData,
+        setUserData,
+        sendChatMessage,
+        data,
+        setData,
+        chatMessage,
+        setChatMessage,
+        removeNotificationCount,
+        notificationsCompter,
+        ref,
+        usersCloned,
+        setUsersCloned,
+        onSearch,
+        AdminId,
+        loader,
+        notificationsCountLive,
+        startAudioCall: () => startCall("audio"),
+        startVideoCall: () => startCall("video"),
+        acceptCall,
         rejectCall,
+        endCall,
+        incomingCall,
+        callAccepted,
+        isCalling,
+        localVideo,
+        remoteVideo,
+        remoteAudio,
+        callType,
+        setCallType,
         callStatus,
         callDuration,
         formatCallDuration,
-        usersOnLine
-    }
+        usersOnLine,
+    };
 }

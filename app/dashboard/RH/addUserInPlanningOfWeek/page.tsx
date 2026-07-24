@@ -2,196 +2,237 @@
 
 import AddOrEditUserPlanningOfWeek from "@/components/addEditUserPlanningOfWeek";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faSpinner, faCalendarAlt, faUsers, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { ClipLoader } from "react-spinners";
 import Link from "next/link";
 import useAddUserInPlanningOfWeek from "./hook";
 import { providers } from "@/index";
 
 export default function AddUserInPlanningOfWeek() {
-    const { 
-        handleSubmit, 
-        onSearch, 
-        usersArrayCloned, 
-        addEditUserPlanningOfWeek, 
-        weekDays, 
-        plannings, 
-        isLoading, 
-        datas, 
+    const {
+        handleSubmit,
+        onSearch,
+        usersArrayCloned,
+        addEditUserPlanningOfWeek,
+        weekDays,
+        plannings,
+        isLoading,
+        datas,
         getFormatTime,
         handleToggleUser,
         handleSelectPlanning,
-        handleToggleWeekDay 
+        handleToggleWeekDay
     } = useAddUserInPlanningOfWeek();
 
-    // Pour l'affichage UI : récurrence des sélections actuelles
+    // Récurrence des sélections actuelles
     const selectedPlannings = datas[0]?.planningsId || [];
     const selectedWeekDays = datas[0]?.weekDaysId || [];
 
     return (
-        <main className="bg-gray-100 dark:bg-transparent">
-            <div className="flex">
-                <div className="mx-4 font-semibold mt-6 mb-4 w-full">
-                    {/* Header / Breadcrumb */}
-                    <div className="flex flex-col gap-1 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-                        <div>
-                            <h1 className="text-xl font-semibold tracking-tight text-slate-700 dark:text-white">
-                                Gestion du planning d'un collaborateur
-                            </h1>
-                        </div>
-                        <div className="hidden items-center gap-1.5 text-sm text-slate-500 xl:flex dark:text-slate-400">
-                            <span className="hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition-colors">Dashboard</span>
-                            <span className="text-slate-300 dark:text-slate-700">/</span>
-                            <span className="hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition-colors">RH</span>
-                            <span className="text-slate-300 dark:text-slate-700">/</span>
-                            <span className="font-medium text-blue-600 dark:text-blue-400">Ajouter un planning collaborateur au planning</span>
-                        </div>
+        <main className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
+            <div className="mx-auto max-w-7xl space-y-8">
+                
+                {/* Header & Breadcrumbs */}
+                <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                            Gestion du planning
+                        </h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            Assignez des créneaux horaires et des jours de travail à vos collaborateurs.
+                        </p>
                     </div>
-                    
-                    <hr />
 
-                    {/* Navigation links */}
-                    <div className="mt-6 flex flex-wrap justify-end gap-4">
+                    {/* Links d'actions rapides */}
+                    <div className="flex flex-wrap gap-3">
                         {addEditUserPlanningOfWeek?.addUserInPlanningOfWeek.links.map((elm) => (
                             <Link
                                 key={elm.path}
                                 href={elm.path}
-                                className="inline-flex items-center gap-3 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-md transition-all duration-300 hover:bg-blue-800 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                                className="inline-flex items-center gap-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white active:scale-95"
                             >
-                                <FontAwesomeIcon icon={elm.icon} className="text-white text-sm" />
+                                <FontAwesomeIcon icon={elm.icon} className="text-amber-500 dark:text-amber-400 text-sm" />
                                 <span>{elm.title}</span>
                             </Link>
                         ))}
                     </div>
+                </div>
 
-                    <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-                        {/* Section Collaborateurs */}
-                        <div className="h-[500px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-900">
-                            <div className="mb-5 flex items-center justify-between">
-                                <h2 className="text-lg font-bold text-slate-700 dark:text-slate-100">Collaborateurs</h2>
-                                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600 dark:bg-orange-400/10 dark:text-orange-400">
-                                    {usersArrayCloned.length} membre(s)
-                                </span>
+                {/* Panneau Principal : Grid 2 Colonnes */}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    
+                    {/* SECTION 1 : COLLABORATEURS */}
+                    <div className="flex flex-col h-[560px] rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-6 shadow-sm dark:shadow-xl transition-all duration-200">
+                        
+                        {/* En-tête Section */}
+                        <div className="mb-5 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                    <FontAwesomeIcon icon={faUsers} className="text-sm" />
+                                </div>
+                                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Collaborateurs</h2>
                             </div>
+                            <span className="rounded-full bg-amber-100 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                {usersArrayCloned.length} membre(s)
+                            </span>
+                        </div>
 
-                            <div className="relative mb-6">
-                                <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    onChange={(e) => onSearch(e.target.value)}
-                                    placeholder="Rechercher un collaborateur..."
-                                    className="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 pl-11 pr-4 text-slate-700 outline-none transition-all duration-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-orange-400/20"
-                                />
-                            </div>
+                        {/* Search Bar */}
+                        <div className="relative mb-4">
+                            <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-sm" />
+                            <input
+                                type="text"
+                                onChange={(e) => onSearch(e.target.value)}
+                                placeholder="Rechercher par nom, prénom..."
+                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 py-2.5 pl-11 pr-4 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 outline-none transition-all duration-200 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-amber-500/20"
+                            />
+                        </div>
 
-                            <div className="flex h-[340px] flex-col gap-3 overflow-y-auto pr-1">
-                                {usersArrayCloned.map((user) => (
-                                    <div
+                        {/* Liste des utilisateurs */}
+                        <div className="flex-1 overflow-y-auto pr-1.5 space-y-2.5">
+                            {usersArrayCloned.map((user) => {
+                                const isSelected = datas.some((item) => item.userId === user.id);
+                                return (
+                                    <label
                                         key={user.id}
-                                        className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:border-orange-400 hover:bg-orange-50/40 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                        onClick={() => handleToggleUser(user)}
+                                        className={`group flex cursor-pointer items-center justify-between rounded-xl border p-3.5 transition-all duration-200 ${
+                                            isSelected
+                                                ? "border-amber-500 bg-amber-50/60 dark:border-amber-500/50 dark:bg-amber-500/10 shadow-sm"
+                                                : "border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/80 dark:hover:bg-slate-800/80"
+                                        }`}
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <img
-                                                src={user.photo ? `${providers.APIUrl}/images/${user.photo}` : "/images/clientProfile.png"}
-                                                alt={`${user.firstname} ${user.lastname}`}
-                                                className="h-12 w-12 rounded-full border-2 border-orange-400 object-cover"
-                                            />
+                                        <div className="flex items-center gap-3.5">
+                                            <div className="relative">
+                                                <img
+                                                    src={user.photo ? `${providers.APIUrl}/images/${user.photo}` : "/images/clientProfile.png"}
+                                                    alt={`${user.firstname} ${user.lastname}`}
+                                                    className="h-11 w-11 rounded-full border-2 border-slate-200 dark:border-slate-700 object-cover group-hover:border-amber-500 transition-colors"
+                                                />
+                                                {isSelected && (
+                                                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white font-bold">
+                                                        <FontAwesomeIcon icon={faCheck} />
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div>
-                                                <p className="font-semibold text-slate-700 dark:text-slate-100">
+                                                <p className="font-semibold text-sm text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                                     {user.lastname} {user.firstname}
                                                 </p>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400">Collaborateur</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Collaborateur</p>
                                             </div>
                                         </div>
 
-                                        {/* Checkbox Utilisateur */}
+                                        {/* Custom Checkbox */}
                                         <input
                                             type="checkbox"
-                                            checked={datas.some(item => item.userId === user.id)}
-                                            onChange={() => handleToggleUser(user)}
-                                            className="h-5 w-5 cursor-pointer rounded border-slate-400 text-orange-400 focus:ring-orange-400"
+                                            checked={isSelected}
+                                            onChange={() => {}} // Géré via le clic parent
+                                            className="h-5 w-5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-amber-500 focus:ring-amber-400 dark:focus:ring-offset-slate-900"
                                         />
-                                    </div>
-                                ))}
-                            </div>
+                                    </label>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        {/* Section Planning & Jours */}
-                        <div className="h-[500px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-900">
-                            <div className="mb-6 flex items-center justify-between">
-                                <h2 className="text-lg font-bold text-slate-700 dark:text-slate-100">Planning hebdomadaire</h2>
-                                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                    {weekDays.length} jours
+                    {/* SECTION 2 : PLANNING & JOURS */}
+                    <div className="flex flex-col h-[560px] rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-6 shadow-sm dark:shadow-xl transition-all duration-200 justify-between">
+                        <div>
+                            {/* En-tête Section */}
+                            <div className="mb-5 flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                        <FontAwesomeIcon icon={faCalendarAlt} className="text-sm" />
+                                    </div>
+                                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Planning hebdomadaire</h2>
+                                </div>
+                                <span className="rounded-full bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-400">
+                                    {weekDays.length} jours configurables
                                 </span>
                             </div>
 
-                            {/* Select Planning */}
+                            {/* Selecteur de Planning Horaire */}
                             <div className="mb-6">
-                                <label className="mb-2 block font-medium text-slate-600 dark:text-slate-300">
-                                    Sélectionnez un planning horaire
+                                <label className="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    Créneau Horaire
                                 </label>
                                 <select
                                     value={selectedPlannings[0] || ""}
                                     onChange={(e) => handleSelectPlanning(Number(e.target.value))}
-                                    className="w-full rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-700 outline-none transition-all duration-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-orange-400/20"
+                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/80 p-3 text-sm text-slate-800 dark:text-slate-100 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                                 >
-                                    <option value="">Sélectionnez un planning</option>
+                                    <option value="" className="bg-white dark:bg-slate-900 text-slate-400">Sélectionnez un horaire type...</option>
                                     {plannings.map((planning) => (
-                                        <option key={planning.id} value={planning.id}>
-                                            {getFormatTime(planning.startTime)} - {getFormatTime(planning.breakingStartTime)} - {getFormatTime(planning.resumeEndTime)} - {getFormatTime(planning.endTime)}
+                                        <option key={planning.id} value={planning.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                                            {getFormatTime(planning.startTime)} - {getFormatTime(planning.breakingStartTime)} | {getFormatTime(planning.resumeEndTime)} - {getFormatTime(planning.endTime)}
                                         </option>
                                     ))}
                                 </select>
                             </div>
 
-                            <div className="mb-4">
-                                <h3 className="mb-2 text-base font-semibold text-slate-700 dark:text-slate-200">Jours de la semaine</h3>
-                                <div className="h-1 w-20 rounded-full bg-orange-400"></div>
-                            </div>
+                            {/* Jours de la semaine */}
+                            <div>
+                                <label className="mb-3 block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    Jours d'application
+                                </label>
+                                <div className="max-h-[250px] overflow-y-auto pr-1.5 space-y-2">
+                                    {weekDays.map((weekDay) => {
+                                        const isChecked = selectedWeekDays.includes(weekDay.id);
+                                        return (
+                                            <label
+                                                key={weekDay.id}
+                                                onClick={() => handleToggleWeekDay(weekDay.id)}
+                                                className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all duration-200 ${
+                                                    isChecked
+                                                        ? "border-blue-500 bg-blue-50/60 dark:border-blue-500/50 dark:bg-blue-500/10"
+                                                        : "border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/80 dark:hover:bg-slate-800/80"
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg font-bold text-xs transition-colors ${
+                                                        isChecked 
+                                                            ? "bg-blue-600 text-white" 
+                                                            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                                                    }`}>
+                                                        {weekDay.day.substring(0, 3).toUpperCase()}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{weekDay.day}</span>
+                                                </div>
 
-                            {/* Checkboxes Jours de la semaine */}
-                            <div className="flex h-[260px] flex-col gap-3 overflow-y-auto pr-1">
-                                {weekDays.map((weekDay) => (
-                                    <div
-                                        key={weekDay.id}
-                                        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:border-orange-400 hover:bg-orange-50/40 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 font-bold text-orange-500 dark:bg-orange-400/10 dark:text-orange-400">
-                                                {weekDay.day.charAt(0)}
-                                            </div>
-                                            <span className="font-medium text-slate-700 dark:text-slate-200">{weekDay.day}</span>
-                                        </div>
-
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedWeekDays.includes(weekDay.id)}
-                                            onChange={() => handleToggleWeekDay(weekDay.id)}
-                                            className="h-5 w-5 cursor-pointer rounded border-slate-400 text-orange-400 focus:ring-orange-400"
-                                        />
-                                    </div>
-                                ))}
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={() => {}} // Géré par le parent
+                                                    className="h-5 w-5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600 focus:ring-blue-500 dark:focus:ring-offset-slate-900"
+                                                />
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
+                        </div>
+
+                        {/* Bouton de soumission */}
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={isLoading}
+                                className="inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl bg-blue-600 dark:bg-blue-600 px-6 py-3 font-semibold text-sm text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 dark:hover:bg-blue-500 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-white" />
+                                        <span>Enregistrement...</span>
+                                    </>
+                                ) : (
+                                    <span>Valider le planning</span>
+                                )}
+                            </button>
                         </div>
                     </div>
 
-                    {/* Bouton de soumission */}
-                    <div className="mt-8 flex justify-end">
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={isLoading}
-                            className="inline-flex min-w-[170px] items-center justify-center gap-3 rounded-xl bg-blue-700 px-8 py-3.5 font-semibold text-white shadow-md transition-all duration-300 hover:bg-blue-800 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <ClipLoader size={18} color="#fff" />
-                                    <span>Traitement...</span>
-                                </>
-                            ) : (
-                                <span>Ajouter</span>
-                            )}
-                        </button>
-                    </div>
                 </div>
             </div>
         </main>

@@ -1,446 +1,687 @@
 "use client";
-import { providers } from "@/index";
-import { useChat } from "./hook";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMessage, faPaperclip, faPhone, faSearch, faTimes, faVideo } from "@fortawesome/free-solid-svg-icons";
+
+import { useMemo, useState, useEffect, KeyboardEvent } from "react";
 import Link from "next/link";
-import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
-import { useState } from "react";
 import { ClipLoader } from "react-spinners";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faMessage,
+  faPaperclip,
+  faPhone,
+  faSearch,
+  faTimes,
+  faArrowLeft,
+  faPaperPlane,
+  faFolderOpen,
+  faFileAlt,
+  faVideo,
+} from "@fortawesome/free-solid-svg-icons";
+
+import { providers } from "@/index";
 import socket from "@/socket";
-import Loader from "@/components/loader/loader";
+import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
+import { useChat } from "./hook";
+
 type ChatMessage = {
-    role: string;
-    receiverId: number;
-    senderId: number;
-    content: string;
-    file: string;
-    createdAt: string;
-    title: string | null
+  id?: number;
+  role: string;
+  receiverId: number;
+  senderId: number;
+  content: string;
+  file?: string;
+  createdAt: string;
+  title?: string | null;
+  callStatus?: boolean;
+  callDuration?: number;
 };
 
+// Composant réutilisable pour les fenêtres modales d'appel
+function CallModal({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="flex h-[380px] w-full max-w-[420px] flex-col items-center justify-center space-y-6 rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-800">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          {title}
+        </h2>
+        <img
+          src="/images/clientProfile.png"
+          alt="Profil"
+          className="h-28 w-28 rounded-full border-2 border-slate-200 object-cover shadow dark:border-slate-700"
+        />
+        <div className="flex items-center space-x-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function Chat() {
+  const {
+    userData,
+    setUserData,
+    data,
+    setData,
+    sendChatMessage,
+    chatMessage,
+    removeNotificationCount,
+    ref,
+    usersCloned,
+    onSearch,
+    UserId,
+    AdminId,
+    loading,
+    loader,
+    notificationsCountLive,
+    notificationsCompter,
+    startAudioCall,
+    acceptCall,
+    incomingCall,
+    callAccepted,
+    endCall,
+    remoteAudio,
+    isCalling,
+    localVideo,
+    remoteVideo,
+    startVideoCall,
+    callType,
+    setCallType,
+    usersOnLine,
+  } = useChat();
 
-    const { users, userData, setUserData, data, setData, sendChatMessage, chatMessage, setChatMessage, getNotificationCount, removeNotificationCount, ref, usersCloned, setUsersCloned, onSearch, AdminId, loader, notificationsCountLive, notificationsCompter, startAudioCall, acceptCall, incomingCall, callAccepted, endCall, remoteAudio, isCalling, localVideo,
-        remoteVideo,
-        startVideoCall,
-        callType, setIsCalling, setCallType, usersOnLine } = useChat();
+  const [showChat, setShowChat] = useState(false);
+  const { isMobile } = useSidebarContext();
 
-    const [showChat, setShowChat] = useState(false)
-    const { isMobile } = useSidebarContext()
-    const chatMessageGrouped: Record<string, ChatMessage[]> = chatMessage.reduce((acc, item) => {
-        const today = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(today.getDate() - 1);
+  const currentUserId = AdminId ?? UserId;
 
-        const currentDate = new Date(item.createdAt)
-
-        let date = "";
-
-        if (today.toDateString() === currentDate.toDateString()) {
-            date = "Aujourd'hui"
-        } else if (yesterday.toDateString() === currentDate.toDateString()) {
-            date = "Hier"
-        } else {
-            date = currentDate.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })
-        }
-
-        if (!acc[date]) {
-            acc[date] = []
-        }
-
-        acc[date].push(item);
-
-        return acc;
-
-    }, {} as Record<string, ChatMessage[]>)
-
-    const getLatestChatMessage = (UserId: number) => {
-        const message = chatMessage.filter(item => (item.senderId === UserId &&
-            item.receiverId === AdminId) || (item.senderId === AdminId && item.receiverId === UserId)
-        ).at(-1);
-
-        return {
-            content: message?.content ?? "Laissez un message",
-            date: message?.createdAt ? new Date(message?.createdAt).toLocaleDateString([], {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-            }) : ""
-        }
+  // Défilement automatique vers le bas lors du changement d'utilisateur ou de message
+  useEffect(() => {
+    if (userData.UserId && ref?.current) {
+      ref.current.scrollIntoView({ behavior: "smooth" });
     }
+  }, [userData.UserId, chatMessage, ref]);
 
-    return (
-        <div className="flex h-[626px] overflow-hidden">
-            {callType === "video" && (
-                <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center">
-                    {/* REMOTE VIDEO */}
-                    <video
-                        ref={remoteVideo}
-                        autoPlay
-                        className="w-full h-full object-cover"
-                    />
+  // Optimisation du regroupement des messages par date
+  const chatMessageGrouped = useMemo(() => {
+    return chatMessage.reduce((acc, item) => {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
 
-                    {/* LOCAL VIDEO */}
-                    <video
-                        ref={localVideo}
-                        autoPlay
-                        muted
-                        className="w-40 h-40 absolute bottom-5 right-5 border-2 border-white rounded-lg"
-                    />
+      const currentDate = new Date(item.createdAt);
+      let dateLabel = "";
 
-                    {/* CONTROLS */}
-                    <div className="absolute top-5 right-5">
-                        <button
-                            onClick={() => {
-                                endCall();
-                                setCallType("audio");
-                            }}
-                            className="bg-red-500 ease duration-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-                        >
-                            Raccrocher
-                        </button>
-                    </div>
-                </div>
-            )}
+      if (today.toDateString() === currentDate.toDateString()) {
+        dateLabel = "Aujourd'hui";
+      } else if (yesterday.toDateString() === currentDate.toDateString()) {
+        dateLabel = "Hier";
+      } else {
+        dateLabel = currentDate.toLocaleDateString([], {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      }
 
-            {
-                isCalling && !callAccepted && (
-                    <div className="fixed flex items-center justify-center z-50 w-full h-full bg-black/70">
-                        <div className="bg-white w-[350px] lg:w-[470px] rounded-md h-[400px] relative lg:right-36 -top-10 flex justify-center items-center">
-                            <div className="flex flex-col space-y-5">
-                                <h1 className="text-center text-xl font-bold text-gray-700">Appel en cours...</h1>
-                                <img src="/images/clientProfile.png" className="rounded-full w-[150px] h-[150px] relative left-8" />
-                                <div className='flex items-center space-x-3'>
-                                    <button onClick={endCall}
-                                        className="bg-red-500 ease duration-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
-                                    >
-                                        Annuler
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+      if (!acc[dateLabel]) {
+        acc[dateLabel] = [];
+      }
+      acc[dateLabel].push(item);
+      return acc;
+    }, {} as Record<string, ChatMessage[]>);
+  }, [chatMessage]);
 
-            {
-                incomingCall && !callAccepted && (
-                    <div className="fixed flex items-center justify-center z-50  w-full h-full bg-black/70">
-                        <div className="bg-white w-[350px] lg:w-[470px] rounded-md h-[400px] relative lg:right-36 -top-10 flex justify-center items-center">
-                            <div className="flex flex-col space-y-5">
-                                <h1 className="text-center text-xl font-bold text-gray-700">Appel entrant...</h1>
-                                <img src="/images/clientProfile.png" className="rounded-full w-[150px] h-[150px] relative left-8" />
-                                <div className='flex items-center space-x-3'>
-                                    <button
-                                        onClick={acceptCall}
-                                        className="bg-green-500 ease duration-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
-                                    >
-                                        Accepter
-                                    </button>
-                                    <button onClick={endCall}
-                                        className="bg-red-500 ease duration-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
-                                    >
-                                        Réfuser
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+  const getLatestChatMessage = (targetUserId: number) => {
+    const message = chatMessage
+      .filter(
+        (item) =>
+          (item.senderId === targetUserId && item.receiverId === currentUserId) ||
+          (item.senderId === currentUserId && item.receiverId === targetUserId)
+      )
+      .at(-1);
 
-                    </div>
-                )
-            }
+    return {
+      content: message?.content ?? "Laissez un message",
+      date: message?.createdAt
+        ? new Date(message.createdAt).toLocaleDateString([], {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+    };
+  };
 
-            {
-                callAccepted && callType !== "video" && (
-                    <div className="fixed flex items-center justify-center z-50 w-full h-full bg-black/70">
-                        <div className="bg-white w-[350px] lg:w-[470px] rounded-md h-[400px] relative lg:right-36 -top-10 flex justify-center items-center">
-                            <div className="flex flex-col space-y-5">
-                                <h1 className="text-center font-bold text-gray-700">Appel connecté...</h1>
-                                <img src="/images/clientProfile.png" className="rounded-full w-[150px] h-[150px] relative left-2" />
-                                <div className='flex items-center space-x-3'>
-                                    <button onClick={endCall}
-                                        className="bg-red-500 ease relative left-5 duration-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
-                                    >
-                                        Raccrocher
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (data.content?.trim() || data.files) {
+        sendChatMessage();
+      }
+    }
+  };
 
-                    </div>
-                )
-            }
-            <div className={` bg-white border-r border-gray-300 dark:border-gray-800 dark:bg-gray-900 overflow-y-auto pb-10 ${isMobile && !showChat ? "w-full" : isMobile && showChat ? "hidden" : "w-[35%]"}`}>
-                <header className="p-4 border-b border-gray-300 flex justify-between items-center bg-gray-900 dark:border dark:border-gray-800  text-white">
-                    <h1 className="text-2xl text-white font-semibold">LRCSheet Chat</h1>
-                </header>
+  return (
+    <div className="flex h-[calc(100vh-120px)] max-h-[800px] min-h-[500px] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      {/* Flux Audio / Vidéo HTML5 cachés */}
+      <audio ref={remoteAudio} autoPlay className="hidden" />
 
-                <div className="h-full mb-9  dark:bg-gray-900">
-                    <div className="relative w-full px-2 ">
-                        <div className="w-full">
-                            <input type="text" onChange={(e) => {
-                                onSearch(e.target.value)
-                            }} className="border outline-none w-full border-gray-300 bg-white my-3 rounded-md dark:border-gray-600 dark:bg-transparent p-3" placeholder="Recherche" />
-                        </div>
-
-                        <div className="absolute top-6 right-5">
-                            <FontAwesomeIcon icon={faSearch} className="text-gray-600" />
-                        </div>
-                    </div>
-
-                    {
-                        usersCloned.length > 0 && !loader ?
-                            usersCloned.map((item, index) => (
-                                <div key={index} onClick={() => {
-                                    setUserData({
-                                        UserId: item.UserId,
-                                        fcmToken: item.fcmToken,
-                                        EnterpriseId: item.UserEnterpriseId,
-                                        email: item.User.email,
-                                        lastname: item.User.lastname,
-                                        firstname: item.User.firstname,
-                                        photo: String(item.User.photo)
-                                    })
-                                    setData({
-                                        ...data,
-                                        receiverId: item.UserId
-                                    })
-                                    setShowChat(true);
-                                    removeNotificationCount(item.UserId)
-                                    socket.emit("onReadMessage", { senderId: item.UserId, receiverId: Number(AdminId) })
-                                }} className={item.UserId !== AdminId ? "flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover dark:hover:bg-gray-800/50 ease duration-500   border-b border-gray-300 dark:border-gray-800" : "hidden"}>
-                                    <div className="w-12 h-12 bg-gray-300 rounded-full mr-3 relative">
-                                        <img
-                                            src={item?.User?.photo ? `${providers.APIUrl}/images/${item?.User?.photo}` : "/images/clientProfile.png"}
-                                            alt="User Avatar"
-                                            className="w-12 h-12 rounded-full object-cover"
-                                        />
-                                        <div className={`w-2 h-2 rounded-full absolute bottom-0 right-0 ${usersOnLine.includes(item.UserId) ? "bg-green-500" : "bg-red-500"}`}>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h2 className="text-md font-semibold">{item?.User?.firstname} {providers.reduceLengthOfText(item?.User?.lastname, 7)}</h2>
-                                        <div className="flex flex-row justify-between items-center">
-                                            <p className="text-gray-600 text-[14px]">
-                                                {providers.reduceLengthOfText(getLatestChatMessage(item.UserId).content.replace(/<br\s*\/?>/g, "\n")
-                                                    .replace(/<\/p>/g, "\n")
-                                                    .replace(/<p[^>]*>/g, "")
-                                                    .replace(/<[^>]+>/g, ""), 10)}
-                                            </p>
-                                            {
-                                                !notificationsCountLive.status && (
-                                                    <p className={notificationsCompter(item?.UserId) === 0 ? "hidden" : "bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full"}>
-                                                        {notificationsCompter(item?.UserId)}
-                                                    </p>
-                                                )
-                                            }
-
-                                            {
-                                                notificationsCountLive.status && notificationsCountLive.UserId === item.UserId && notificationsCountLive.count > 0 && (
-                                                    <p className="bg-red-500 text-white py-0.5 px-2.5 text-[12px] rounded-full">
-                                                        {notificationsCountLive.count}
-                                                    </p>
-                                                )
-                                            }
-                                            <p className="text-gray-600 text-[12px]">{getLatestChatMessage(item?.UserId).date}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )) :
-                            <div className="w-full h-[500px] items-center flex justify-center">
-                                {
-                                    usersCloned.length === 0 && loader ?
-                                        <ClipLoader size={30} color="#1d4ed8" />
-                                        : <div>
-                                            <img src="/images/folder.png" className="w-[150px] h-[150px] relative left-5 object-cover" alt="" />
-                                            <p className="mt-3 text-center">Aucune donnée trouvée</p>
-                                        </div>
-                                }
-
-                            </div>
-                    }
-                </div>
-            </div>
-
-            <div className={`w-full ${isMobile && !showChat ? "hidden" : "w-full"}`}>
-                {
-                    !userData.fcmToken && (
-                        <div className="w-full flex items-center justify-center h-full">
-                            <div>
-                                <div>
-                                    <h1 className="text-gray-600 dark:text-gray-300">Laissez un message à un des collaborateurs</h1>
-                                </div>
-                                <div className="mx-auto w-[30px]">
-                                    <FontAwesomeIcon icon={faMessage} className="text-[30px] text-gray-600  text-center" />
-                                </div>
-                            </div>
-                        </div>
-                    )
-
-                }
-                {
-                    userData.fcmToken && (
-                        <div className="w-full h-full relative">
-                            <header className="bg-white dark:bg-gray-900  border-b border-gray-300 dark:border-gray-800 p-4 text-gray-700">
-                                <div className="flex flex-row items-center justify-between">
-                                    <div className="flex items-center space-x-4">
-                                        <div className='w-10 h-10 relative'>
-                                            <img className="w-full h-full rounded-full object-cover" src={userData.photo ? `${providers.APIUrl}/images/${userData.photo}` : "/images/clientProfile.png"} />
-                                            <div className={`w-2 h-2 rounded-full absolute bottom-0 right-0 ${usersOnLine.includes(userData.UserId) ? "bg-green-500" : "bg-red-500"}`}>
-                                            </div>
-                                        </div>
-
-                                        <div className="">
-                                            <h1 className="text-xl dark:text-gray-300 font-semibold">{userData.firstname} {providers.reduceLengthOfText(userData.lastname, 7)}</h1>
-                                            <div className="flex items-center space-x-3">
-                                                <p className="text-sm dark:text-gray-300">{usersOnLine.includes(userData.UserId) ? "En ligne" : "Hors ligne"}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-4" onClick={() => {
-                                        setShowChat(false)
-                                    }}>
-                                        <div className="flex items-center space-x-3">
-                                            <FontAwesomeIcon icon={faPhone} className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full dark:text-gray-300 hover:scale-105 cursor-pointer ease duration-500" onClick={() => {
-                                                // startAudioCall   
-                                            }
-                                            } />
-                                            <FontAwesomeIcon icon={faVideo} onClick={
-                                                () => {
-                                                    // startVideoCall                 
-                                                }
-                                            } className="text-gray-600 px-3 py-3.5 bg-gray-100 border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-[16px] shadow-xl rounded-full cursor-pointer dark:text-gray-300 hover:scale-105" />
-                                            <div className="lg:hidden">
-                                                <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </header>
-
-                            <audio ref={remoteAudio} autoPlay playsInline />
-
-                            <div className="h-[500px] pb-32 lg:pb-20 overflow-y-auto px-4 pt-4">
-                                {
-                                    Object.keys(chatMessageGrouped).map((date, index) => (
-                                        <div>
-                                            <div className={`mb-5 flex flex-row space-x-3 justify-between items-center ${chatMessageGrouped[date].some(item => item.receiverId === userData.UserId || item.senderId === userData.UserId) ? "block" : "hidden"}`}>
-                                                <div className="h-[0.5px] border w-1/2 border-gray-300 dark:border-gray-800"></div>
-                                                <div>
-                                                    <p className="text-gray-600 text-sm font-semibold dark:text-gray-300">{date}
-                                                    </p>
-                                                </div>
-                                                <div className="h-[1px] border w-1/2 border-gray-300 dark:border-gray-800"></div>
-                                            </div>
-                                            {
-                                                chatMessageGrouped[date].map((chat, i) => (
-                                                    <div className={`flex mb-4 ${chat.receiverId === userData.UserId && chat.role === "Super-Admin" && chat.senderId === AdminId ? "justify-end" : chat.role === "client" && chat.senderId === userData.UserId && chat.receiverId === AdminId ? "justify-start " : "hidden"}`}>
-                                                        {/* <div className="w-9 h-9 mr-2">
-                                                            <img
-                                                                src="/images/adminProfile.png"
-                                                                alt="User Avatar"
-                                                                className="w-8 h-8 rounded-full"
-                                                            />
-                                                        </div> */}
-                                                        <div className={`p-3 rounded-lg dark:bg-gray-800 ${chat.role === "client" && chat.senderId === userData.UserId ? "bg-gray-800 text-white dark:bg-gray-900 dar:border dark:border-gray-800 dark:text-gray-300 " : chat.receiverId === userData.UserId && chat.role === "Super-Admin" ? "bg-gray-200" : ""}`}>
-                                                            {
-                                                                chat.title && (
-                                                                    <p className="font-semibold mb-4">{chat.title}</p>
-                                                                )
-                                                            }
-                                                            <div dangerouslySetInnerHTML={{
-                                                                __html: chat.content
-                                                            }} className="[&_ul]:mb-4 font-normal [&_li]:mb-3 [&_p]:mb-4" />
-                                                            {
-                                                                chat.file && (
-                                                                    <div className="flex justify-end mt-4">
-                                                                        <a target="_blank" href={`${providers.APIUrl}/images/${chat.file}`} className="cursor-pointer ease duration-500 hover:scale-105">
-                                                                            <img src="/images/folder.png" alt="" className="w-10 h-10 rounded-md relative left-6" />
-                                                                            <p className="underline text-blue-700">Pièce jointe</p>
-                                                                        </a>
-                                                                    </div>
-                                                                )
-                                                            }
-                                                            <div className="flex flex-end mt-4">
-                                                                <p>{new Date(chat.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            }
-                                        </div>
-
-                                    ))
-                                }
-                                <div ref={ref} />
-                            </div>
-
-                            <footer className="bg-white  dark:bg-gray-900 w-full border-t border-gray-300 dark:border-gray-800 p-4 absolute bottom-0">
-                                <div className="flex flex-col lg:flex-row items-center space-x-0 space-y-4  lg:space-x-4 lg:space-y-0">
-
-                                    {/* Textarea */}
-                                    <div className="relative w-full">
-                                        <textarea value={data.content}
-                                            onChange={(e) => {
-                                                const value = e.target.value
-                                                setData({
-                                                    ...data,
-                                                    content: value
-                                                });
-                                            }}
-                                            placeholder="Saisissez un contenu..."
-                                            className="py-3 pl-3 pr-10 rounded-md w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-800 focus:outline-none"
-                                        />
-                                        {
-                                            data.files && userData.UserId === data.receiverId && (
-                                                <div className="absolute  top-4 right-4">
-                                                    <img src="/images/folder.png" className="w-10 h-10" alt="" />
-                                                </div>
-                                            )
-                                        }
-                                    </div>
-
-                                    <div className="flex flex-row space-x-4">
-                                        <input onChange={async (e) => {
-                                            const files = e.target.files?.[0];
-                                            const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-
-                                            setData({
-                                                ...data,
-                                                files: response.filename
-                                            })
-                                        }}
-                                            type="file"
-                                            id="fileUpload"
-                                            className="hidden"
-                                        />
-
-                                        {/* Bouton pièce jointe */}
-                                        <label
-                                            htmlFor="fileUpload"
-                                            className="cursor-pointer p-3 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                                        >
-                                            <FontAwesomeIcon icon={faPaperclip} className="text-gray-600 dark:text-gray-300" />
-                                        </label>
-                                        <button
-                                            onClick={sendChatMessage}
-                                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2.5 rounded-md transition"
-                                        >
-                                            Envoyer
-                                        </button>
-                                    </div>
-
-                                </div>
-                            </footer>
-                        </div>
-                    )
-                }
-
-            </div>
+      {/* VISIO VIDEO EN PLEIN ÉCRAN */}
+      {callType === "video" && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
+          <video
+            ref={remoteVideo}
+            autoPlay
+            className="h-full w-full object-cover"
+          />
+          <video
+            ref={localVideo}
+            autoPlay
+            muted
+            className="absolute bottom-5 right-5 h-36 w-36 rounded-lg border-2 border-white object-cover shadow-lg"
+          />
+          <div className="absolute top-5 right-5">
+            <button
+              onClick={() => {
+                endCall();
+                setCallType("audio");
+              }}
+              className="rounded bg-red-600 px-4 py-2 font-medium text-white transition hover:bg-red-700"
+            >
+              Raccrocher
+            </button>
+          </div>
         </div>
-    );
+      )}
+
+      {/* MODALE : APPEL EN COURS */}
+      {isCalling && !callAccepted && (
+        <CallModal title="Appel en cours...">
+          <button
+            onClick={endCall}
+            className="rounded-md bg-red-500 px-5 py-2 text-white transition hover:bg-red-600"
+          >
+            Annuler
+          </button>
+        </CallModal>
+      )}
+
+      {/* MODALE : APPEL ENTRANT */}
+      {incomingCall && !callAccepted && (
+        <CallModal title="Appel entrant...">
+          <button
+            onClick={acceptCall}
+            className="rounded-md bg-green-500 px-5 py-2 text-white transition hover:bg-green-600"
+          >
+            Accepter
+          </button>
+          <button
+            onClick={endCall}
+            className="rounded-md bg-red-500 px-5 py-2 text-white transition hover:bg-red-600"
+          >
+            Refuser
+          </button>
+        </CallModal>
+      )}
+
+      {/* MODALE : APPEL AUDIO CONNECTÉ */}
+      {callAccepted && callType !== "video" && (
+        <CallModal title="Appel connecté...">
+          <button
+            onClick={endCall}
+            className="rounded-md bg-red-500 px-5 py-2 text-white transition hover:bg-red-600"
+          >
+            Raccrocher
+          </button>
+        </CallModal>
+      )}
+
+      {/* Sidebar: Liste des Utilisateurs */}
+      <div
+        className={`flex flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 transition-all duration-300 ${
+          isMobile && showChat
+            ? "hidden"
+            : isMobile && !showChat
+            ? "w-full"
+            : "w-full max-w-[360px] lg:max-w-[400px]"
+        }`}
+      >
+        {/* En-tête Sidebar */}
+        <header className="flex items-center justify-between border-b border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+          <h1 className="text-xl font-bold text-slate-700 dark:text-white">
+            LRCSheet Chat
+          </h1>
+        </header>
+
+        {/* Barre de Recherche */}
+        <div className="p-3 border-b border-slate-200 dark:border-slate-700">
+          <div className="relative">
+            <input
+              type="text"
+              onChange={(e) => onSearch(e.target.value)}
+              placeholder="Rechercher un collaborateur..."
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-amber-400"
+            />
+            <FontAwesomeIcon
+              icon={faSearch}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-600 dark:text-slate-400"
+            />
+          </div>
+        </div>
+
+        {/* Liste des conversations */}
+        <div className="flex-1 overflow-y-auto">
+          {usersCloned.length > 0 && !loading && !loader ? (
+            usersCloned.map((item, index) => {
+              if (item.UserId === currentUserId) return null;
+
+              const isSelected = userData.UserId === item.UserId;
+              const isOnline = usersOnLine.includes(item.UserId);
+              const latestMsg = getLatestChatMessage(item.UserId);
+              const unreadCount =
+                notificationsCountLive?.status &&
+                notificationsCountLive?.UserId === item.UserId
+                  ? notificationsCountLive.count
+                  : notificationsCompter(item.UserId);
+
+              return (
+                <div
+                  key={item.UserId || index}
+                  onClick={() => {
+                    setUserData({
+                      UserId: item.UserId,
+                      fcmToken: item.fcmToken,
+                      lastname: item.User?.lastname || "",
+                      firstname: item.User?.firstname || "",
+                      photo: String(item.User?.photo || ""),
+                      email: item.User?.email || "",
+                      EnterpriseId: item.UserEnterpriseId,
+                    });
+                    setData({
+                      ...data,
+                      receiverId: item.UserId,
+                    });
+                    setShowChat(true);
+                    removeNotificationCount(item.UserId);
+                    localStorage.setItem(
+                      "receiverId",
+                      JSON.stringify(item.UserId)
+                    );
+                    socket.emit("onReadMessage", {
+                      senderId: item.UserId,
+                      receiverId: Number(currentUserId),
+                    });
+                  }}
+                  className={`flex items-center gap-3 border-b border-slate-100 p-3.5 cursor-pointer transition-colors dark:border-slate-700/60 ${
+                    isSelected
+                      ? "bg-blue-50/80 border-l-4 border-l-blue-600 dark:bg-slate-800 dark:border-l-amber-400"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  }`}
+                >
+                  {/* Avatar + Indicator en ligne */}
+                  <div className="relative shrink-0">
+                    <img
+                      src={
+                        item?.User?.photo
+                          ? `${providers.APIUrl}/images/${item?.User?.photo}`
+                          : "/images/clientProfile.png"
+                      }
+                      alt="Avatar"
+                      className="h-12 w-12 rounded-full object-cover ring-2 ring-transparent"
+                    />
+                    <span
+                      className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${
+                        isOnline
+                          ? "bg-green-500"
+                          : "bg-red-500"
+                      }`}
+                    />
+                  </div>
+
+                  {/* Infos Contact */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h2 className="text-sm font-semibold text-slate-700 truncate dark:text-slate-100">
+                        {item?.User?.firstname}{" "}
+                        {providers.reduceLengthOfText(
+                          item?.User?.lastname,
+                          12
+                        )}
+                      </h2>
+                      {latestMsg.date && (
+                        <span className="text-[11px] text-slate-600 shrink-0 dark:text-slate-400">
+                          {latestMsg.date}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-slate-600 truncate dark:text-slate-400">
+                        {providers.reduceLengthOfText(
+                          latestMsg.content.replace(/<[^>]*>/g, ""),
+                          28
+                        )}
+                      </p>
+                      {unreadCount > 0 && (
+                        <span className="ml-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : loading || loader ? (
+            <div className="flex h-64 items-center justify-center">
+              <ClipLoader size={28} color="#2563eb" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-center px-4">
+              <FontAwesomeIcon
+                icon={faFolderOpen}
+                className="text-4xl text-slate-600 mb-2"
+              />
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Aucun contact trouvé
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Box */}
+      <div
+        className={`flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-950/50 ${
+          isMobile && !showChat ? "hidden" : "flex"
+        }`}
+      >
+        {!userData.UserId ? (
+          /* Empty State (Pas de conversation sélectionnée) */
+          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+            <div className="mb-4 rounded-full bg-blue-50 p-6 dark:bg-slate-800">
+              <FontAwesomeIcon
+                icon={faMessage}
+                className="text-4xl text-blue-600 dark:text-amber-400"
+              />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+              Vos messages
+            </h3>
+            <p className="mt-1 text-sm text-slate-600 max-w-sm dark:text-slate-400">
+              Sélectionnez un collaborateur dans la liste de gauche pour démarrer ou continuer une discussion.
+            </p>
+          </div>
+        ) : (
+          /* Fenêtre de Conversation Active */
+          <div className="flex h-full flex-col">
+            {/* Header Chat */}
+            <header className="flex items-center justify-between border-b border-slate-200 bg-white p-3.5 shrink-0 dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex items-center gap-3">
+                {/* Back button (Mobile) */}
+                <button
+                  onClick={() => setShowChat(false)}
+                  className="mr-1 rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+                >
+                  <FontAwesomeIcon icon={faArrowLeft} className="text-lg" />
+                </button>
+
+                <div className="relative">
+                  <img
+                    src={
+                      userData.photo
+                        ? `${providers.APIUrl}/images/${userData.photo}`
+                        : "/images/clientProfile.png"
+                    }
+                    alt="Profile"
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  <span
+                    className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
+                      usersOnLine.includes(userData.UserId)
+                        ? "bg-green-500"
+                        : "bg-red-500"
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-700 dark:text-white">
+                    {userData.firstname} {userData.lastname}
+                  </h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    {usersOnLine.includes(userData.UserId)
+                      ? "En ligne"
+                      : "Hors ligne"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions Header (Appels WebRTC) */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startAudioCall}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+                  title="Lancer un appel audio"
+                >
+                  <FontAwesomeIcon icon={faPhone} className="text-sm" />
+                </button>
+                <button
+                  onClick={startVideoCall}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+                  title="Lancer un appel vidéo"
+                >
+                  <FontAwesomeIcon icon={faVideo} className="text-sm" />
+                </button>
+              </div>
+            </header>
+
+            {/* Zone des Messages (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {Object.keys(chatMessageGrouped).map((date) => {
+                const isGroupVisible = chatMessageGrouped[date].some(
+                  (item) =>
+                    (item.senderId === currentUserId &&
+                      item.receiverId === userData.UserId) ||
+                    (item.senderId === userData.UserId &&
+                      item.receiverId === currentUserId)
+                );
+
+                if (!isGroupVisible) return null;
+
+                return (
+                  <div key={date} className="space-y-4">
+                    {/* Date Divider */}
+                    <div className="flex items-center my-4">
+                      <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
+                      <span className="px-3 text-[11px] font-medium text-slate-600 bg-slate-100 rounded-full py-0.5 dark:bg-slate-800 dark:text-slate-400">
+                        {date}
+                      </span>
+                      <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
+                    </div>
+
+                    {/* Messages du groupe */}
+                    {chatMessageGrouped[date].map((chat, idx) => {
+                      const isMe = chat.senderId === currentUserId;
+                      const isOther = chat.senderId === userData.UserId;
+
+                      if (!isMe && !isOther) return null;
+
+                      return (
+                        <div
+                          key={chat.id || idx}
+                          className={`flex ${
+                            isMe ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
+                              isMe
+                                ? "bg-blue-600 text-white rounded-br-none"
+                                : "bg-white text-slate-700 rounded-bl-none border border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+                            }`}
+                          >
+                            {chat.title && (
+                              <p className="font-semibold text-sm mb-1">
+                                {chat.title}
+                              </p>
+                            )}
+
+                            {/* Bulle Texte */}
+                            <div
+                              className="leading-relaxed break-words [&_p]:mb-1 [&_ul]:list-disc [&_ul]:pl-4"
+                              dangerouslySetInnerHTML={{
+                                __html: !chat.title && chat.content?.startsWith("<p>")
+                                  ? chat.content
+                                  : chat.content,
+                              }}
+                            />
+
+                            {/* Fichier Joint */}
+                            {chat.file && (
+                              <div className="mt-2 pt-2 border-t border-white/20 dark:border-slate-700">
+                                <a
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  href={`${providers.APIUrl}/images/${chat.file}`}
+                                  className={`flex items-center gap-2 p-2 rounded-lg text-sm font-medium transition ${
+                                    isMe
+                                      ? "bg-blue-700 hover:bg-blue-800 text-white"
+                                      : "bg-slate-50 hover:bg-slate-100 text-blue-600 dark:bg-slate-900 dark:text-amber-400"
+                                  }`}
+                                >
+                                  <FontAwesomeIcon
+                                    icon={faFileAlt}
+                                    className="text-base"
+                                  />
+                                  <span className="truncate">
+                                    Pièce jointe
+                                  </span>
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Statut d'appel */}
+                            {chat.callStatus && (
+                              <div className="flex items-center gap-1.5 mt-1.5 text-sm">
+                                <FontAwesomeIcon
+                                  icon={faPhone}
+                                  className={
+                                    chat.callStatus
+                                      ? "text-amber-400"
+                                      : "text-rose-400"
+                                  }
+                                />
+                                <span>{chat.callDuration ?? 0}s</span>
+                              </div>
+                            )}
+
+                            {/* Horodatage */}
+                            <div
+                              className={`mt-1 text-[10px] text-right ${
+                                isMe
+                                  ? "text-blue-100"
+                                  : "text-slate-600 dark:text-slate-400"
+                              }`}
+                            >
+                              {new Date(chat.createdAt).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              <div ref={ref} />
+            </div>
+
+            {/* Input Footer */}
+            <footer className="p-3 bg-white border-t border-slate-200 shrink-0 dark:border-slate-700 dark:bg-slate-900">
+              {/* Preview de fichier en cours d'envoi */}
+              {data.files && (
+                <div className="mb-2 flex items-center justify-between rounded-lg bg-blue-50 p-2 border border-blue-100 dark:bg-slate-800 dark:border-slate-700">
+                  <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-amber-400">
+                    <FontAwesomeIcon icon={faPaperclip} />
+                    <span className="font-medium truncate">{data.files}</span>
+                  </div>
+                  <button
+                    onClick={() => setData({ ...data, files: "" })}
+                    className="text-slate-600 hover:text-slate-700 dark:hover:text-slate-200"
+                  >
+                    <FontAwesomeIcon icon={faTimes} />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-end gap-2">
+                <input
+                  onChange={async (e) => {
+                    const files = e.target.files?.[0];
+                    if (!files) return;
+                    const response = await providers.API.post(
+                      providers.APIUrl,
+                      "sendFiles",
+                      null,
+                      { files }
+                    );
+                    setData({
+                      ...data,
+                      files: response.filename,
+                    });
+                  }}
+                  type="file"
+                  id="fileUpload"
+                  className="hidden"
+                />
+
+                {/* Bouton Pièce Jointe */}
+                <label
+                  htmlFor="fileUpload"
+                  className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                  title="Joindre un fichier"
+                >
+                  <FontAwesomeIcon icon={faPaperclip} className="text-sm" />
+                </label>
+
+                {/* Champ Texte */}
+                <div className="flex-1">
+                  <textarea
+                    value={data.content}
+                    onChange={(e) =>
+                      setData({ ...data, content: e.target.value })
+                    }
+                    onKeyDown={handleKeyDown}
+                    placeholder="Écrivez votre message..."
+                    rows={1}
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 placeholder-slate-600 outline-none transition focus:border-blue-600 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:focus:border-amber-400"
+                  />
+                </div>
+
+                {/* Bouton Envoyer */}
+                <button
+                  onClick={sendChatMessage}
+                  disabled={!data.content?.trim() && !data.files}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+                >
+                  <FontAwesomeIcon icon={faPaperPlane} className="text-sm" />
+                </button>
+              </div>
+            </footer>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

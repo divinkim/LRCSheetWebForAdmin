@@ -1,266 +1,363 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { providers } from "@/index";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faSearch } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
-import { tablesModal } from "@/components/Tables/tablesModal";
-import Swal from "sweetalert2";
-// import TablesPage from "@/app/tables/page";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBuilding,
+  faPhone,
+  faEnvelope,
+  faGlobe,
+  faMapMarkerAlt,
+  faCity,
+  faPen,
+  faArrowLeft,
+  faCheckCircle,
+  faClock,
+  faPercentage,
+  faFileContract,
+  faBriefcase,
+  faCompass
+} from "@fortawesome/free-solid-svg-icons";
+import { providers } from "@/index";
 
 type EnterpriseType = {
-    name: string,
-    description: string,
-    logo: string,
-    activityDomain: string,
-    phone: string,
-    toleranceTime: string | null,
-    maxToleranceTime: string | null,
-    pourcentageOfHourlyDeduction: string | null,
-    maxPourcentageOfHourlyDeduction: string | null,
-    email: string,
-    address: string,
-    website: string | null,
-    latitude: string,
-    longitude: string,
-    CityId: number | null,
-    City: {
-        name: string
-    }
-    CountryId: number | null,
-    Country: {
-        name: string
-    },
-    legalForm: string,
-    rccm: string | null,
-    nui: string | null,
-    subscriptionType: string,
-    subscriptionStatus: string,
-    [key: string]: any
+  id?: number;
+  name: string;
+  description: string;
+  logo: string;
+  activityDomain: string;
+  phone: string;
+  toleranceTime: string | null;
+  maxToleranceTime: string | null;
+  pourcentageOfHourlyDeduction: string | null;
+  maxPourcentageOfHourlyDeduction: string | null;
+  email: string;
+  address: string;
+  website: string | null;
+  latitude: string;
+  longitude: string;
+  CityId: number | null;
+  City?: {
+    name: string;
+  };
+  CountryId: number | null;
+  Country?: {
+    name: string;
+  };
+  legalForm: string;
+  rccm: string | null;
+  nui: string | null;
+  subscriptionType: string;
+  subscriptionStatus: string;
+  [key: string]: any;
+};
 
-}
+export default function ViewEnterprise() {
+  const [enterprise, setEnterprise] = useState<EnterpriseType | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-export default function UsersList() {
-    const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);             // page courante
+  useEffect(() => {
+    (async () => {
+      try {
+        const id = window.location.href.split("/").pop();
+        if (id && !isNaN(Number(id))) {
+          const res = await providers.API.getOne(
+            providers.APIUrl,
+            "getEnterprise",
+            Number(id)
+          );
+          if (res) {
+            setEnterprise(res);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération de l'entreprise:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, []);
 
-    const [usersList, setEnterprisesList] = useState<EnterpriseType[]>([]);
-    const [savedEnterprisesList, setSavedEnterprisesList] = useState<EnterpriseType[]>([]);
-    const [getAdminRole, setAdminRole] = useState("");
-    const limit = 5;                                 // items par page
-    const [maxPage, setMaxPage] = useState(0);
-    const [start, setStart] = useState(1);
-
-    const [loading, setIsLoading] = useState(false);
-    const requireAdminRoles = ['Super-Admin', 'Supervisor-Admin'];
-
-    useEffect(() => {
-        if (typeof (window) === "undefined") return;
-        (async () => {
-            const getAdminRole = window?.localStorage.getItem("adminRole");
-            setAdminRole(getAdminRole ?? "");
-
-            const authToken = window?.localStorage.getItem("authToken");
-            if (authToken === null) {
-                window.location.href = "/"
-            }
-
-            const enterprisesList = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
-            setEnterprisesList(enterprisesList);
-            setSavedEnterprisesList(enterprisesList)
-
-        })()
-    }, [getAdminRole]);
-
-    // 🔎 Filtrer par recherche
-    function onSearch(value: string) {
-        let filtered = usersList.filter(item => item?.lastname?.toLocaleLowerCase()?.includes(value.toLocaleLowerCase()) || item?.firstname?.toLocaleLowerCase()?.includes(value.toLocaleLowerCase()));
-        setSavedEnterprisesList(filtered)
-    }
-
-    // 📑 Pagination
-    useEffect(() => {
-        (() => {
-            const maxPage = Math.ceil(savedEnterprisesList?.length / limit);
-
-            setMaxPage(maxPage);
-            setPage(maxPage);
-
-        })()
-    }, [savedEnterprisesList])
-
-    const startPage = (start - 1) * limit;
-
+  if (isLoading) {
     return (
-        <div className="flex justify-center   mx-auto">
-            <main className='m-4  text-gray-700 dark:text-gray-300 dark:bg-transparent'>
-                {
-                    tablesModal.map((e) => (
-                        <div className="flex font-semibold justify-between items-center">
-                            <h1 className="text-[20px] my-4 font-bold dark:text-gray-300">{e.enterprisesList.pageTitle}  </h1>
-                            <p className='text-blue-700 dark:text-blue-600 hidden xl:block'>{e.enterprisesList.path}</p>
-                        </div>
-                    ))
-                }
-                <hr className='' />
-                <div className="flex flex-col space-y-4 xl:space-y-0  lg:flex-row items-center justify-between">
-                    <div className="relative w-[250px]">
-                        <input
-                            type="text"
-                            placeholder="Rechercher un profil..."
-                            className="border  outline-none border-gray-300 dark:bg-transparent px-3 py-2.5 rounded-md my-6 w-full"
-                            value={search}
-                            onChange={(e) => {
-                                setSearch(e.target.value)
-                                onSearch(e.target.value)
-                                setPage(1); // reset page quand on tape
-                            }}
-                        />
-                        <FontAwesomeIcon icon={faSearch} className="absolute text-gray-400 right-3 top-[38px]" />
-                    </div>
-                    {
-                        tablesModal.map((e) => (
-                            e.enterprisesList.links.map((item) => (
-                                <Link href={item.href} className="bg-blue-800 rounded-md hover:bg-blue-900 ease duration-500 py-3 px-4">
-                                    <FontAwesomeIcon icon={item.icon} className="text-white" />
-                                    <span className='text-white font-semibold'> {item.title}</span>
-                                </Link>
-                            ))
-
-                        ))
-                    }
-                </div>
-
-                {/* 🧾 Tableau */}
-                <table className="border w-full mx-auto">
-                    <thead>
-                        <tr className="bg-gray-800 dark:bg-transparent ">
-                            {
-                                tablesModal.map((e) => (
-                                    e.enterprisesList.table.titles.map((item) => (
-                                        <th className="border py-2 xl:px-5 border-gray-400 dark:border-gray-300 text-gray-300  2xl:px-10 px-2 dark:text-gray-300">{item.title}</th>
-                                    ))
-                                ))
-                            }
-                        </tr>
-                    </thead>
-
-                    <tbody className="w-full">
-
-                        {
-
-                            savedEnterprisesList.length > 0 ? savedEnterprisesList.slice(start, start + limit).map((u) => (
-                                <tr className="">
-
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300">
-                                        {u.photo ? <img src={`${providers.APIUrl}/images/${u.logo}`} className="w-[50px] mx-auto h-[50px] object-cover rounded-full" alt="" /> : <p className="text-center text-[40px]">
-                                            🧑‍💼
-                                        </p>}
-                                    </td>
-
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{providers.reduceLengthOfText(u.description, 12)}</td>
-
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.activityDomain}</td>
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.phone}</td>
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.email}</td>
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">{u.subscriptionType}</td>
-                                    <td className="border p-2 border-gray-400 dark:border-gray-300  text-center font-semibold dark:text-gray-300">
-                                        {u.subscriptionStatus === "expired" ? <p className="bg-red-500 text-center p-3 rounded-md text-white">Expiré</p> : u.subscriptionStatus === "onGoing" ? <p className="bg-green-500 text-center p-3 rounded-md text-white">En cours</p> : ""}
-                                    </td>
-                                    <td className="text-center py-5 font-semibold border-b border-r  space-x-3 flex  h-auto p-2 border-gray-400 dark:border-gray-300">
-                                        <Link onClick={() => {
-                                            if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                Swal.fire({
-                                                    icon: 'warning',
-                                                    title: "Violation d'accès!",
-                                                    text: "Vous n'avez aucun droit d'effectuer cette action. Contacter votre administrateur de gestion",
-                                                });
-                                            }
-                                        }} href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/RH/getUserProfil/${u.id}` : ""} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                            <p className="text-center">👁️</p>
-                                        </Link>
-                                        <button className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md" onClick={() => {
-                                            if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                return Swal.fire({
-                                                    icon: "warning",
-                                                    title: "Vioaltion d'accès!",
-                                                    text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                });
-                                            }
-                                        }}>
-                                            <Link href={requireAdminRoles.includes(getAdminRole ?? "") ? `/dashboard/OTHERS/updateEnterprise/${u.id}` : ""} >
-                                                <p className="text-center">🖊️</p>
-                                            </Link>
-                                        </button>
-                                        <button type="button" onClick={() => {
-                                            if (!requireAdminRoles.includes(getAdminRole ?? "")) {
-                                                return Swal.fire({
-                                                    icon: "warning",
-                                                    title: "Vioaltion d'accès!",
-                                                    text: "Vous n'avez aucun droit d'effectuer cette opération. Veuillez contacter votre administrateur local"
-                                                })
-                                            }
-                                            Swal.fire({
-                                                icon: "warning",
-                                                title: "Voulez-vous supprimer ce collaborateur? ",
-                                                showCancelButton: true,
-                                                cancelButtonText: "Annuler",
-                                                confirmButtonText: "Oui"
-                                            }).then(async (confirmed) => {
-                                                if (confirmed.isConfirmed) {
-                                                    const response = await providers.API.delete(providers.APIUrl, "deleteEnterprise", u.id, {});
-                                                    providers.alertMessage(response.status, response.title, response.message, "/dashboard/OTHERS/enterprisesList")
-                                                }
-                                            })
-                                        }} className="bg-gray-300 hover:scale-105 ease duration-500 p-2 rounded-md">
-                                            <p className="text-center">🗑️</p>
-                                        </button>
-                                    </td>
-                                </tr>
-
-                            )) :
-                                <tr>
-                                    <td>
-                                        <p className="text-center absolute left-1/2 right-1/2 w-[200px] mt-3">
-                                            Aucune donnée trouvée
-                                        </p>
-                                    </td>
-                                </tr>
-
-                        }
-
-                    </tbody>
-                </table>
-
-                {/* 🔄 Pagination */}
-                <div className="flex items-center justify-center  gap-4 mt-10">
-                    <div className="flex flex-col">
-                        <p className="text-center">Page {page} / {maxPage}</p>
-                        <div className="flex flex-row mt-4 space-x-4">
-                            <button
-                                className="px-4 py-3  font-semibold text-white ease duration-500 hover:bg-red-600 bg-red-500 rounded disabled:opacity-40"
-                                onClick={() => {
-                                    setPage(page - 1);
-                                    setStart(start + 1)
-                                }}
-                                disabled={page === 1}
-                            >
-                                <span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronLeft} /></span> Précédent
-                            </button>
-                            <button
-                                className="px-4 py-3 bg-green-500 ease duration-500 hover:bg-green-600 text-white font-semibold rounded disabled:opacity-40"
-                                onClick={() => {
-                                    setPage(nextPage => nextPage + 1);
-                                    setStart(start - 1)
-                                }}
-                                disabled={page === maxPage}
-                            >
-                                Suivant<span className="relative top-[1px]"><FontAwesomeIcon icon={faChevronRight} /></span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </main>
+      <main className="min-h-screen bg-white dark:bg-slate-700 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+          <p className="text-sm font-medium text-slate-600 dark:text-white">
+            Chargement des détails de l'entreprise...
+          </p>
         </div>
-    )
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-white dark:bg-slate-700 text-slate-700 dark:text-white p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-200">
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* Titre & En-tête */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-white">
+              Fiche de l'entreprise : {enterprise?.name || "Non disponible"}
+            </h1>
+          </div>
+        </div>
+
+        {/* Carte Profil Supérieure */}
+        <div className="bg-white dark:bg-slate-600 border-2 border-slate-600 rounded-2xl p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors">
+          <div className="flex items-center gap-5">
+            {/* Logo */}
+            <div className="relative w-20 h-20 rounded-2xl bg-slate-700 border-2 border-amber-400 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+              {enterprise?.logo ? (
+                <img
+                  src={`${providers.APIUrl}/images/${enterprise.logo}`}
+                  alt={enterprise.name}
+                  className="w-full h-full object-contain p-2"
+                />
+              ) : (
+                <FontAwesomeIcon icon={faBuilding} className="text-3xl text-amber-400" />
+              )}
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-slate-700 dark:text-white tracking-wide">
+                {enterprise?.name || "Nom non spécifié"}
+              </h2>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-200 mt-0.5 flex items-center gap-2">
+                <FontAwesomeIcon icon={faBriefcase} className="text-amber-500" />
+                {enterprise?.activityDomain || "Secteur d'activité non renseigné"}
+              </p>
+              <p className="text-sm font-semibold text-blue-600 dark:text-amber-400 mt-1 flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faFileContract} className="text-blue-600 dark:text-amber-400" />
+                Forme juridique : {enterprise?.legalForm || "Non précisée"}
+              </p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/OTHERS/updateEnterprise/${enterprise?.id}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-md active:scale-95"
+            >
+              <FontAwesomeIcon icon={faPen} />
+              <span>Modifier</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-700 font-bold text-sm transition-all border border-amber-500"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} />
+              <span>Retour</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Grille principale */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Colonne Gauche (2/3) */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Informations Générales */}
+            <div className="bg-white dark:bg-slate-600 border border-slate-600 rounded-2xl p-6 shadow-sm space-y-6">
+              <div className="flex items-center gap-2.5 border-b border-slate-600 pb-4">
+                <FontAwesomeIcon icon={faBuilding} className="text-blue-600 dark:text-amber-400 text-sm" />
+                <h3 className="font-bold text-base text-slate-700 dark:text-white">Informations Générales</h3>
+              </div>
+
+              <div className="space-y-4 text-sm">
+                <div>
+                  <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider">Description</p>
+                  <p className="text-slate-700 dark:text-white mt-1 leading-relaxed">
+                    {enterprise?.description || "Aucune description renseignée pour cette entreprise."}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider">Téléphone</p>
+                    <p className="font-semibold text-blue-600 dark:text-white mt-1 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faPhone} className="text-amber-500" />
+                      {enterprise?.phone || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider">E-mail</p>
+                    <p className="font-semibold text-blue-600 dark:text-white mt-1 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faEnvelope} className="text-amber-500" />
+                      {enterprise?.email || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider">Site Web</p>
+                    {enterprise?.website ? (
+                      <a
+                        href={enterprise.website.startsWith("http") ? enterprise.website : `https://${enterprise.website}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-blue-600 hover:text-blue-700 dark:text-amber-400 mt-1 flex items-center gap-2 hover:underline"
+                      >
+                        <FontAwesomeIcon icon={faGlobe} className="text-amber-500" />
+                        {enterprise.website}
+                      </a>
+                    ) : (
+                      <p className="font-medium text-slate-700 dark:text-white mt-1">—</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider">Adresse</p>
+                    <p className="font-medium text-slate-700 dark:text-white mt-1 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} className="text-amber-500" />
+                      {enterprise?.address || "Non communiquée"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tolérances & Règlements */}
+            <div className="bg-white dark:bg-slate-600 border border-slate-600 rounded-2xl p-6 shadow-sm space-y-6">
+              <div className="flex items-center gap-2.5 border-b border-slate-600 pb-4">
+                <FontAwesomeIcon icon={faClock} className="text-blue-600 dark:text-amber-400 text-sm" />
+                <h3 className="font-bold text-base text-slate-700 dark:text-white">Tolérances & Retenues Horaire</h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-600 space-y-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 flex items-center gap-1.5 uppercase">
+                    <FontAwesomeIcon icon={faClock} className="text-amber-500" /> Temps de tolérance
+                  </p>
+                  <p className="font-bold text-blue-600 dark:text-white text-base">
+                    {enterprise?.toleranceTime ? `${enterprise.toleranceTime} min` : "0 min"}
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-200">
+                    Max : {enterprise?.maxToleranceTime ? `${enterprise.maxToleranceTime} min` : "Non défini"}
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-600 space-y-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 flex items-center gap-1.5 uppercase">
+                    <FontAwesomeIcon icon={faPercentage} className="text-amber-500" /> Déduction horaire
+                  </p>
+                  <p className="font-bold text-blue-600 dark:text-white text-base">
+                    {enterprise?.pourcentageOfHourlyDeduction ? `${enterprise.pourcentageOfHourlyDeduction} %` : "0 %"}
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-200">
+                    Max : {enterprise?.maxPourcentageOfHourlyDeduction ? `${enterprise.maxPourcentageOfHourlyDeduction} %` : "Non défini"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Localisation Géographique */}
+            <div className="bg-white dark:bg-slate-600 border border-slate-600 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-slate-600 pb-4">
+                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-blue-600 dark:text-amber-400 text-sm" />
+                <h3 className="font-bold text-base text-slate-700 dark:text-white">Localisation & Coordonnées GPS</h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div className="bg-white dark:bg-slate-700 p-3.5 rounded-xl border border-slate-600">
+                  <p className="text-xs font-medium text-slate-600 dark:text-amber-400 flex items-center gap-1.5 mb-1">
+                    <FontAwesomeIcon icon={faGlobe} className="text-amber-500" /> Pays
+                  </p>
+                  <p className="font-semibold text-slate-700 dark:text-white">{enterprise?.Country?.name || "—"}</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-700 p-3.5 rounded-xl border border-slate-600">
+                  <p className="text-xs font-medium text-slate-600 dark:text-amber-400 flex items-center gap-1.5 mb-1">
+                    <FontAwesomeIcon icon={faCity} className="text-amber-500" /> Ville
+                  </p>
+                  <p className="font-semibold text-slate-700 dark:text-white">{enterprise?.City?.name || "—"}</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-700 p-3.5 rounded-xl border border-slate-600">
+                  <p className="text-xs font-medium text-slate-600 dark:text-amber-400 flex items-center gap-1.5 mb-1">
+                    <FontAwesomeIcon icon={faCompass} className="text-amber-500" /> Latitude
+                  </p>
+                  <p className="font-semibold text-slate-700 dark:text-white">{enterprise?.latitude || "—"}</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-700 p-3.5 rounded-xl border border-slate-600">
+                  <p className="text-xs font-medium text-slate-600 dark:text-amber-400 flex items-center gap-1.5 mb-1">
+                    <FontAwesomeIcon icon={faCompass} className="text-amber-500" /> Longitude
+                  </p>
+                  <p className="font-semibold text-slate-700 dark:text-white">{enterprise?.longitude || "—"}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Colonne Droite (1/3) */}
+          <div className="space-y-6">
+
+            {/* Statut de l'Abonnement */}
+            <div className="bg-white dark:bg-slate-600 border border-slate-600 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-slate-600 pb-3">
+                <FontAwesomeIcon icon={faCheckCircle} className="text-blue-600 dark:text-amber-400 text-sm" />
+                <h3 className="font-bold text-base text-slate-700 dark:text-white">Statut de l'abonnement</h3>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-700 border border-slate-600">
+                  <span className="text-slate-600 dark:text-slate-200 font-medium">Statut</span>
+                  {enterprise?.subscriptionStatus === "onGoing" ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-700 font-bold border border-amber-500">
+                      ● En cours
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-700 text-amber-400 font-bold border border-amber-400">
+                      ● Expiré
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-blue-600 text-white border border-blue-700 flex items-center justify-between">
+                  <span className="text-sm font-semibold">Formule</span>
+                  <span className="text-base font-extrabold text-amber-400 capitalize">
+                    {enterprise?.subscriptionType || "Standard"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Registre & Fiscalité */}
+            <div className="bg-white dark:bg-slate-600 border border-slate-600 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-slate-600 pb-3">
+                <FontAwesomeIcon icon={faFileContract} className="text-blue-600 dark:text-amber-400 text-sm" />
+                <h3 className="font-bold text-base text-slate-700 dark:text-white">Registre & Fiscalité</h3>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-600">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider mb-1">N° RCCM</p>
+                  <p className="font-bold text-blue-700 dark:text-white">
+                    {enterprise?.rccm || "Non renseigné"}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-600">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-amber-400 uppercase tracking-wider mb-1">N° NUI / NIU</p>
+                  <p className="font-bold text-blue-700 dark:text-white">
+                    {enterprise?.nui || enterprise?.niu || "Non renseigné"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </main>
+  );
 }

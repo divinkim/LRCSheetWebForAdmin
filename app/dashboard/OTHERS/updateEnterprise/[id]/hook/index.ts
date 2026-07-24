@@ -1,238 +1,271 @@
 "use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { providers } from "@/index";
-import { FormEvent, useEffect, useState } from "react";
 
-type InputsValue = {
-    name: string,
-    description: string,
-    logo: string,
-    activityDomain: string,
-    phone: string,
-    toleranceTime: string | null,
-    maxToleranceTime: string | null,
-    pourcentageOfHourlyDeduction: string | null,
-    maxPourcentageOfHourlyDeduction: string | null,
-    email: string,
-    address: string,
-    website: string | null,
-    latitude: string,
-    longitude: string,
-    CityId: number | null,
-    City: {
-        name: string
-    }
-    CountryId: number | null,
-    Country: {
-        name: string
-    },
-    legalForm: string,
-    rccm: string | null,
-    nui: string | null,
-    subscriptionType: string,
-    subscriptionStatus: string,
-    [key: string]: any
-}
+export type InputsValue = {
+  name: string;
+  description: string;
+  logo: string;
+  activityDomain: string;
+  phone: string;
+  toleranceTime: string | null;
+  maxToleranceTime: string | null;
+  pourcentageOfHourlyDeduction: string | null;
+  maxPourcentageOfHourlyDeduction: string | null;
+  email: string;
+  address: string;
+  website: string | null;
+  latitude: string;
+  longitude: string;
+  CityId: number | null;
+  City: {
+    name: string;
+  };
+  CountryId: number | null;
+  Country: {
+    name: string;
+  };
+  legalForm: string;
+  rccm: string | null;
+  nui: string | null;
+  subscriptionType: string;
+  subscriptionStatus: string;
+  [key: string]: any;
+};
+
 export default function useUpdateEnterprise() {
-    const [getEnterprises, setEnterprises] = useState<any[]>([]);
-    const [getDepartmentPosts, setDepartmentPosts] = useState<any[]>([]);
-    const [getPosts, setPosts] = useState<any[]>([]);
-    const [getSalary, setSalary] = useState<any[]>([]);
-    const [getContractTypes, setContractTypes] = useState<any[]>([]);
-    const [getContracts, setContracts] = useState<any[]>([]);
-    const [getCountry, setCountry] = useState<any[]>([]);
-    const [getCity, setCity] = useState<any[]>([]);
-    const [getDistrict, setDistrict] = useState<any[]>([]);
-    const [getQuarter, setQuarter] = useState<any[]>([]);
-    const [getPlannings, setPlannings] = useState<any[]>([])
+  const { data: session } = useSession();
 
-    const [EnterpriseId, setEnterpriseId] = useState<string | null>(null)
-    const [adminRole, setAdminRole] = useState<string | null>(null)
-    const [inputs, setInputs] = useState<InputsValue>({
-        name: "",
-        description: "",
-        logo: "",
-        activityDomain: "",
-        phone: "",
-        toleranceTime: null,
-        maxToleranceTime: null,
-        pourcentageOfHourlyDeduction: null,
-        maxPourcentageOfHourlyDeduction: null,
-        email: "",
-        address: "",
-        website: null,
-        latitude: "",
-        longitude: "",
-        CityId: null,
-        City: {
-            name: ""
-        },
-        CountryId: null,
-        Country: {
-            name: ""
-        },
-        legalForm: "",
-        rccm: null,
-        nui: null,
-        subscriptionType: "",
-        subscriptionStatus: "",
-    });
+  // États de données
+  const [getEnterprises, setEnterprises] = useState<any[]>([]);
+  const [getDepartmentPosts, setDepartmentPosts] = useState<any[]>([]);
+  const [getCountry, setCountry] = useState<any[]>([]);
+  const [getCity, setCity] = useState<any[]>([]);
 
-    const [isLoading, setIsLoading] = useState(false);
+  // États utilisateur / administration
+  const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    // Récupération des entreprises et filtrage en fonction de l'id de l'administrateur courant
-    useEffect(() => {
-        (async () => {
-            const getInputMemory = localStorage.getItem("inputMemoryOfAddEnterprisePage");
-            getInputMemory ? setInputs(JSON.parse(getInputMemory ?? "")) : setInputs({ ...inputs });
+  // État des inputs
+  const [inputs, setInputs] = useState<InputsValue>({
+    name: "",
+    description: "",
+    logo: "",
+    activityDomain: "",
+    phone: "",
+    toleranceTime: null,
+    maxToleranceTime: null,
+    pourcentageOfHourlyDeduction: null,
+    maxPourcentageOfHourlyDeduction: null,
+    email: "",
+    address: "",
+    website: null,
+    latitude: "",
+    longitude: "",
+    CityId: null,
+    City: { name: "" },
+    CountryId: null,
+    Country: { name: "" },
+    legalForm: "",
+    rccm: null,
+    nui: null,
+    subscriptionType: "",
+    subscriptionStatus: "",
+  });
 
-            const role = localStorage.getItem("adminRole");
-            const enterpriseIdOfAdmin = window.location.href.split('/').pop();
+  // 1. Initialisation de la session et chargement des données de l'entreprise
+  useEffect(() => {
+    (async () => {
+      // Récupération de l'ID d'entreprise (URL ou fallback session)
+      const enterpriseIdFromUrl = window.location.href.split("/").pop();
+      const currentEnterpriseId = enterpriseIdFromUrl || session?.user?.EnterpriseId;
+      const role = session?.user?.role || localStorage.getItem("adminRole");
 
-            const getEnterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
+      if (currentEnterpriseId) setEnterpriseId(String(currentEnterpriseId));
+      if (role) setAdminRole(role);
 
-            const getEnterprise = getEnterprises.filter((item: { id: number }) => item.id === Number(enterpriseIdOfAdmin))[0];
-            console.log("les données reçu",getEnterprise)
-            setInputs({
-                name: getEnterprise.name,
-                description: getEnterprise.description,
-                logo: getEnterprise.logo,
-                activityDomain: getEnterprise.activityDomain,
-                phone: getEnterprise.phone,
-                toleranceTime: getEnterprise.toleranceTime,
-                maxToleranceTime: getEnterprise.maxToleranceTime,
-                pourcentageOfHourlyDeduction: getEnterprise.pourcentageOfHourlyDeduction,
-                maxPourcentageOfHourlyDeduction: getEnterprise.maxPourcentageOfHourlyDeduction,
-                email: getEnterprise.email,
-                address: getEnterprise.address,
-                website: getEnterprise.website,
-                latitude: getEnterprise.latitude,
-                longitude: getEnterprise.longitude,
-                CityId: getEnterprise.CityId,
-                City: {
-                    name: getEnterprise.City.name
-                },
-                CountryId: getEnterprise.Country,
-                Country: {
-                    name: getEnterprise.Country.name
-                },
-                legalForm: getEnterprise.legalForm,
-                rccm: getEnterprise.rccm,
-                nui: getEnterprise.niu,
-                subscriptionType: getEnterprise.subscriptionType,
-                subscriptionStatus: getEnterprise.subscriptionStatus,
-            })
-            setEnterpriseId(String(enterpriseIdOfAdmin));
-            setAdminRole(role);
-        })();
-    }, []);
+      // Récupération de la mémoire locale si elle existe
+      const getInputMemory = localStorage.getItem("inputMemoryOfAddEnterprisePage");
+      if (getInputMemory) {
+        setInputs(JSON.parse(getInputMemory));
+        return;
+      }
 
-    // Récupération des départements d'entreprises
-    useEffect(() => {
-        (async () => {
-            const getDepartmentPosts = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
-            const filterDepartmentsByAdminEnterpriseId = getDepartmentPosts.filter((department: { EnterpriseId: number }) => department.EnterpriseId === inputs.EnterpriseId);
-            setDepartmentPosts(filterDepartmentsByAdminEnterpriseId)
-        })()
-    }, [inputs.EnterpriseId]);
+      // Chargement depuis l'API si pas de mémoire locale
+      if (currentEnterpriseId) {
+        const enterprisesList = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
+        setEnterprises(enterprisesList);
 
-    useEffect(() => {
-        (async () => {
-            setTimeout(async () => {
-                const getCountries = await providers.API.getAll(providers.APIUrl, "getCountries", null);
-                setCountry(getCountries);
-                console.log(getCountries)
-            }, 2000)
-        })();
-    }, []);
-
-    // // Récupération des type des villes en fonction du pays
-    useEffect(() => {
-        (async () => {
-            const getCities = await providers.API.getAll(providers.APIUrl, "getCities", null);
-            const filteredCities = getCities.filter((city: any) => city.CountriesTypeId === inputs.CountryId)
-            setCity(filteredCities)
-        })()
-    }, [inputs.CountryId]);
-
-    // const adminRoles = ['Super-Admin', 'Supervisor-Admin'];
-    // const role = window?.localStorage.getItem("adminRole") ?? "";
-
-    let dynamicArrayData = [
-        {
-            alias: "EnterpriseId",
-            arrayData: getEnterprises.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        },
-        {
-            alias: "DepartmentPostId",
-            arrayData: getDepartmentPosts.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        },
-        {
-            alias: "CountryId",
-            arrayData: getCountry.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        },
-        {
-            alias: "CityId",
-            arrayData: getCity.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        },
-    ];
-
-    let staticArrayData = [
-        {
-            alias: "subscriptionStatus",
-            arrayData: [
-                {
-                    title: "En cours",
-                    value: "onGoing",
-                },
-                {
-                    title: "Expiré",
-                    value: "expired",
-                },
-
-            ]
-
-        },
-    ]
-
-    console.log("le tableau des données statiques", dynamicArrayData)
-
-    const handleSubmit = async () => {
-
-        const requireFields = {
-            name: inputs.name,
-            description: inputs.description,
-            logo: inputs.logo,
-            activityDomain: inputs.activityDomain,
-            phone: inputs.phone,
-            CityId: inputs.CityId,
-            CountryId: inputs.CountryId,
-            latitude: inputs.latitude,
-            longitude: inputs.longitude,
-        }
-
-        for (const [key, value] of Object.entries(requireFields)) {
-            if (!value) {
-                return providers.alertMessage(false, "Champs invalides", `Veuillez remplir tous les champs  obligatoires`, null);
-            }
-        }
-
-        setIsLoading(true);
-
-        const response = await providers.API.update(providers.APIUrl, "updateEnterprise", null, inputs, Number(EnterpriseId));
-
-        if (response.status) localStorage.removeItem("inputMemoryOfAddEnterprisePage");
-
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/ADMIN/addPost" : null
+        const currentEnterprise = enterprisesList.find(
+          (item: { id: number }) => item.id === Number(currentEnterpriseId)
         );
 
-        setIsLoading(false);
+        if (currentEnterprise) {
+          setInputs({
+            name: currentEnterprise.name || "",
+            description: currentEnterprise.description || "",
+            logo: currentEnterprise.logo || "",
+            activityDomain: currentEnterprise.activityDomain || "",
+            phone: currentEnterprise.phone || "",
+            toleranceTime: currentEnterprise.toleranceTime,
+            maxToleranceTime: currentEnterprise.maxToleranceTime,
+            pourcentageOfHourlyDeduction: currentEnterprise.pourcentageOfHourlyDeduction,
+            maxPourcentageOfHourlyDeduction: currentEnterprise.maxPourcentageOfHourlyDeduction,
+            email: currentEnterprise.email || "",
+            address: currentEnterprise.address || "",
+            website: currentEnterprise.website,
+            latitude: currentEnterprise.latitude || "",
+            longitude: currentEnterprise.longitude || "",
+            CityId: currentEnterprise.CityId,
+            City: {
+              name: currentEnterprise.City?.name || "",
+            },
+            CountryId: currentEnterprise.CountryId || currentEnterprise.Country?.id,
+            Country: {
+              name: currentEnterprise.Country?.name || "",
+            },
+            legalForm: currentEnterprise.legalForm || "",
+            rccm: currentEnterprise.rccm,
+            nui: currentEnterprise.niu || currentEnterprise.nui,
+            subscriptionType: currentEnterprise.subscriptionType || "",
+            subscriptionStatus: currentEnterprise.subscriptionStatus || "",
+          });
+        }
+      }
+    })();
+  }, [session]);
+
+  // 2. Chargement des pays
+  useEffect(() => {
+    (async () => {
+      const countriesList = await providers.API.getAll(providers.APIUrl, "getCountries", null);
+      setCountry(countriesList || []);
+    })();
+  }, []);
+
+  // 3. Chargement des départements filtrés par entreprise
+  useEffect(() => {
+    if (!inputs.EnterpriseId && !enterpriseId) return;
+    (async () => {
+      const targetEnterpriseId = inputs.EnterpriseId || Number(enterpriseId);
+      const departmentPostsList = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
+      const filteredDepartments = departmentPostsList.filter(
+        (department: { EnterpriseId: number }) => department.EnterpriseId === targetEnterpriseId
+      );
+      setDepartmentPosts(filteredDepartments);
+    })();
+  }, [inputs.EnterpriseId, enterpriseId]);
+
+  // 4. Chargement des villes filtrées par pays
+  useEffect(() => {
+    if (!inputs.CountryId) return;
+    (async () => {
+      const citiesList = await providers.API.getAll(providers.APIUrl, "getCities", null);
+      const filteredCities = citiesList.filter(
+        (city: any) => city.CountriesTypeId === inputs.CountryId || city.CountryId === inputs.CountryId
+      );
+      setCity(filteredCities);
+    })();
+  }, [inputs.CountryId]);
+
+  // Structure des options dynamiques
+  const dynamicArrayData = [
+    {
+      alias: "EnterpriseId",
+      arrayData: getEnterprises
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
+      alias: "DepartmentPostId",
+      arrayData: getDepartmentPosts
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
+      alias: "CountryId",
+      arrayData: getCountry
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
+      alias: "CityId",
+      arrayData: getCity
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+  ];
+
+  // Structure des options statiques
+  const staticArrayData = [
+    {
+      alias: "subscriptionStatus",
+      arrayData: [
+        { title: "En cours", value: "onGoing" },
+        { title: "Expiré", value: "expired" },
+      ],
+    },
+  ];
+
+  // Soumission des modifications
+  const handleSubmit = async () => {
+    const requiredFields = {
+      name: inputs.name,
+      description: inputs.description,
+      logo: inputs.logo,
+      activityDomain: inputs.activityDomain,
+      phone: inputs.phone,
+      CityId: inputs.CityId,
+      CountryId: inputs.CountryId,
+      latitude: inputs.latitude,
+      longitude: inputs.longitude,
     };
 
-    console.log("les datas", inputs);
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value) {
+        return providers.alertMessage(
+          false,
+          "Champs invalides",
+          "Veuillez remplir tous les champs obligatoires",
+          null
+        );
+      }
+    }
 
-    return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading, adminRole }
+    setIsLoading(true);
+
+    const response = await providers.API.update(
+      providers.APIUrl,
+      "updateEnterprise",
+      null,
+      inputs,
+      Number(enterpriseId)
+    );
+
+    if (response.status) {
+      localStorage.removeItem("inputMemoryOfAddEnterprisePage");
+    }
+
+    providers.alertMessage(
+      response.status,
+      response.title,
+      response.message,
+      response.status ? "/dashboard/ADMIN/addPost" : null
+    );
+
+    setIsLoading(false);
+  };
+
+  return {
+    dynamicArrayData,
+    staticArrayData,
+    handleSubmit,
+    inputs,
+    setInputs,
+    isLoading,
+    adminRole,
+  };
 }

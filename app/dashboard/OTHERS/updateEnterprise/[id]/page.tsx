@@ -1,141 +1,217 @@
 "use client";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ClipLoader } from "react-spinners";
-import { formElements } from "@/components/FormElements/forms";
+
 import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner, faBuilding, faImage } from "@fortawesome/free-solid-svg-icons";
+import { formElements } from "@/components/FormElements/forms";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
-import useUpdateEnterprise from "./hook/index";
+import UpdateCompanyHookModal from "./hook";
 
-export default function AddEnterpise() {
-    const { dynamicArrayData, staticArrayData, inputs, setInputs, isLoading, handleSubmit, adminRole } = useUpdateEnterprise();
-    return (
-        <main className="bg-white dark:bg-transparent">
-            <div className="flex">
-                <div className="mx-4 mt-6 mb-4 w-full font-semibold">
-                    {
-                        formElements.map((element) => (
-                            <div className="text-gray-700 w-full space-y-4 md:space-y-0 items-center">
-                                <div className="flex justify-between flex-wrap">
-                                    <h1 className="font-bold mb-3 text-[20px] dark:text-gray-300 text-gray-700">Modifier une entreprise</h1>
-                                    <p className="text-blue-700 dark:text-blue-600">Dashboard/RH/Modifier une entreprise</p>
-                                </div>
-                                <hr className='bg-gray-400' />
-                                <div className="flex flex-wrap py-4 lg:space-x-4 space-y-4 items-center">
-                                    {
-                                        element.addOrUpdateEnterprise.navigationLinks.map((element, index) => (
-                                            <Link href={element.href} className={`bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 px-4 relative top-2.5 rounded-md ${index === 1 && adminRole !== "Super-Admin" ? "hidden" : index === 0 ? "top-[18px]" : "block"}`}>
-                                                <FontAwesomeIcon icon={element.icon} className="text-white" /> <span className='text-white'>{element.title}</span>
-                                            </Link>
-                                        ))
-                                    }
-                                </div>
-                            </div>
-                        ))
-                    }
+export default function UpdateCompany() {
+  const {
+    dynamicArrayData,
+    staticArrayData,
+    inputs,
+    setInputs,
+    isLoading,
+    handleSubmit,
+  } = UpdateCompanyHookModal();
 
-                    <div className='dark:border mt-8 w-full  mx-auto font-semibold h-auto border-gray-400 dark:border-gray-800 dark:bg-gray-900 rounded-[30px] border  dark:shadow-none p-4'>
-                        {
-                            formElements.map((element) => (
+  return (
+    <main className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
+      <div className="mx-auto max-w-7xl space-y-8">
 
-                                <div className="flex flex-wrap space-y-4 justify-between mb-2 items-center dark:text-gray-300 text-gray-700">
-                                    <h2 className="font-bold">{element.addOrEditPost.addPostTitlePage}</h2>
-                                    <p className="font-semibold"> <span className="text-red-600">*</span> Champs obligatoires</p>
-                                </div>
-                            ))
-                        }
-                        <hr className='bg-gray-400 border-0 h-[1px]' />
-                        {/* <div className={inputs.photo ? "block w-[150px] h-[150px] mt-5" : "hidden"}>
-                            <img src={`${providers.APIUrl}/images/${inputs.photo}`} alt="" className="w-full rounded-full h-full object-cover" />
-                        </div> */}
-                        <div className='grid grid-cols-1 mt-4 gap-x-4 md:grid-cols-3 font-semibold w-full'>
-                            {
-                                formElements.map((element) => (
-
-                                    element.addOrUpdateEnterprise.inputs.map((e, index) => (
-                                        <div className={cn('w-full mb-4')}>
-                                            <label htmlFor="" className={cn("mb-3 font-semibold dark:text-gray-300 text-gray-700")}><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
-                                            {!e.selectedInput && !e.textarea ?
-                                                <input value={e.type !== "file" ? inputs[e.alias] ?? "" : ""} onChange={async (v) => {
-                                                    let field = e.alias;
-                                                    if (e.type === "file") {
-                                                        const files = v.target.files?.[0];
-                                                        const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                                                        if (response.status) {
-                                                            setInputs({
-                                                                ...inputs,
-                                                                [field]: response.filename
-                                                            })
-                                                        }
-                                                    }
-                                                    setInputs({
-                                                        ...inputs,
-                                                        [field]: v.target.value
-                                                    });
-                                                    window?.localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify({ ...inputs, [field]: v.target.value }));
-
-                                                }} type={e.type} maxLength={e.type === "tel" ? 9 : undefined} placeholder={e.placeholder} className="w-full outline-none rounded-md  dark:shadow-none p-2.5 bg-transparent border border-gray-400 dark:border-gray-300  dark:placeholder-gray-300 f dark:text-gray-300 text-gray-700 font-semibold placeholder-gray-600" />
-                                                :
-                                                e.selectedInput && !e.textarea ?
-                                                    <select value={e.type !== "file" ? inputs[e.alias] ?? "" : ""} onChange={(v) => {
-                                                        let field = e.alias;
-                                                        const fieldValue = {
-                                                            ...inputs,
-                                                            [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value
-                                                        }
-                                                        setInputs(fieldValue)
-                                                        localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify(fieldValue))
-                                                    }} name="" id="" className={cn("w-full mt-1 outline-none rounded-md  dark:shadow-none p-2.5 bg-transparent border border-gray-400 dark:border-gray-300 dark:bg-gray-900  dark:placeholder-gray-300 font-semibold dark:text-gray-300 text-gray-700 placeholder-gray-700", e.alias === "adminService" && inputs.role === null ? "hidden" : "block")}>
-                                                        <option value="" selected>
-                                                            {e.placeholder}
-                                                        </option>
-                                                        {
-                                                            e.dynamicOptions?.status ? dynamicArrayData
-                                                                .find((item: any) => item.alias === e.alias)
-                                                                ?.arrayData
-                                                                ?.map((option: any) => (
-                                                                    <option className="text-gray-700" value={option.value}>
-                                                                        {option.title}
-                                                                    </option>
-                                                                )) :
-                                                                staticArrayData.find((item: any) => item.alias === e.alias)?.arrayData.map((option: any) => (
-                                                                    <option value={option.value}>
-                                                                        {option.title}
-                                                                    </option>
-                                                                ))
-                                                        }
-                                                    </select>
-                                                    :
-                                                    !e.selectedInput && e.textarea ?
-                                                        <textarea className="outline-none bg-white dark:bg-transparent border border-gray-400 rounded-md p-3 text-gray-600  dark:text-gray-300 w-full font-semibold" value={inputs[e.alias] ?? ""} onChange={(v) => {
-                                                            let field = e.alias;
-                                                            const fieldValue = {
-                                                                ...inputs,
-                                                                [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value
-                                                            }
-                                                            setInputs(fieldValue)
-                                                            localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify(fieldValue))
-                                                        }} placeholder={e.placeholder}>
-                                                        </textarea> : ""
-                                            }
-                                        </div>
-                                    ))
-                                ))
-                            }
-
-                        </div>
-                        <div className="flex w-full justify-end ">
-                            <button type="button" onClick={(e) => {
-                                handleSubmit()
-                            }} className="bg-blue-600 my-2 hover:bg-blue-700 relative rounded-md font-semibold ease duration-500 text-white py-3 px-8">
-                                <p className={isLoading ? "hidden" : "block"}> Exécuter</p>
-                                <p className={isLoading ? "block" : "hidden"}><ClipLoader color="#fff" size={16} /></p>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        {/* 📌 HEADER & NAVIGATION */}
+        {formElements.map((element, idx) => (
+          <div key={idx} className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Modifier les informations de l'entreprise
+                </h1>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Mettez à jour les coordonnées et paramètres généraux de l'organisation.
+                </p>
+              </div>
             </div>
 
-        </main>
-    )
+            {/* Action Links Bar */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {element.addOrUpdateEnterprise?.navigationLinks?.map((navItem, index) => (
+                <Link
+                  key={index}
+                  href={navItem.href}
+                  className="inline-flex items-center gap-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white active:scale-95"
+                >
+                  <FontAwesomeIcon icon={navItem.icon} className="text-blue-600 dark:text-blue-400 text-sm" />
+                  <span>{navItem.title}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* 📝 FORM CARD CONTAINER */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm dark:shadow-xl transition-all duration-200">
+
+          {/* Card Header */}
+          {formElements.map((element, idx) => (
+            <div key={idx} className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-6 py-5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <FontAwesomeIcon icon={faBuilding} className="text-sm" />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                  { "Formulaire de modification"}
+                </h2>
+              </div>
+              <p className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                <span className="text-amber-500 font-bold">*</span> Champs obligatoires
+              </p>
+            </div>
+          ))}
+
+          <div className="p-6 sm:p-8">
+
+            {/* Preview Logo Upload */}
+            {inputs.logo && (
+              <div className="mb-8 flex items-center gap-4 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-4 transition-all">
+                <img
+                  src={`${providers.APIUrl}/images/${inputs.logo}`}
+                  alt="Logo de l'entreprise"
+                  className="h-16 w-16 rounded-xl border-2 border-blue-500 object-contain bg-white dark:bg-slate-800 p-1 shadow-sm"
+                />
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faImage} className="text-blue-500" />
+                    Logo de l'entreprise téléversé
+                  </p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    L'image a bien été chargée sur le serveur.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Form Fields Grid */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {formElements.map((element) =>
+                element.addOrUpdateEnterprise?.inputs?.map((e) => (
+                  <div key={e.alias} className={cn("flex flex-col gap-2", e.textarea && "md:col-span-2 xl:col-span-3")}>
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
+                      {e.label}
+                    </label>
+
+                    {/* RENDU TEXTAREA */}
+                    {e.textarea ? (
+                      <textarea
+                        rows={4}
+                        value={inputs[e.alias] ?? ""}
+                        placeholder={e.placeholder}
+                        onChange={(v) => {
+                          const field = e.alias;
+                          const fieldValue = {
+                            ...inputs,
+                            [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value,
+                          };
+                          setInputs(fieldValue);
+                          localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(fieldValue));
+                        }}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 p-3.5 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                    ) : e.selectedInput ? (
+                      /* RENDU SELECT */
+                      <select
+                        value={inputs[e.alias] ?? ""}
+                        onChange={(v) => {
+                          const field = e.alias;
+                          const fieldValue = {
+                            ...inputs,
+                            [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value,
+                          };
+                          setInputs(fieldValue);
+                          localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(fieldValue));
+                        }}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                      >
+                        <option value="" className="text-slate-400 dark:bg-slate-900">
+                          {e.placeholder}
+                        </option>
+                        {e.dynamicOptions?.status
+                          ? dynamicArrayData
+                              .find((item: any) => item.alias === e.alias)
+                              ?.arrayData?.map((option: any) => (
+                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                  {option.title}
+                                </option>
+                              ))
+                          : staticArrayData
+                              .find((item: any) => item.alias === e.alias)
+                              ?.arrayData?.map((option: any) => (
+                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                  {option.title}
+                                </option>
+                              ))}
+                      </select>
+                    ) : (
+                      /* RENDU INPUT STANDARD / FILE */
+                      <input
+                        type={e.type}
+                        value={e.type === "file" ? undefined : (inputs[e.alias] ?? "")}
+                        maxLength={e.type === "tel" ? 9 : undefined}
+                        placeholder={e.placeholder}
+                        onChange={async (v) => {
+                          const field = e.alias;
+                          if (e.type === "file") {
+                            const files = v.target.files?.[0];
+                            if (!files) return;
+                            const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
+                            if (response.status) {
+                              const updatedInputs = { ...inputs, [field]: response.filename };
+                              setInputs(updatedInputs);
+                              localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(updatedInputs));
+                              return;
+                            }
+                          }
+                          const updatedInputs = { ...inputs, [field]: v.target.value };
+                          setInputs(updatedInputs);
+                          localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(updatedInputs));
+                        }}
+                        className={cn(
+                          "w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                          e.type === "file" && "file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 dark:file:bg-blue-900/30 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-blue-600 dark:file:text-blue-400 hover:file:bg-blue-100"
+                        )}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Form Actions Footer */}
+            <div className="mt-8 flex justify-end border-t border-slate-200 dark:border-slate-800 pt-6">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="inline-flex w-full sm:w-auto min-w-[150px] items-center justify-center gap-2.5 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:bg-blue-600 dark:hover:bg-blue-500"
+              >
+                {isLoading ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin text-white" />
+                    <span>Chargement...</span>
+                  </>
+                ) : (
+                  <span>Enregistrer les modifications</span>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }

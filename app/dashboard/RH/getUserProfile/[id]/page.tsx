@@ -33,13 +33,6 @@ export default function GetUserProfile() {
         {/* Fil d'Ariane & Titre */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <nav className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span>Collaborateurs</span>
-              <span>/</span>
-              <span className="text-blue-600 dark:text-blue-500 font-semibold">Détails du collaborateur</span>
-            </nav>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Profil de {user?.firstname} {user?.lastname}
             </h1>
@@ -76,7 +69,7 @@ export default function GetUserProfile() {
           <div className="flex items-center gap-3">
             <Link
               href={`/dashboard/RH/editUser/${user?.id}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-amber-500/10 active:scale-95"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm transition-all shadow-md shadow-amber-500/10 active:scale-95"
             >
               <FontAwesomeIcon icon={faPen} />
               <span>Modifier</span>

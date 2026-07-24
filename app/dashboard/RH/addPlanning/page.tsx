@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCalendarPlus, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { formElements } from "@/components/FormElements/forms";
 import AddUserHookModal from "./hook";
 
@@ -30,68 +30,71 @@ export default function AddPlanning() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 dark:bg-slate-900/50">
-      <div className="mx-auto max-w-4xl space-y-6">
-        
-        {/* Header Dashboard & Fil d'Ariane */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/80 pb-5 dark:border-slate-800">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
-              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-              <span>/</span>
-              <span>RH</span>
-              <span>/</span>
-              <span className="text-blue-600 dark:text-blue-400">Nouveau Planning</span>
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+    <main className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
+      <div className="mx-auto max-w-5xl space-y-8">
+
+        {/* 📌 HEADER & FIL D'ARIANE */}
+        <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Ajouter un nouveau planning
             </h1>
+            {/* Breadcrumb */}
           </div>
 
-          <Link
-            href="/dashboard/rh/planning"
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
-          >
-            ← Retour à la liste
-          </Link>
+          {/* Action Link */}
+          <div className="flex items-center gap-3 mt-2">
+            <Link
+              href="/dashboard/rh/planning"
+              className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white active:scale-95"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="text-sm text-slate-500 dark:text-slate-400" />
+              <span>Retour à la liste</span>
+            </Link>
+          </div>
         </div>
 
-        {/* Conteneur principal du formulaire */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          
-          {/* Header de la carte */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800/60">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {formTitle}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Remplissez les informations ci-dessous pour planifier les sessions.
-              </p>
+        {/* 📝 FORM CARD CONTAINER */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm dark:shadow-xl transition-all duration-200">
+
+          {/* Card Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-6 py-5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <FontAwesomeIcon icon={faCalendarPlus} className="text-sm" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  {formTitle}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Remplissez les informations ci-dessous pour planifier les sessions.
+                </p>
+              </div>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
               <span className="text-amber-500 font-bold">*</span> Champs obligatoires
             </p>
           </div>
 
-          {/* Corps du Formulaire */}
-          <form 
+          {/* Form Body */}
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSubmit();
             }}
-            className="p-6 space-y-6"
+            className="p-6 sm:p-8 space-y-6"
           >
             {/* Grille responsive */}
-            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {inputList.map((e: any, index: number) => {
                 const value = inputs[e.alias] ?? "";
 
                 return (
-                  <div key={index} className={`w-full ${e.textarea ? "md:col-span-2" : ""}`}>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  <div key={index} className={`flex flex-col gap-2 ${e.textarea ? "md:col-span-2" : ""}`}>
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                       {e.label}
-                      {e.requireField && <span className="ml-1 text-amber-500">*</span>}
                     </label>
 
                     {/* Input Standard */}
@@ -102,7 +105,7 @@ export default function AddPlanning() {
                         maxLength={e.type === "tel" ? 9 : undefined}
                         placeholder={e.placeholder}
                         onChange={(v) => handleInputChange(e.alias, v.target.value)}
-                        className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder:text-slate-600 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
                     )}
 
@@ -113,7 +116,7 @@ export default function AddPlanning() {
                         value={value}
                         placeholder={e.placeholder}
                         onChange={(v) => handleInputChange(e.alias, v.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 text-sm font-medium text-slate-800 outline-none transition-all resize-none placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder:text-slate-600 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 p-4 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
                     )}
 
@@ -125,16 +128,16 @@ export default function AddPlanning() {
                           const val = e.type === "number" ? parseInt(v.target.value) : v.target.value;
                           handleInputChange(e.alias, val);
                         }}
-                        className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                       >
-                        <option value="" disabled className="dark:bg-slate-900">
+                        <option value="" disabled className="text-slate-400 dark:bg-slate-900">
                           {e.placeholder}
                         </option>
                         {e.dynamicOptions?.status &&
                           dynamicArrayData
                             ?.find((item: any) => item.alias === e.alias)
                             ?.arrayData?.map((option: any, oIdx: number) => (
-                              <option key={oIdx} value={option.value} className="dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                              <option key={oIdx} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
                                 {option.title}
                               </option>
                             ))}
@@ -146,11 +149,20 @@ export default function AddPlanning() {
             </div>
 
             {/* Actions du Formulaire */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/60">
+            <div className="mt-8 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800 pt-6">
               <button
                 type="button"
-                onClick={() => setInputs({})}
-                className="h-11 px-5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-900"
+                onClick={() => setInputs(
+                  {
+                    startTime: null,
+                    breakingStartTime: null,
+                    resumeEndTime: null,
+                    endTime: null,
+                    description: null,
+                    EnterpriseId: null,
+                  }
+                )}
+                className="rounded-xl border border-slate-200 dark:border-slate-700/60 px-5 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95"
               >
                 Réinitialiser
               </button>
@@ -158,12 +170,13 @@ export default function AddPlanning() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`inline-flex h-11 min-w-[130px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${
-                  isLoading ? "opacity-50" : ""
-                }`}
+                className="inline-flex min-w-[140px] items-center justify-center gap-2.5 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:bg-blue-600 dark:hover:bg-blue-500"
               >
                 {isLoading ? (
-                  <FontAwesomeIcon icon={faSpinner} spin className="text-white text-base" />
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} className="h-4 w-4 animate-spin text-white" />
+                    <span>Enregistrement...</span>
+                  </>
                 ) : (
                   <span>Enregistrer</span>
                 )}
@@ -172,7 +185,7 @@ export default function AddPlanning() {
           </form>
 
         </div>
-      </div>
-    </main>
+      </div >
+    </main >
   );
 }

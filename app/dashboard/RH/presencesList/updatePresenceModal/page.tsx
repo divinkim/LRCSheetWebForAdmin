@@ -120,7 +120,7 @@ export default function UpdatePresenceModal() {
     }
 
     return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm p-4">
             <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
                 {/* Header */}
                 <div className="px-8 my-5">
@@ -333,9 +333,9 @@ export default function UpdatePresenceModal() {
                     {/* Footer */}
                     <div className="my-4 flex justify-end">
                         <button
-                            type="button"
+                            type="button" disabled={isLoading}
                             onClick={handleSubmit}
-                            className="rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105 hover:from-blue-800 hover:to-blue-700"
+                            className={`rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105 ${isLoading ? "opacity-50" : "opacity-100"}`}
                         >
                             {isLoading ? (
                                 <p>

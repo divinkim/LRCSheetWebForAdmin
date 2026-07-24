@@ -1,376 +1,164 @@
 'use client';
+
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { providers } from "@/index";
-import { FormEvent, useEffect, useState } from "react";
 
 type InputsValue = {
-    // firstname: string | null,
-    // lastname: string | null,
-    // birthDate: string | null,
-    // gender: string | null,
-    // email: string | null,
-    // password: string | null,
-    // phone: string | null,
-    EnterpriseId: number | null,
-    startDate: string | null,
-    endDate: string | null,
-    delay: string | null,
-    ContractTypeId: number | null
-    // title: string | null,
-    // description: string | null
-    // PostId: number | null,
-    // SalaryId: number | null,
-    // ContractTypeId: number | null,
-    // ContractId: number | null,
-    // CountryId: number | null,
-    // CityId: number | null,
-    // DistrictId: number | null,
-    // PlanningId: number | null,
-    // QuarterId: number | null,
-    // photo: string | null,
-    // role: string | null,
-    // DepartmentPostId: number | null,
-    // marialStatus: string | null,
-    // adminService: string | null,
-    // status: boolean | null,
-    [key: string]: string | number | null | any,
-}
+  EnterpriseId: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  delay: string | null;
+  ContractTypeId: number | null;
+  [key: string]: string | number | boolean | null | any;
+};
+
+const INITIAL_INPUTS: InputsValue = {
+  EnterpriseId: null,
+  startDate: null,
+  endDate: null,
+  delay: null,
+  ContractTypeId: null,
+};
 
 export default function useAddContract() {
-    const [getEnterprises, setEnterprises] = useState<any[]>([]);
-    const [getDepartmentPosts, setDepartmentPosts] = useState<any[]>([]);
-    const [getPosts, setPosts] = useState<any[]>([]);
-    const [getSalary, setSalary] = useState<any[]>([]);
-    const [getContractTypes, setContractTypes] = useState<any[]>([]);
-    const [getContracts, setContracts] = useState<any[]>([]);
-    const [getCountry, setCountry] = useState<any[]>([]);
-    const [getCity, setCity] = useState<any[]>([]);
-    const [getDistrict, setDistrict] = useState<any[]>([]);
-    const [getQuarter, setQuarter] = useState<any[]>([]);
-    const [getPlannings, setPlannings] = useState<any[]>([])
+  // 1. Récupération de la session utilisateur via useSession
+  const { data: session } = useSession();
 
-    const [enterpriseIdOfadmin, setEnterpriseIdOfAdmin] = useState<string | null>(null)
-    const [adminRole, setAdminRole] = useState<string | null>(null)
-    const [inputs, setInputs] = useState<InputsValue>({
-        // firstname: null,
-        // lastname: null,
-        // birthDate: null,
-        // gender: null,
-        // email: null,
-        // password: null,
-        // phone: null,
-        EnterpriseId: null,
-        startDate: null,
-        endDate: null,
-        delay: null,
-        ContractTypeId: null
-        // PostId: null,
-        // SalaryId: null,
-        // ContractTypeId: null,
-        // PlanningId: null,
-        // ContractId: null,
-        // CountryId: null,
-        // CityId: null,
-        // DistrictId: null,
-        // QuarterId: null,
-        // photo: null,
-        // role: null,
-        // DepartmentPostId: null,
-        // marialStatus: null,
-        // adminService: null,
-        // status: null,
-    });
+  // 2. États
+  const [inputs, setInputs] = useState<InputsValue>(INITIAL_INPUTS);
+  const [getEnterprises, setEnterprises] = useState<any[]>([]);
+  const [getContractTypes, setContractTypes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const [isLoading, setIsLoading] = useState(false);
+  // Extraction des rôles/identifiants depuis la session
+  const adminRole = session?.user?.role ?? null;
+  const enterpriseIdOfAdmin = session?.user?.EnterpriseId ?? null;
 
-    // Récupération des entreprises et filtrage en fonction de l'id de l'administrateur courant
-    useEffect(() => {
-        (async () => {
-            const getInputMemory = localStorage.getItem("inputMemoryOfAddContratPage");
-            getInputMemory ? setInputs(JSON.parse(getInputMemory ?? "")) : setInputs({ ...inputs });
+  // 3. Restauration du brouillon de formulaire + Récupération des Entreprises
+  useEffect(() => {
+    // Restauration de la mémoire de saisie du formulaire si présente
+    const storedInputMemory = sessionStorage.getItem("inputMemoryOfAddContractPage");
+    if (storedInputMemory) {
+      try {
+        setInputs(JSON.parse(storedInputMemory));
+      } catch {
+        setInputs(INITIAL_INPUTS);
+      }
+    }
 
-            const role = localStorage.getItem("adminRole");
-            const enterpriseIdOfAdmin = localStorage.getItem("EnterpriseId");
+    (async () => {
+      const enterprises = await providers.API.getAll(
+        providers.APIUrl,
+        "getEnterprises",
+        null
+      );
 
-            const enterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
-
-            if (role !== "Super-Admin") {
-                const getEnterpriseByAdminRole = enterprises.filter((item: { id: number }) => item.id === Number(enterpriseIdOfAdmin));
-                setEnterprises(getEnterpriseByAdminRole);
-                setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
-                setAdminRole(role);
-                return;
-            }
-
-            setEnterprises(enterprises);
-            setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
-            setAdminRole(role);
-        })();
-    }, []);
-
-    //Récupération des plannings
-    // useEffect(() => {
-    //     (async () => {
-    //         const plannings = await providers.API.getAll(providers.APIUrl, "getPlannings", null);
-    //         if (adminRole !== "Super-Admin") {
-    //             const getPlanningsByAdminEnterpriseId = plannings.filter((item: { EnterpriseId: number }) => item.EnterpriseId === inputs.EnterpriseId);
-    //             setPlannings(getPlanningsByAdminEnterpriseId);
-    //             return;
-    //         }
-    //         setPlannings(plannings);
-    //     })()
-    // }, [inputs.EnterpriseId])
-
-    // Récupération des départements d'entreprises
-    // useEffect(() => {
-    //     (async () => {
-    //         const getDepartmentPosts = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
-    //         const filterDepartmentsByAdminEnterpriseId = getDepartmentPosts.filter((department: { EnterpriseId: number }) => department.EnterpriseId === inputs.EnterpriseId);
-    //         setDepartmentPosts(filterDepartmentsByAdminEnterpriseId)
-    //     })()
-    // }, [inputs.EnterpriseId]);
-
-    // // Récupération des postes d'entreprises
-    // useEffect(() => {
-    //     (async () => {
-    //         const getPosts = await providers.API.getAll(providers.APIUrl, "getPosts", null);
-    //         const filteredPosts = getPosts.filter((post: { EnterpriseId: number, DepartmentPostId: number }) => post.DepartmentPostId === inputs.DepartmentPostId && post.EnterpriseId === inputs.EnterpriseId);
-    //         setPosts(filteredPosts)
-    //         console.log("Voici la liste des postes", filteredPosts);
-    //     })()
-    // }, [inputs.DepartmentPostId, inputs.EnterpriseId]);
-
-    // // Récupération des salaires
-    // useEffect(() => {
-    //     (async () => {
-    //         const getSalaries = await providers.API.getAll(providers.APIUrl, "getSalaries", null);
-    //         const filteredSalries = getSalaries.filter((salary: { EnterpriseId: number, DepartmentId: number, PostId: number }) => salary.PostId === inputs.PostId && salary.EnterpriseId === inputs.EnterpriseId);
-    //         setSalary(filteredSalries)
-    //         console.log(filteredSalries);
-    //     })()
-    // }, [inputs.PostId, inputs.EnterpriseId]);
-
-    // Récupération des type de Contrat
-    useEffect(() => {
-        (async () => {
-            const getContractTypes = await providers.API.getAll(providers.APIUrl, "getContractTypes", null);
-            const filterContractTypes = getContractTypes.filter((contractType: { EnterpriseId: number }) => contractType.EnterpriseId === inputs.EnterpriseId)
-            setContractTypes(filterContractTypes)
-            console.log(filterContractTypes);
-        })()
-    }, [inputs.EnterpriseId]);
-
-    // // Récupération des Contrat
-    // useEffect(() => {
-    //     (async () => {
-    //         const getContracts = await providers.API.getAll(providers.APIUrl, "getContracts", null);
-    //         const filterContracts = getContracts.filter((contract: { EnterpriseId: number, ContractTypeId: number }) => contract.ContractTypeId === inputs.ContractTypeId && contract.EnterpriseId === inputs.EnterpriseId)
-    //         setContracts(filterContracts)
-    //         console.log(filterContracts);
-    //     })()
-    // }, [inputs.ContractTypeId]);
-
-    // // Récupération des type des pays
-    // useEffect(() => {
-    //     (async () => {
-    //         setTimeout(async () => {
-    //             const getCountries = await providers.API.getAll(providers.APIUrl, "getCountries", null);
-    //             setCountry(getCountries);
-    //             console.log(getCountries)
-    //         }, 2000)
-    //     })();
-    // }, []);
-
-    // // Récupération des type des villes en fonction du pays
-    // useEffect(() => {
-    //     (async () => {
-
-    //         const getCities = await providers.API.getAll(providers.APIUrl, "getCities", null);
-    //         const filteredCities = getCities.filter((city: any) => city.CountriesTypeId === inputs.CountryId)
-    //         setCity(filteredCities)
-    //     })()
-    // }, [inputs.CountryId]);
-
-    // // Récupération des arrondissements en fonction de la ville
-    // useEffect(() => {
-    //     (async () => {
-    //         const getDistricts = await providers.API.getAll(providers.APIUrl, "getDistricts", null);
-    //         const filteredDistricts = getDistricts.filter((district: any) => district.CityId === inputs.CityId)
-    //         setTimeout(() => {
-    //             setDistrict(filteredDistricts)
-    //         }, 2000)
-    //         console.log(filteredDistricts);
-    //     })()
-    // }, [inputs.CityId]);
-
-    // // Récupération des quartiers en fonction de la ville
-    // useEffect(() => {
-    //     (async () => {
-    //         const getQuarters = await providers.API.getAll(providers.APIUrl, "getQuarters", null);
-    //         const filteredQuarters = getQuarters.filter((quarter: any) => quarter.DistrictId === inputs.DistrictId)
-    //         setTimeout(() => {
-    //             setQuarter(filteredQuarters)
-    //         }, 2000)
-    //         console.log(filteredQuarters);
-    //     })()
-    // }, [inputs.DistrictId]);
-
-    // const adminRoles = ['Super-Admin', 'Supervisor-Admin'];
-    // const role = window?.localStorage.getItem("adminRole") ?? "";
-
-    let dynamicArrayData = [
-        {
-            alias: "EnterpriseId",
-            arrayData: getEnterprises.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        },
-        // {
-        //     alias: "PlanningId",
-        //     arrayData: getPlannings.filter(item => item.id && item.PlanningType).map(item => ({ value: item.id, title: item.PlanningType.title }))
-        // },
-        // {
-        //     alias: "DepartmentPostId",
-        //     arrayData: getDepartmentPosts.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        // },
-        // {
-        //     alias: "PostId",
-        //     arrayData: getPosts.filter(item => item.id && item.title).map(item => ({ value: item.id, title: item.title }))
-        // },
-        // {
-        //     alias: "SalaryId",
-        //     arrayData: getSalary.filter(item => item.id && item.netSalary).map(item => ({ value: item.id, title: item.netSalary }))
-        // },
-        {
-            alias: "ContractTypeId",
-            arrayData: getContractTypes.filter(item => item.id && item.title).map(item => ({ value: item.id, title: item.title }))
-        },
-        // {
-        //     alias: "ContractId",
-        //     arrayData: getContracts.filter(item => item.id && item.delay).map(item => ({ value: item.id, title: item.delay }))
-        // },
-        // {
-        //     alias: "CountryId",
-        //     arrayData: getCountry.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        // },
-        // {
-        //     alias: "CityId",
-        //     arrayData: getCity.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        // },
-        // {
-        //     alias: "DistrictId",
-        //     arrayData: getDistrict.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        // },
-        // {
-        //     alias: "QuarterId",
-        //     arrayData: getQuarter.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        // }
-    ];
-
-    let staticArrayData = [
-        {
-            alias: "",
-            arrayData: [
-                { title: "", value: "" },
-                // {
-                //     title: "Femme",
-                //     value: "Femme"
-                // },
-                // {
-                //     title: "Aucun",
-                //     value: "Aucun"
-                // }
-            ]
-
-        },
-        // {
-        //     alias: "status",
-        //     arrayData: [
-        //         { title: "Actif", value: true },
-        //         { title: "Inactif", value: false },
-        //     ]
-
-        // },
-
-        // {
-        //     alias: "role",
-        //     arrayData: [
-        //         {
-        //             title: "Super administrateur",
-        //             value: "Super-Admin"
-        //         },
-        //         {
-        //             title: "Administrateur générale",
-        //             value: "Supervisor-Admin"
-        //         },
-        //         {
-        //             title: "Administrateur d contôle",
-        //             value: "Controllor-Admin"
-        //         },
-        //         {
-        //             title: "Utilisateur client",
-        //             value: "client"
-        //         }
-        //     ]
-        // },
-        // {
-        //     alias: "adminService",
-        //     arrayData: [
-        //         { title: "Administration", value: "ADMINISTRATION" },
-        //         { title: "Ressouces humaines", value: "RH" },
-        //         { title: "Comptabilité", value: "COMPTA" },
-        //     ]
-        // },
-        // {
-        //     alias: "marialStatus",
-        //     arrayData: [
-        //         { title: "Célibataire", value: "Célibataire" },
-        //         { title: "Fiancé", value: "Fiancé" },
-        //         { title: "En couple", value: "En couple" },
-        //         { title: "Divorcé(e)", value: "Divorcé(e)" }
-        //     ]
-        // }
-    ]
-
-    console.log("le tableau des données statiques", dynamicArrayData)
-
-    const handleSubmit = async () => {
-        const requireFields = {
-            // firstname: inputs.firstname,
-            // gender: inputs.gender,
-            // password: inputs.password,
-            EnterpriseId: inputs.EnterpriseId,
-            startDate: inputs.startDate,
-            endDate: inputs.endDate,
-            ContractTypeId: inputs.ContractTypeId
-            // email: inputs.email,
-            // role: inputs.role,
-            // CountryId: inputs.CountryId,
-            // CityId: inputs.CityId,
-            // status: inputs.status
-        }
-
-        for (const [key, value] of Object.entries(requireFields)) {
-            if (!value) {
-                return providers.alertMessage(false, "Champs invlides", "Veuillez renseigner tous les champs obligatoires", null);
-            }
-        }
-
-        setIsLoading(true);
-
-        const response = await providers.API.post(providers.APIUrl, "createContract", null, inputs);
-
-        setIsLoading(false);
-
-        if (response.status) localStorage.removeItem("inputMemoryOfAddContratPage");
-
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/ADMIN/addContract" : null
+      if (adminRole && adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
+        const filteredEnterprises = enterprises.filter(
+          (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
         );
+        setEnterprises(filteredEnterprises);
+      } else {
+        setEnterprises(enterprises);
+      }
+    })();
+  }, [adminRole, enterpriseIdOfAdmin]);
 
+  // 4. Récupération des Types de Contrat selon l'Entreprise sélectionnée
+  useEffect(() => {
+    if (!inputs.EnterpriseId) {
+      setContractTypes([]);
+      return;
+    }
+
+    (async () => {
+      const allContractTypes = await providers.API.getAll(
+        providers.APIUrl,
+        "getContractTypes",
+        null
+      );
+      const filteredTypes = allContractTypes.filter(
+        (contractType: { EnterpriseId: number }) =>
+          contractType.EnterpriseId === inputs.EnterpriseId
+      );
+      setContractTypes(filteredTypes);
+    })();
+  }, [inputs.EnterpriseId]);
+
+  // 5. Données dynamiques & statiques
+  const dynamicArrayData = [
+    {
+      alias: "EnterpriseId",
+      arrayData: getEnterprises
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
+      alias: "ContractTypeId",
+      arrayData: getContractTypes
+        .filter((item) => item.id && item.title)
+        .map((item) => ({ value: item.id, title: item.title })),
+    },
+  ];
+
+  const staticArrayData = [
+    {
+      alias: "",
+      arrayData: [{ title: "", value: "" }],
+    },
+  ];
+
+  // 6. Soumission du formulaire
+  const handleSubmit = async () => {
+    const requiredFields = {
+      EnterpriseId: inputs.EnterpriseId,
+      startDate: inputs.startDate,
+      endDate: inputs.endDate,
+      ContractTypeId: inputs.ContractTypeId,
     };
 
-    console.log("les datas", inputs);
+    const hasEmptyField = Object.values(requiredFields).some((value) => !value);
 
-    return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading, adminRole }
+    if (hasEmptyField) {
+      return providers.alertMessage(
+        false,
+        "Champs invalides",
+        "Veuillez renseigner tous les champs obligatoires",
+        null
+      );
+    }
+
+    setIsLoading(true);
+
+    const response = await providers.API.post(
+      providers.APIUrl,
+      "createContract",
+      null,
+      inputs
+    );
+
+    setIsLoading(false);
+
+    if (response.status) {
+      sessionStorage.removeItem("inputMemoryOfAddContractPage");
+    }
+
+    providers.alertMessage(
+      response.status,
+      response.title,
+      response.message,
+      response.status ? "/dashboard/ADMIN/addContract" : null
+    );
+  };
+
+  return {
+    dynamicArrayData,
+    staticArrayData,
+    handleSubmit,
+    inputs,
+    setInputs,
+    isLoading,
+    adminRole,
+  };
 }

@@ -1,124 +1,171 @@
 "use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { providers } from "@/index";
-import { FormEvent, useEffect, useState } from "react";
 
 type InputsValue = {
-    title: string | null,
-    description: string | null
-    EnterpriseId: number | null,
-    DepartmentPostId: number | null,
-    Enterprise: {
-        name: string
-    },
-    [key: string]: any
-}
+  title: string | null;
+  description: string | null;
+  EnterpriseId: number | null;
+  DepartmentPostId: number | null;
+  Enterprise: {
+    name: string;
+  };
+  DepartmentPost: {
+    name: string;
+  };
+  [key: string]: any;
+};
+
 export default function useAddDepartment() {
-    const [getEnterprises, setEnterprises] = useState<any[]>([]);
-    const [getDepartmentPosts, setDepartmentPosts] = useState<any[]>([]);
-    const [getPosts, setPosts] = useState<any[]>([]);
-    const [getSalary, setSalary] = useState<any[]>([]);
-    const [getContractTypes, setContractTypes] = useState<any[]>([]);
-    const [getContracts, setContracts] = useState<any[]>([]);
-    const [getCountry, setCountry] = useState<any[]>([]);
-    const [getCity, setCity] = useState<any[]>([]);
-    const [getDistrict, setDistrict] = useState<any[]>([]);
-    const [getQuarter, setQuarter] = useState<any[]>([]);
-    const [getPlannings, setPlannings] = useState<any[]>([])
+  const { data: session, status } = useSession();
 
-    const [enterpriseIdOfadmin, setEnterpriseIdOfAdmin] = useState<string | null>(null)
-    const [adminRole, setAdminRole] = useState<string | null>(null)
-    const [inputs, setInputs] = useState<InputsValue>({
-        EnterpriseId: null,
-        DepartmentPostId: null,
-        description: null,
-        title: null,
-        Enterprise: {
-            name: ""
-        },
-        DepartmentPost: {
-            name: ""
+  const [enterprises, setEnterprises] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Valeurs extraites de la session NextAuth
+  const adminRole = session?.user?.role ?? null;
+  const enterpriseIdOfAdmin = session?.user?.EnterpriseId ?? null;
+
+  const [inputs, setInputs] = useState<InputsValue>({
+    EnterpriseId: null,
+    DepartmentPostId: null,
+    description: null,
+    title: null,
+    Enterprise: {
+      name: "",
+    },
+    DepartmentPost: {
+      name: "",
+    },
+  });
+
+  // 1. Récupération des données locales et API
+  useEffect(() => {
+    // Si la session est encore en cours de chargement, on attend
+    if (status === "loading") return;
+
+    (async () => {
+      // Restauration de la mémoire du formulaire
+      const savedInputs = localStorage.getItem("inputMemoryOfAddDepartmentPage");
+      if (savedInputs) {
+        try {
+          setInputs(JSON.parse(savedInputs));
+        } catch (error) {
+          console.error("Erreur de lecture du localStorage :", error);
         }
-    });
+      }
 
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Récupération des entreprises et filtrage en fonction de l'id de l'administrateur courant
-    useEffect(() => {
-        (async () => {
-            const getInputMemory = localStorage.getItem("inputMemoryOfAddDepartmentPage");
-            getInputMemory ? setInputs(JSON.parse(getInputMemory ?? "")) : setInputs({ ...inputs });
-
-            const role = localStorage.getItem("adminRole");
-            const enterpriseIdOfAdmin = localStorage.getItem("EnterpriseId");
-
-            const getEnterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
-
-            if (adminRole !== "Super-Admin") {
-                const getEnterprisesByAdminRole = getEnterprises.filter((item: { id: number }) => item.id === Number(enterpriseIdOfAdmin));
-                setEnterprises(getEnterprisesByAdminRole)
-            } else {
-                setEnterprises(getEnterprises);
-            }
-
-            setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
-            setAdminRole(role);
-        })();
-    }, []);
-
-    // const adminRoles = ['Super-Admin', 'Supervisor-Admin'];
-    // const role = window?.localStorage.getItem("adminRole") ?? "";
-
-    let dynamicArrayData = [
-        {
-            alias: "EnterpriseId",
-            arrayData: getEnterprises.filter(item => item.id && item.name).map(item => ({ value: item.id, title: item.name }))
-        },
-    ];
-
-    let staticArrayData = [
-        {
-            alias: "",
-            arrayData: [{
-                title: "",
-                value: "",
-            }]
-
-        }
-    ]
-
-    console.log("le tableau des données statiques", dynamicArrayData)
-
-    const handleSubmit = async () => {
-
-        const requireFields = {
-            "Entreprises": inputs.EnterpriseId,
-            "Titre": inputs.EnterpriseId,
-            "Description": inputs.description
-        }
-
-        for (const [key, value] of Object.entries(requireFields)) {
-            if (!value) {
-                return providers.alertMessage(false, "Champs invalides", `Le champs ${key} est obligatoire`, "/dashboard/addUser");
-            }
-        }
-
-        setIsLoading(true);
-
-        const response = await providers.API.post(providers.APIUrl, "createDepartmentPost", null, inputs);
-
-        if (response.status) localStorage.removeItem("inputMemoryOfAddDepartmentPage");
-
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/ADMIN/addDepartment" : null
+      // Récupération des entreprises via l'API
+      try {
+        const fetchedEnterprises = await providers.API.getAll(
+          providers.APIUrl,
+          "getEnterprises",
+          null
         );
 
-        setIsLoading(false);
+        if (Array.isArray(fetchedEnterprises)) {
+          // Filtrage selon le rôle de l'administrateur
+          if (adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
+            const filteredEnterprises = fetchedEnterprises.filter(
+              (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
+            );
+            setEnterprises(filteredEnterprises);
+          } else {
+            setEnterprises(fetchedEnterprises);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des entreprises :", error);
+      }
+    })();
+  }, [status, adminRole, enterpriseIdOfAdmin]);
+
+  // 2. Options dynamiques pour le composant UI
+  const dynamicArrayData = [
+    {
+      alias: "EnterpriseId",
+      arrayData: enterprises
+        .filter((item) => item.id && item.name)
+        .map((item) => ({
+          value: item.id,
+          title: item.name,
+        })),
+    },
+  ];
+
+  const staticArrayData = [
+    {
+      alias: "",
+      arrayData: [
+        {
+          title: "",
+          value: "",
+        },
+      ],
+    },
+  ];
+
+  // 3. Soumission du formulaire
+  const handleSubmit = async () => {
+    const requiredFields = {
+      Entreprise: inputs.EnterpriseId,
+      Titre: inputs.title, // Corrected key check from EnterpriseId to title
+      Description: inputs.description,
     };
 
-    console.log("les datas", inputs);
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value) {
+        return providers.alertMessage(
+          false,
+          "Champs invalides",
+          `Le champ ${key} est obligatoire.`,
+          null
+        );
+      }
+    }
 
-    return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading, adminRole }
+    setIsLoading(true);
+
+    try {
+      const response = await providers.API.post(
+        providers.APIUrl,
+        "createDepartmentPost",
+        null,
+        inputs
+      );
+
+      if (response.status) {
+        localStorage.removeItem("inputMemoryOfAddDepartmentPage");
+      }
+
+      providers.alertMessage(
+        response.status,
+        response.title,
+        response.message,
+        response.status ? "/dashboard/ADMIN/addDepartment" : null
+      );
+    } catch (error) {
+      console.error("Erreur lors de l'envoi :", error);
+      providers.alertMessage(
+        false,
+        "Erreur",
+        "Une erreur est survenue lors de la création du département.",
+        null
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    dynamicArrayData,
+    staticArrayData,
+    handleSubmit,
+    inputs,
+    setInputs,
+    isLoading,
+    adminRole,
+  };
 }

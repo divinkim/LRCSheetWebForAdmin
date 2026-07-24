@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
-import { useToast } from "@/hooks/useToast";
+import { useToast } from "@/components/toast";
 
 type InputsValue = {
     startTime: string | null;
@@ -72,7 +72,7 @@ export default function useAddPlanning() {
                     }));
                 }
             } catch (error) {
-                toast.error("Erreur lors du chargement des entreprises");
+                toast.error("Erreur", "Erreur lors du chargement des entreprises");
                 console.error("Erreur initData Hook:", error);
             }
         }
@@ -92,7 +92,7 @@ export default function useAddPlanning() {
 
         for (const [key, value] of Object.entries(requireFields)) {
             if (!value) {
-                toast.error("Veuillez renseigner tous les champs obligatoires (*)");
+                toast.error("Erreur", "Veuillez renseigner tous les champs obligatoires (*)");
                 return;
             }
         }
@@ -109,31 +109,29 @@ export default function useAddPlanning() {
                 EnterpriseId: inputs.EnterpriseId ? Number(inputs.EnterpriseId) : null,
             };
 
-            const response = await providers.API.post(
-                providers.APIUrl,
+            await providers.API.post(
+                "https://vps118934.serveur-vps.net:4001",
                 "createPlanning",
                 null,
                 payload
             );
 
-            if (response.status) {
-                toast.success("Bravo",|| "Planning créé avec succès !");
 
-                // Nettoyage de la mémoire et réinitialisation du formulaire
-                localStorage.removeItem("inputMemoryOfAddPlanningPage");
-                setInputs({
-                    startTime: null,
-                    breakingStartTime: null,
-                    resumeEndTime: null,
-                    endTime: null,
-                    description: null,
-                    EnterpriseId: session?.user?.EnterpriseId !== 1 ? session?.user?.EnterpriseId : null,
-                });
-            } else {
-                toast.error("Erreur", "Échec de la création du planning");
-            }
+            toast.success("Bravo", "Planning horaire créé avec succès !");
+
+            // Nettoyage de la mémoire et réinitialisation du formulaire
+            localStorage.removeItem("inputMemoryOfAddPlanningPage");
+            setInputs({
+                startTime: null,
+                breakingStartTime: null,
+                resumeEndTime: null,
+                endTime: null,
+                description: null,
+                EnterpriseId: session?.user?.EnterpriseId !== 1 ? session?.user?.EnterpriseId : null,
+            });
+
         } catch (error) {
-            toast.error("Erreur", "Une erreur réseau s'est produite lors de la soumission.");
+            toast.error("Erreur", error instanceof Error ? error.message : "Erreur inconnue");
             console.error("Erreur handleSubmit Planning:", error);
         } finally {
             setIsLoading(false);

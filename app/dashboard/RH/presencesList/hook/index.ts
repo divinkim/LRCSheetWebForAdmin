@@ -49,12 +49,14 @@ export function PresencesListHookModal() {
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
     const [adminRole, setAdminRole] = useState<string>("");
-    const { data: session } = useSession();
-    console.log(session)
-    useEffect(() => {
-        setAdminRole(session?.user.adminRole ?? "")
-    }, [session]);
+    const { data: session, status } = useSession();
 
+    useEffect(() => {
+        if (status === "authenticated" && session?.user) {
+            setAdminRole(session.user.adminRole ?? "");
+        }
+    }, [session, status]);
+    console.log(session)
     useEffect(() => {
         (async () => {
             const users = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
