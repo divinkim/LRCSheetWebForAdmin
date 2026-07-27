@@ -64,7 +64,7 @@ export default function useAddPlanning() {
                 setEnterprises(enterpriseList);
 
                 // 3. Pré-remplissage de l'entreprise si l'utilisateur n'est pas Super-Admin (EnterpriseId !== 1)
-                const userEnterpriseId = session.user.EnterpriseId;
+                const userEnterpriseId = (session.user as any).EnterpriseId;
                 if (userEnterpriseId && userEnterpriseId !== 1) {
                     setInputs((prev) => ({
                         ...prev,
@@ -127,7 +127,7 @@ export default function useAddPlanning() {
                 resumeEndTime: null,
                 endTime: null,
                 description: null,
-                EnterpriseId: session?.user?.EnterpriseId !== 1 ? session?.user?.EnterpriseId : null,
+                EnterpriseId: (session?.user as any)?.EnterpriseId !== 1 ? (session?.user as any)?.EnterpriseId : null,
             });
 
         } catch (error) {

@@ -83,13 +83,16 @@ export function RepportsListHook() {
   }, []);
 
   // --- EFFECTS ---
-  
+
   // 1. Synchronisation de la session (EnterpriseId) et chargement initial des rapports
   useEffect(() => {
     if (sessionStatus === "authenticated" && session?.user) {
       // Récupération depuis la session au lieu du localStorage
-      const userEnterpriseId = session.user.EnterpriseId
-        ? String(session.user.EnterpriseId)
+      //
+      const user = session.user as typeof session.user & { EnterpriseId?: number | string | null };
+
+      const userEnterpriseId = user.EnterpriseId
+        ? String(user.EnterpriseId)
         : null;
 
       setEnterpriseId(userEnterpriseId);
@@ -188,7 +191,7 @@ export function RepportsListHook() {
     session,
     sessionUserId: session?.user?.id ?? null,
     EnterpriseId: enterpriseId,
-    
+
     // Component States
     itemIndex,
     setItemIndex,
@@ -203,7 +206,7 @@ export function RepportsListHook() {
     isLoading,
     setIsLoading,
     loader,
-    
+
     // Data & Collections
     RepportsArray: repportsArray,
     repportsArrayCloned,

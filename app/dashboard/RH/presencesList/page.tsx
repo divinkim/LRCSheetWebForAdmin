@@ -4,14 +4,14 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faChevronLeft, 
-  faChevronRight, 
-  faSearch, 
-  faTimes, 
-  faUserCheck, 
-  faClock, 
-  faUserXmark, 
+import {
+  faChevronLeft,
+  faChevronRight,
+  faSearch,
+  faTimes,
+  faUserCheck,
+  faClock,
+  faUserXmark,
   faUsers,
   faEye,
   faTrashAlt,
@@ -111,7 +111,7 @@ export default function PresencesList() {
   }, [presencesListCloned]);
 
   // Suppression d'un enregistrement de présence
-  const handleDelete = (userId: string, createdAt: string) => {
+  const handleDelete = (userId: number, createdAt: string) => {
     if (!hasAdminAccess()) return;
 
     Swal.fire({
@@ -161,7 +161,7 @@ export default function PresencesList() {
                 onClick={() => {
                   setShowAddPresenceModal(false);
                   setShowUpdatePresenceModal(false);
-                  window.location.href="/dashboard/RH/presencesList"
+                  window.location.href = "/dashboard/RH/presencesList"
                 }}
                 className="absolute right-4 top-4 flex h-10 w-10 z-50 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
               >
@@ -375,11 +375,11 @@ export default function PresencesList() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-300">
                         {u.createdAt
                           ? new Date(u.createdAt).toLocaleDateString("fr-FR", {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
                           : "-"}
                       </td>
 
@@ -405,22 +405,20 @@ export default function PresencesList() {
                       {/* Statut Badge */}
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${
-                            u.status === "A temps"
-                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400"
-                              : u.status === "En retard"
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${u.status === "A temps"
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400"
+                            : u.status === "En retard"
                               ? "bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400"
                               : "bg-rose-500/10 text-rose-600 border border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400"
-                          }`}
+                            }`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              u.status === "A temps"
-                                ? "bg-emerald-500"
-                                : u.status === "En retard"
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${u.status === "A temps"
+                              ? "bg-emerald-500"
+                              : u.status === "En retard"
                                 ? "bg-amber-500"
                                 : "bg-rose-500"
-                            }`}
+                              }`}
                           />
                           {u.status}
                         </span>
@@ -437,7 +435,7 @@ export default function PresencesList() {
                             <FontAwesomeIcon icon={faEye} className="w-4 h-4" />
                           </Link>
                           <button
-                            onClick={() => handleDelete(u.UserId, u.createdAt)}
+                            onClick={() => handleDelete(u.UserId, String(u.createdAt))}
                             className="p-2 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all"
                             title="Supprimer"
                           >

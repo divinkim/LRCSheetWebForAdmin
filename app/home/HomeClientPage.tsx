@@ -25,7 +25,7 @@ export default function HomePage() {
   const { cardComponent, enterprise, loader } = HomeComponent();
 
   // Récupération du rôle depuis la session
-  const userRole = session?.user?.adminRole ?? "";
+  const userRole = (session?.user as any)?.adminRole ?? "";
   const userName = session?.user?.name ?? "Administrateur";
   const hasAdminAccess = useMemo(
     () => REQUIRED_ADMIN_ROLES.includes(userRole),
@@ -68,7 +68,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
       <div className="mx-auto max-w-7xl space-y-8">
-        
+
         {/* 📌 SECTION HEADER DASHBOARD */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-500/10 blur-2xl dark:bg-amber-500/5" />
@@ -79,7 +79,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/40">
                   <FontAwesomeIcon icon={faBuilding} className="text-[10px]" />
-                  {enterprise?.name || "Espace Entreprise"}
+                  {(enterprise as any)?.name || "Espace Entreprise"}
                 </span>
                 {hasAdminAccess && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/40">

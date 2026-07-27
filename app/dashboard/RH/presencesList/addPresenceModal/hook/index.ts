@@ -2,7 +2,7 @@ import { providers } from "@/index";
 import { isResolvedLazyResult } from "next/dist/server/lib/lazy-result";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
-
+import { useSession } from "next-auth/react";
 type User = {
     lastname: string,
     firstname: string,
@@ -36,10 +36,10 @@ export default function useAddPresenceModal() {
     });
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
-
+    const { data: session } = useSession();
     useEffect(() => {
         (async () => {
-            const EnterpriseId = localStorage.getItem("EnterpriseId");
+            const EnterpriseId = (session?.user as any)?.EnterpriseId;
             const getUsers = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
 
             if (Number(EnterpriseId) === 1) {

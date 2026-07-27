@@ -53,8 +53,8 @@ export function Sidebar() {
       const datas = {
         fcmToken: adminFcmToken,
         UserId: userIdNumber,
-        adminRole: user.adminRole,
-        UserEnterpriseId: Number(user.EnterpriseId),
+        adminRole: (user as any)?.role,
+        UserEnterpriseId: Number((user as any)?.EnterpriseId),
       };
 
       providers.API.post(
@@ -263,10 +263,10 @@ export function Sidebar() {
 
             <div className="flex flex-col truncate">
               <span className="text-xs font-bold text-slate-100 truncate">
-                {session.user.firstname} {session.user.lastname}
+                {(session.user as any)?.firstname} {(session.user as any)?.lastname}
               </span>
               <span className="text-[10px] font-medium text-amber-400/90 truncate">
-                {session.user.adminRole}
+                {(session.user as any)?.role}
               </span>
             </div>
           </div>

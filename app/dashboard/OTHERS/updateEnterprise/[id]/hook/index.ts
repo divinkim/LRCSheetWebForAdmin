@@ -79,10 +79,11 @@ export default function useUpdateEnterprise() {
   // 1. Initialisation de la session et chargement des données de l'entreprise
   useEffect(() => {
     (async () => {
+      const user = session?.user
       // Récupération de l'ID d'entreprise (URL ou fallback session)
       const enterpriseIdFromUrl = window.location.href.split("/").pop();
-      const currentEnterpriseId = enterpriseIdFromUrl || session?.user?.EnterpriseId;
-      const role = session?.user?.role || localStorage.getItem("adminRole");
+      const currentEnterpriseId = (user as any)?.EnterpriseId || null
+      const role = (user as any)?.role || null;
 
       if (currentEnterpriseId) setEnterpriseId(String(currentEnterpriseId));
       if (role) setAdminRole(role);

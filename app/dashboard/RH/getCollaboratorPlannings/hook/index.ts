@@ -61,11 +61,11 @@ export default function useGetUsersInPlanningOfWeek() {
     const [getAdminRole, setAdminRole] = useState<string | null>(null);
     const [loading, setIsLoading] = useState(false);
     const requireRoles = ['Super-Admin', 'Supervisor-Admin'];
-    
+
     const { data: session } = useSession()
     useEffect(() => {
         (async () => {
-            let EnterpriseId = session?.EnterpriseId
+            let EnterpriseId = (session?.user as any)?.EnterpriseId
 
             const request = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getAllCollaboratorPlannings", null);
             console.log("le requete", request)

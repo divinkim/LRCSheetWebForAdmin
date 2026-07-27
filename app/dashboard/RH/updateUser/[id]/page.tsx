@@ -24,7 +24,7 @@ export default function UpdateUser() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
       <div className="mx-auto max-w-7xl space-y-8">
-        
+
         {/* 📌 HEADER & FIL D'ARIANE */}
         <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -39,7 +39,7 @@ export default function UpdateUser() {
           <div className="flex flex-wrap items-center gap-3 mt-2">
             {currentFormElement?.addOrUpdateUser.navigationLinks
               .filter((link, index) => {
-                const isSuperAdminOnlyLink = index === 2 || link.requireSuperAdmin;
+                const isSuperAdminOnlyLink = index === 2;
                 if (isSuperAdminOnlyLink && adminRole !== "Super-Admin") {
                   return false;
                 }
@@ -62,7 +62,7 @@ export default function UpdateUser() {
 
         {/* 📝 FORM CARD CONTAINER */}
         <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm dark:shadow-xl transition-all duration-200">
-          
+
           {/* Card Header */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-6 py-5">
             <div className="flex items-center gap-2.5">
@@ -123,7 +123,13 @@ export default function UpdateUser() {
                       /* Input classique */
                       <input
                         type={e.type}
-                        value={e.type !== "file" ? (inputs[e.alias] ?? "") : undefined}
+                        value={
+                          e.type !== "file"
+                            ? (typeof inputs[e.alias] === "boolean"
+                              ? String(inputs[e.alias])
+                              : ((inputs[e.alias] ?? "") as string | number))
+                            : undefined
+                        }
                         maxLength={e.type === "tel" ? 9 : undefined}
                         placeholder={e.placeholder}
                         onChange={async (v) => {
@@ -158,13 +164,13 @@ export default function UpdateUser() {
                     ) : (
                       /* Select input */
                       <select
-                        value={inputs[e.alias] ?? ""}
+                        value={(inputs[e.alias] ?? "") as string | number}
                         onChange={(v) => {
                           setInputs({
                             ...inputs,
                             [e.alias]:
                               e.type === "number"
-                                ? parseInt(v.target.value)
+                                ? parseInt(v.target.value) || 0
                                 : v.target.value,
                           });
                         }}
@@ -175,19 +181,19 @@ export default function UpdateUser() {
                         </option>
                         {e.dynamicOptions?.status
                           ? dynamicOptions
-                              .find((item) => item.alias === e.alias)
-                              ?.arrayData?.map((option) => (
-                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                  {option.title}
-                                </option>
-                              ))
+                            .find((item) => item.alias === e.alias)
+                            ?.arrayData?.map((option) => (
+                              <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                {option.title}
+                              </option>
+                            ))
                           : staticOptions
-                              .find((item) => item.alias === e.alias)
-                              ?.arrayData.map((option) => (
-                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                  {option.title}
-                                </option>
-                              ))}
+                            .find((item) => item.alias === e.alias)
+                            ?.arrayData.map((option) => (
+                              <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                {option.title}
+                              </option>
+                            ))}
                       </select>
                     )}
                   </div>

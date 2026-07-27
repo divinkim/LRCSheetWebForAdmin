@@ -32,9 +32,16 @@ type ChatMessage = {
 export function useChat() {
     const { data: session } = useSession();
 
+    //
     const sessionUserId = session?.user?.id ? Number(session.user.id) : null;
-    const sessionEnterpriseId = session?.user?.EnterpriseId ? Number(session.user.EnterpriseId) : null;
 
+    // Cast sécurisé évitant l'accès à session quand il est null
+    type CustomUser = { id?: string; EnterpriseId?: number | string | null };
+    const user = session?.user as CustomUser | undefined;
+    // Conversion explicite en number
+    const sessionEnterpriseId = user?.EnterpriseId ? Number(user.EnterpriseId) : null;
+
+    // Convertir explicitement en number pour correspondre aux types des APIs/Users
     const [users, setUsers] = useState<Users[]>([]);
     const [usersCloned, setUsersCloned] = useState<Users[]>([]);
     const [AdminId, setAdminId] = useState<number | null>(null);
@@ -416,7 +423,7 @@ export function useChat() {
             setLoader(false);
         })();
     }, [sessionEnterpriseId]);
-    
+
     async function sendChatMessage() {
         if (!data.content) {
             return providers.alertMessage(
@@ -510,6 +517,7 @@ export function useChat() {
         usersCloned,
         setUsersCloned,
         onSearch,
+        UserId: currentUserId, // <-- AJOUTEZ CETTE LIGNE
         AdminId,
         loader,
         notificationsCountLive,
@@ -531,4 +539,5 @@ export function useChat() {
         formatCallDuration,
         usersOnLine,
     };
+
 }

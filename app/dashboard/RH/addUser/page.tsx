@@ -116,7 +116,13 @@ export default function AddUser() {
                       {!e.selectedInput ? (
                         <input
                           type={e.type}
-                          value={e.type === "file" ? undefined : (inputs[e.alias] ?? "")}
+                          value={
+                            e.type !== "file"
+                              ? (typeof inputs[e.alias] === "boolean"
+                                ? String(inputs[e.alias])
+                                : ((inputs[e.alias] ?? "") as string | number))
+                              : undefined
+                          }
                           maxLength={e.type === "tel" ? 9 : undefined}
                           placeholder={e.placeholder}
                           onChange={async (v) => {
@@ -143,16 +149,23 @@ export default function AddUser() {
                         />
                       ) : (
                         <select
-                          value={inputs[e.alias] ?? ""}
+                          value={
+                            typeof inputs[e.alias] === "boolean"
+                              ? String(inputs[e.alias])
+                              : ((inputs[e.alias] ?? "") as string | number)
+                          }
                           onChange={(v) => {
-                            let field = e.alias;
-                            const fieldValue = {
+                            const field = {
                               ...inputs,
-                              [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value
-                            };
-                            setInputs(fieldValue);
-                            localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify(fieldValue));
+                              [e.alias]:
+                                e.type === "number"
+                                  ? parseInt(v.target.value) || 0
+                                  : v.target.value,
+                            }
+                            setInputs(field);
+                            localStorage.setItem("inputMemoryOfAddUserPage", JSON.stringify(field));
                           }}
+
                           className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                         >
                           <option value="" className="text-slate-400 dark:bg-slate-900">

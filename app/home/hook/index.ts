@@ -80,7 +80,7 @@ export default function HomeComponent() {
   useEffect(() => {
     if (status !== "authenticated" || !session?.user) return;
 
-    const userEnterpriseId = Number(session.user.EnterpriseId);
+    const userEnterpriseId = Number((session.user as any).EnterpriseId);
     const userId = Number(session.user.id);
 
 
@@ -191,5 +191,5 @@ export default function HomeComponent() {
     },
   ];
 
-  return { cardComponent, enterprise, loader};
+  return { cardComponent, enterprise, loader };
 }

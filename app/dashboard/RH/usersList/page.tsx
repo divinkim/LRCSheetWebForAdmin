@@ -84,7 +84,7 @@ export default function UsersList() {
           setUsersList(filtered);
         }
       } catch (error) {
-        toast.error("Erreur lors de la récupération des collaborateurs");
+        toast.error("Erreur", "Erreur lors de la récupération des collaborateurs");
         console.error("Erreur fetchUsers:", error);
       } finally {
         setLoading(false);

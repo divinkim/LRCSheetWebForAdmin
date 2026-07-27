@@ -74,7 +74,6 @@ export default function Chat() {
     onSearch,
     UserId,
     AdminId,
-    loading,
     loader,
     notificationsCountLive,
     notificationsCompter,
@@ -276,7 +275,7 @@ export default function Chat() {
 
         {/* Liste des conversations */}
         <div className="flex-1 overflow-y-auto">
-          {usersCloned.length > 0 && !loading && !loader ? (
+          {usersCloned.length > 0 && !loader ? (
             usersCloned.map((item, index) => {
               if (item.UserId === currentUserId) return null;
 
@@ -377,7 +376,7 @@ export default function Chat() {
                 </div>
               );
             })
-          ) : loading || loader ? (
+          ) : loader ? (
             <div className="flex h-64 items-center justify-center">
               <ClipLoader size={28} color="#2563eb" />
             </div>
