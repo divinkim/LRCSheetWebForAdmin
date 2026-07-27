@@ -23,17 +23,28 @@ const INITIAL_INPUTS: InputsValue = {
 
 export default function useAddContract() {
   // 1. Récupération de la session utilisateur via useSession
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   // 2. États
   const [inputs, setInputs] = useState<InputsValue>(INITIAL_INPUTS);
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
   const [getContractTypes, setContractTypes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [adminRole, setAdminRole] = useState("");
+  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState("")
+  useEffect(() => {
+    if (status === "authenticated" && session.user) {
+      const user = session?.user as (typeof session.user & { role?: string; EnterpriseId?: number | string }) | undefined;
+
+      const adminRole = user?.role ?? null;
+      const enterpriseIdOfAdmin = user?.EnterpriseId ?? null;
+      setAdminRole(adminRole ?? "");
+      setEnterpriseIdOfAdmin(String(enterpriseIdOfAdmin))
+    }
+  }, [])
 
   // Extraction des rôles/identifiants depuis la session
-  const adminRole = session?.user?.role ?? null;
-  const enterpriseIdOfAdmin = session?.user?.EnterpriseId ?? null;
+
 
   // 3. Restauration du brouillon de formulaire + Récupération des Entreprises
   useEffect(() => {

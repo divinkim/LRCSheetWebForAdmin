@@ -23,10 +23,19 @@ export default function useAddDepartment() {
 
   const [enterprises, setEnterprises] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
+  const [adminRole, setAdminRole] = useState("");
+  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState("")
   // Valeurs extraites de la session NextAuth
-  const adminRole = session?.user?.role ?? null;
-  const enterpriseIdOfAdmin = session?.user?.EnterpriseId ?? null;
+  useEffect(() => {
+    if (status === "authenticated" && session.user) {
+      const user = session?.user as (typeof session.user & { role?: string; EnterpriseId?: number | string }) | undefined;
+
+      const adminRole = user?.role ?? null;
+      const enterpriseIdOfAdmin = user?.EnterpriseId ?? null;
+      setAdminRole(adminRole ?? "");
+      setEnterpriseIdOfAdmin(String(enterpriseIdOfAdmin))
+    }
+  }, [])
 
   const [inputs, setInputs] = useState<InputsValue>({
     EnterpriseId: null,
