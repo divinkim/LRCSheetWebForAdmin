@@ -184,7 +184,7 @@ export default function WeekDaysPlanningsList() {
 
   // Suppression
   const handleDelete = async (id: number) => {
-    const userRole = (session?.user as any)?.role || "";
+    const userRole = (session?.user as any)?.adminRole || "";
     if (!requireAdminRoles.includes(userRole)) {
       return Swal.fire({
         icon: "warning",

@@ -40,7 +40,7 @@ export function UpdateUserHookModal() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Session
-  const adminRole = (session?.user as any)?.role ?? null;
+  const adminRole = (session?.user as any)?.adminRole ?? null;
   const adminEnterpriseId = (session?.user as any)?.EnterpriseId
     ? Number((session?.user as any).EnterpriseId)
     : null;

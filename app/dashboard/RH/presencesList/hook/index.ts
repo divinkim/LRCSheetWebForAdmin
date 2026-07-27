@@ -53,7 +53,8 @@ export function PresencesListHookModal() {
 
     useEffect(() => {
         if (status === "authenticated" && session?.user) {
-            setAdminRole((session.user as any)?.role);
+            console.log("la session", session.user)
+            setAdminRole((session.user as any)?.adminRole);
         }
     }, [session, status]);
     console.log(session)
