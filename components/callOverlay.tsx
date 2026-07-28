@@ -12,9 +12,9 @@ type CallOverlayProps = {
   endCall: () => void;
   acceptCall: () => void;
   rejectCall: () => void;
-  remoteAudio: React.RefObject<HTMLAudioElement | null>;
-  remoteVideo: React.RefObject<HTMLVideoElement | null>;
-  localVideo: React.RefObject<HTMLVideoElement | null>;
+  remoteAudio: React.RefObject<HTMLAudioElement>;
+  remoteVideo: React.RefObject<HTMLVideoElement>;
+  localVideo: React.RefObject<HTMLVideoElement>;
   setCallType: (type: "audio" | "video") => void;
   localStream?: MediaStream | null;
   remoteStream?: MediaStream | null;
