@@ -1,461 +1,220 @@
-import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
 import socket from "@/socket";
-import {
-    faChevronDown, faChevronUp, faUser, faUserGroup, faBell, faPaperPlane, faList, faFileAlt, faShieldAlt,
-    faUserClock, faUsers, faUserPlus, faClipboardList,
-    faClipboardCheck, faCalendarCheck, faUserShield, faFileLines, faCheckCircle, faFileContract, faSuitcaseRolling,
-    faCalendarDay, faUmbrellaBeach, faFileSignature, faIdBadge, faBuilding, faChartLine, faCreditCard,
-    faMoneyBill1Wave,
-    faFileInvoiceDollar,
-    faBuildingCircleCheck,
-    faBuildingColumns,
-    faFileInvoice,
-    faFileCircleCheck,
-    faMoneyCheckDollar,
-    faReceipt,
-    faBalanceScale,
-    faCalendarPlus,
-    faGlobe,
-    faCity,
-    faHouseChimney, faPenToSquare,
-    faMessage,
-    faCalendarDays
-} from "@fortawesome/free-solid-svg-icons";
 import { getFirebaseMessaging } from "@/firebase/firebaseConfig";
 import { onMessage } from "firebase/messaging";
-import Swal from "sweetalert2";
 
-type notificationProps = {
-    path: string,
-    adminSectionIndex: string,
-    adminPageIndex: string,
-    title: string,
-    content: string,
+// Importation d'icônes FontAwesome plus spécifiques et pertinentes
+import {
+  faUsers,
+  faUserPlus,
+  faGear,
+  faComments,
+  faPaperPlane,
+  faCalendarPlus,
+  faCalendarDays,
+  faClock,
+  faFileLines,
+  faFileContract,
+  faBuilding,
+  faBriefcase,
+  faBuildingCircleArrowRight,
+  faCity,              
+} from "@fortawesome/free-solid-svg-icons";
+
+export interface AppNotification {
+  path?: string;
+  adminSectionIndex?: number | string;
+  adminPageIndex?: number | string;
+  senderId?: number | string;
+  receiverId?: number | string;
 }
 
-export default function SidebarHook() {
-    const [storedNotificationsArray, setStoredNotificationsArray] = useState<any[]>([]);
-    const [isNotification, setIsNotification] = useState(false)
-    const [count, setCount] = useState(0);
-    const messaging = getFirebaseMessaging()
-    const DB_NAME = "NotificationDB";
-    const DB_VERSION = 2;
-    const STORE_NAME = "notifications";
+const STORAGE_KEY = "storedNotificationsArray";
 
-    function openDB(): Promise<IDBDatabase> {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
+// ==========================================
+// 1. Hook de gestion des notifications
+// ==========================================
+export function useNotifications() {
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    if (typeof window === "undefined") return [];
+    const local = localStorage.getItem(STORAGE_KEY);
+    return local ? JSON.parse(local) : [];
+  });
 
-            request.onupgradeneeded = (e: any) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME, { autoIncrement: true });
-                }
-            };
+  // Persistance automatique dans localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+  }, [notifications]);
 
-            request.onsuccess = (e: any) => resolve(e.target.result);
-            request.onerror = (e) => reject(e);
-        });
+  // Sync IndexedDB au chargement
+  useEffect(() => {
+    async function syncBackgroundNotifications() {
+      try {
+        const bgNotifs = await getAndClearIndexedDBNotifications();
+        if (bgNotifs.length > 0) {
+          setNotifications((prev) => [...prev, ...bgNotifs]);
+        }
+      } catch (err) {
+        console.error("Erreur IndexedDB:", err);
+      }
     }
+    syncBackgroundNotifications();
+  }, []);
 
-    async function getAndClearNotifications() {
-        const db = await openDB();
+  // Firebase Push Notifications
+  useEffect(() => {
+    const messaging = getFirebaseMessaging();
+    if (!messaging) return;
 
-        return new Promise<any[]>((resolve) => {
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.getAll();
+    const unsubscribe = onMessage(messaging, (remoteMessage) => {
+      const enterpriseId = localStorage.getItem("EnterpriseId");
+      if (Number(remoteMessage.data?.EnterpriseId) === Number(enterpriseId)) {
+        const newNotif: AppNotification = {
+          path: remoteMessage.data?.path,
+          adminSectionIndex: remoteMessage.data?.adminSectionIndex,
+          adminPageIndex: remoteMessage.data?.adminPageIndex,
+          senderId: remoteMessage.data?.senderId,
+          receiverId: remoteMessage.data?.receiverId,
+        };
+        setNotifications((prev) => [...prev, newNotif]);
+      }
+    });
 
-            req.onsuccess = () => {
-                const data = req.result || [];
-                store.clear();
-                resolve(data);
-            };
-        });
-    }
+    return () => unsubscribe();
+  }, []);
 
-    useEffect(() => {
-        (async () => {
-            const local = localStorage.getItem("storedNotificationsArray");
-            const current = local ? JSON.parse(local) : [];
-            setStoredNotificationsArray(current);
-            //Récupération de IndexedDB (site fermé)
-            const backgroundNotifs = await getAndClearNotifications();
+  // Sockets WebSockets
+  useEffect(() => {
+    const userId = localStorage.getItem("UserId");
 
-            if (backgroundNotifs.length > 0) {
-                const merged = [...current, ...backgroundNotifs];
-                localStorage.setItem("storedNotificationsArray", JSON.stringify(merged))
-                setStoredNotificationsArray(merged);
-                setCount(prevCount => prevCount + 1);
-            }
-        })();
-    }, [])
-
-    //Réception des notifs push
-    useEffect(() => {
-        if (messaging) {
-            const unsubscribe = onMessage(messaging, (remoteMessage) => {
-                console.log(remoteMessage)
-                const EnterpriseId = localStorage.getItem("EnterpriseId");
-                setIsNotification(false);
-                if (Number(remoteMessage.data?.EnterpriseId) === Number(EnterpriseId)) {
-
-                    const notificationComponent = {
-                        path: remoteMessage.data?.path,
-                        adminSectionIndex: remoteMessage.data?.adminSectionIndex,
-                        adminPageIndex: remoteMessage.data?.adminPageIndex,
-                        senderId: remoteMessage.data?.senderId,
-                        receiverId: remoteMessage.data?.receiverId,
-                    };
-
-                    setStoredNotificationsArray((prev) => [...prev, notificationComponent]);
-
-                    const local = localStorage.getItem("storedNotificationsArray");
-                    const current = local ? JSON.parse(local) : [];
-                    localStorage.setItem("storedNotificationsArray", JSON.stringify([...current, notificationComponent]));
-
-                    setIsNotification(true);
-                }
-            });
-
-            return () => {
-                unsubscribe();
-            };
-        }
-    }, []);
-
-    //Supression en temps réel quand l'utilisateur accède à l'espace de conversation
-    useEffect(() => {
-        const event = (data: { senderId: number, receiverId: number }) => {
-            const local = localStorage.getItem("storedNotificationsArray");
-            const storedNotificationsArray: any[] = local ? JSON.parse(local) : [];
-
-            if (storedNotificationsArray.some(item => item.senderId === String(data.senderId))) {
-                const notificationsArray = storedNotificationsArray.filter(
-                    item => item.senderId !== String(data.senderId) && item.receiverId !== String(data.receiverId)
-                );
-                console.log(notificationsArray)
-                setStoredNotificationsArray(notificationsArray);
-                localStorage.setItem("storedNotificationsArray", JSON.stringify(notificationsArray));
-            }
-        }
-
-        socket.off("removeNotificationsCount", event);
-        socket.on("removeNotificationsCount", event);
-
-        return () => {
-            socket.off("removeNotificationsCount", event);
-        }
-    }, [])
-
-    useEffect(() => {
-        const handler = (data: any) => {
-            const UserId = localStorage.getItem("UserId");
-            console.log(data)
-
-            if (data.receiverId === String(UserId)) {
-                // const local = localStorage.getItem("storedNotificationsArray");
-                // const storedNotificationsArray = local ? JSON.parse(local) : [];
-
-                console.log(data)
-                setStoredNotificationsArray((prev) => [...prev, data]);
-                // localStorage.setItem("storedNotificationsArray", JSON.stringify([...storedNotificationsArray, data]))
-            }
-        }
-
-        socket.off("getChatData", handler)
-        socket.on("getChatData", handler)
-
-        return () => {
-            socket.off("getChatData", handler)
-        }
-    }, [])
-
-
-    const ItemAside = [
-        // Onglet notifications
-        {
-            index: 0,
-            title: "💬 Messagerie",
-            ItemLists: [
-                {
-                    index: 0,
-                    title: "Chat",
-                    href: "/dashboard/NOTIF/chat",
-                    icon: faMessage
-                },
-                {
-                    index: 1,
-                    title: "notifications groupés",
-                    href: "/dashboard/NOTIF/notifications",
-                    icon: faBell
-                },
-            ]
-        },
-
-        // Onglet Ressources humaines
-        {
-            index: 2,
-            title: "💼 RH",
-            ItemLists: [
-                {
-                    index: 0,
-                    title: "Présences au poste",
-                    href: "/dashboard/RH/presencesList",
-                    icon: faClipboardCheck
-                },
-                {
-                    index: 1,
-                    title: "Ajouter un collaborateur",
-                    href: "/dashboard/RH/addUser",
-                    icon: faUserPlus
-                },
-                {
-                    index: 2,
-                    title: "Liste des collaborateurs",
-                    href: "/dashboard/RH/usersList",
-                    icon: faUsers
-                },
-                {
-                    index: 3,
-                    title: "Ajouter un collaborateur au planning",
-                    href: "/dashboard/RH/addUserInPlanningOfWeek",
-                    icon: faCalendarPlus
-                },
-                {
-                    index: 4,
-                    title: "Liste des collaborateurs au planning",
-                    href: "/dashboard/RH/getCollaboratorPlannings",
-                    icon: faCalendarCheck
-                },
-                {
-                    index: 5,
-                    title: "Ajouter un planning horaire",
-                    href: "/dashboard/RH/addPlanning",
-                    icon: faCalendarDays
-                },
-            ]
-        },
-
-        // Onglet Administration
-        {
-            index: 2,
-            title: "🗂️ Administration",
-            adminService: "ADMINISTRATION",
-            ItemLists: [
-                // {
-                //     index: 0,
-                //     title: "Permissions",
-                //     href: "/dashboard/ADMIN/permission",
-                //     icon: faUserShield
-                // },
-                {
-                    index: 0,
-                    title: "Liste des rapports",
-                    href: "/dashboard/ADMIN/repportsList",
-                    icon: faFileLines
-                },
-
-                {
-                    index: 1,
-                    title: "Ajouter un contrat",
-                    href: "/dashboard/ADMIN/addContract",
-                    icon: faFileSignature
-                },
-                // {
-                //     index: 3,
-                //     title: "Liste de contrat",
-                //     href: "/dashboard/ADMIN/listContrat",
-                //     icon: faFileContract
-                // },
-                {
-                    index: 2,
-                    title: "Type de contrat",
-                    href: "/dashboard/ADMIN/typeContrat",
-                    icon: faFileContract
-                },
-                // {
-                //     index: 5,
-                //     title: "Liste de Type de contrat",
-                //     href: "/dashboard/ADMIN/listTypeContrat",
-                //     icon: faFileContract
-                // },
-                {
-                    index: 3,
-                    title: "Ajouter un poste",
-                    href: "/dashboard/ADMIN/addPost",
-                    icon: faIdBadge
-                },
-                // {
-                //     index: 7,
-                //     title: "Liste de poste",
-                //     href: "/dashboard/ADMIN/postesList",
-                //     icon: faSuitcaseRolling
-                // },
-                {
-                    index: 4,
-                    title: "Ajouter un département",
-                    href: "/dashboard/ADMIN/addDepartment",
-                    icon: faBuilding
-                },
-                // {
-                //     index: 9,
-                //     title: "Liste de départements",
-                //     href: "/dashboard/ADMIN/departmentsList",
-                //     icon: faSuitcaseRolling
-                // }
-            ]
-        },
-
-        // Onglet Comptabilité
-        {
-            index: 11,
-            title: "💵 Comptabilité",
-            ItemLists: [
-                {
-                    index: 0,
-                    title: "Ajouter un salaire",
-                    href: "/dashboard/COMPTA/addSalary",
-                    icon: faMoneyBill1Wave  // salaire / paie
-                },
-                // {
-                //     index: 1,
-                //     title: "Liste des salaires",
-                //     href: "/dashboard/COMPTA/salaryList",
-                //     icon: faFileInvoiceDollar  // récapitulatif des paies
-                // },
-                // {
-                //     index: 2,
-                //     title: "Factures clients",
-                //     href: "/home",
-                //     icon: faFileInvoice  // suivi des factures émises
-                // },
-                // {
-                //     index: 3,
-                //     title: "Factures fournisseurs",
-                //     href: "/home",
-                //     icon: faFileCircleCheck  // suivi des paiements fournisseurs
-                // },
-                // {
-                //     index: 4,
-                //     title: "Dépenses",
-                //     href: "/home",
-                //     icon: faMoneyCheckDollar  // gestion des dépenses courantes
-                // },
-                // {
-                //     index: 5,
-                //     title: "Rapports financiers",
-                //     href: "/home",
-                //     icon: faChartLine  // bilans, comptes de résultat, cash flow
-                // },
-                // {
-                //     index: 6,
-                //     title: "Taxes & TVA",
-                //     href: "/home",
-                //     icon: faReceipt  // déclarations fiscales, TVA, impôts
-                // },
-                {
-                    index: 2,
-                    title: "Bilan annuel",
-                    href: "/home",
-                    icon: faBalanceScale  // bilan comptable
-                },
-            ]
-        },
-        // Onglet Statistiques
-        {
-            index: 12,
-            title: "📊 Statistiques",
-            ItemLists: [
-                {
-                    index: 0,
-                    title: "Gain sur déduction",
-                    href: "/home",
-                    icon: faChartLine   // graphique linéaire pour gains/performances
-                },
-                // {
-                //     index: 1,
-                //     title: "Gain sur abonnement",
-                //     href: "/home",
-                //     icon: faCreditCard  // abonnement/revenu, carte de paiement
-                // },
-                // {
-                //     index: 2,
-                //     title: "Bilan général",
-                //     href: "/dashboard/STATS/generalPlan",
-                //     icon: faFileAlt      // bilan/rapport général
-                // },
-            ]
-        },
-        {
-            index: 13,
-            title: "🌍 Localités",
-            ItemLists: [
-                {
-                    index: 0,
-                    title: "Ajouter une pays",
-                    href: "/dashboard/LOCALITY/addCountry",
-                    icon: faCity
-                },
-                {
-                    index: 1,
-                    title: "Ajouter une ville",
-                    href: "/dashboard/LOCALITY/addCity",
-                    icon: faCity
-                },
-                {
-                    index: 2,
-                    title: "Ajouter un arrondissement",
-                    href: "/dashboard/LOCALITY/addDistrict",
-                    icon: faBuildingColumns
-                },
-                {
-                    index: 3,
-                    title: "Ajouter un quartier",
-                    href: "/dashboard/LOCALITY/addQuarter",
-                    icon: faHouseChimney
-                },
-            ]
-        },
-        // Onglet Autres
-        {
-            index: 14,
-            title: "🧿 Autres",
-            ItemLists: [
-                {
-                    index: 0,
-                    title: "Enregistrer une entreprise",
-                    href: "/dashboard/OTHERS/addEnterprise",
-                    icon: faBuildingCircleCheck
-                },
-                {
-                    index: 1,
-                    title: "Liste des entreprises",
-                    href: "/dashboard/OTHERS/enterprisesList",
-                    icon: faBuildingColumns
-                },
-            ]
-        },
-    ];
-
-    function getSectionNotificationsCount(sectionIndex: number) {
-        const notificationArray = storedNotificationsArray.filter(notification => Number(notification.adminSectionIndex) === sectionIndex);
-        return notificationArray.length;
+    const handleChatData = (data: AppNotification) => {
+      if (String(data.receiverId) === String(userId)) {
+        setNotifications((prev) => [...prev, data]);
+      }
     };
 
-    function getPageNotificationsCount(pageIndex: number) {
-        const notificationArray = storedNotificationsArray.filter(notification => Number(notification.adminPageIndex) === pageIndex);
+    const handleRemoveNotifications = (data: { senderId: number; receiverId: number }) => {
+      setNotifications((prev) =>
+        prev.filter(
+          (item) =>
+            String(item.senderId) !== String(data.senderId) ||
+            String(item.receiverId) !== String(data.receiverId)
+        )
+      );
+    };
 
-        return notificationArray.length;
-    }
+    socket.on("getChatData", handleChatData);
+    socket.on("removeNotificationsCount", handleRemoveNotifications);
 
-    const getUserNotificationsCount = (UserId: string) => {
-        const getNotificationsCount = storedNotificationsArray.filter((item: { senderId: string }) => item.senderId === UserId);
-        return getNotificationsCount.length;
-    }
+    return () => {
+      socket.off("getChatData", handleChatData);
+      socket.off("removeNotificationsCount", handleRemoveNotifications);
+    };
+  }, []);
 
-    console.log(storedNotificationsArray)
+  const getSectionCount = useCallback(
+    (sectionIndex: number) =>
+      notifications.filter((n) => Number(n.adminSectionIndex) === sectionIndex).length,
+    [notifications]
+  );
 
-    return { ItemAside, storedNotificationsArray, setStoredNotificationsArray, getSectionNotificationsCount, getPageNotificationsCount, getUserNotificationsCount };
+  const getPageCount = useCallback(
+    (pageIndex: number) =>
+      notifications.filter((n) => Number(n.adminPageIndex) === pageIndex).length,
+    [notifications]
+  );
+
+  const getUserCount = useCallback(
+    (userId: string) =>
+      notifications.filter((n) => String(n.senderId) === String(userId)).length,
+    [notifications]
+  );
+
+  return {
+    notifications,
+    setNotifications,
+    getSectionCount,
+    getPageCount,
+    getUserCount,
+  };
+}
+
+// Helper IndexedDB
+async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("NotificationDB", 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("notifications")) return resolve([]);
+
+      const tx = db.transaction("notifications", "readwrite");
+      const store = tx.objectStore("notifications");
+      const getAllReq = store.getAll();
+
+      getAllReq.onsuccess = () => {
+        store.clear();
+        resolve(getAllReq.result || []);
+      };
+    };
+  });
+}
+
+// ==========================================
+// 2. Hook complet pour la Sidebar (SidebarHook)
+// ==========================================
+export function SidebarHook() {
+  const {
+    notifications: storedNotificationsArray,
+    setNotifications: setStoredNotificationsArray,
+    getSectionCount: getSectionNotificationsCount,
+    getPageCount: getPageNotificationsCount,
+  } = useNotifications();
+
+  // Menu dynamique Aside avec icônes adaptées
+  const ItemAside = [
+    {
+      title: "💬 Communication",
+      ItemLists: [
+        { title: "Messagerie & Tchat", href: "/dashboard/NOTIF/chat", icon: faComments },
+        { title: "Notifications groupées", href: "/dashboard/NOTIF/notifications", icon: faPaperPlane },
+      ],
+    },
+    {
+      title: "👥 Gestion RH",
+      ItemLists: [
+        { title: "Ajouter un collaborateur", href: "/dashboard/RH/user/new", icon: faUserPlus },
+        { title: "Liste des collaborateurs", href: "/dashboard/RH/users", icon: faUsers },
+        { title: "Présences", href: "/dashboard/RH/presences", icon: faClock },
+        { title: "Nouveau planning", href: "/dashboard/RH/planning/new", icon: faCalendarPlus },
+        { title: "Plannings horaires", href: "/dashboard/RH/roster", icon: faCalendarDays },
+      ],
+    },
+    {
+      title: "⚙️ Administration",
+      ItemLists: [
+        { title: "Rapports", href: "/dashboard/ADMIN/reporting", icon: faFileLines },
+        { title: "Nouveau contrat", href: "/dashboard/ADMIN/contract/new", icon: faFileContract },
+        { title: "Nouveau Département", href: "/dashboard/ADMIN/department/new", icon: faBuilding },
+        { title: "Nouveau Poste", href: "/dashboard/ADMIN/post/new", icon: faBriefcase },
+      ],
+    },
+    {
+      title: "🏢 Autres",
+      ItemLists: [
+        { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleArrowRight },
+        { title: "enterprises", href: "/dashboard/OTHERS/enterprise", icon: faCity },
+      ],
+    },
+  ];
+
+  return {
+    ItemAside,
+    getSectionNotificationsCount,
+    getPageNotificationsCount,
+    storedNotificationsArray,
+    setStoredNotificationsArray,
+  };
 }

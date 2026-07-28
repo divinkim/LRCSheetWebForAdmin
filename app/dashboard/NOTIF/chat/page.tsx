@@ -22,6 +22,9 @@ import socket from "@/socket";
 import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
 import { useChat } from "./hook";
 
+// On importe uniquement CallOverlay
+import CallOverlay from "@/components/callOverlay";
+
 type ChatMessage = {
   id?: number;
   role: string;
@@ -35,32 +38,9 @@ type ChatMessage = {
   callDuration?: number;
 };
 
-// Composant réutilisable pour les fenêtres modales d'appel
-function CallModal({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="flex h-[380px] w-full max-w-[420px] flex-col items-center justify-center space-y-6 rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-800">
-        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-          {title}
-        </h2>
-        <img
-          src="/images/clientProfile.png"
-          alt="Profil"
-          className="h-28 w-28 rounded-full border-2 border-slate-200 object-cover shadow dark:border-slate-700"
-        />
-        <div className="flex items-center space-x-4">{children}</div>
-      </div>
-    </div>
-  );
-}
-
 export default function Chat() {
+  const chat = useChat();
+
   const {
     userData,
     setUserData,
@@ -78,19 +58,9 @@ export default function Chat() {
     notificationsCountLive,
     notificationsCompter,
     startAudioCall,
-    acceptCall,
-    incomingCall,
-    callAccepted,
-    endCall,
-    remoteAudio,
-    isCalling,
-    localVideo,
-    remoteVideo,
     startVideoCall,
-    callType,
-    setCallType,
     usersOnLine,
-  } = useChat();
+  } = chat;
 
   const [showChat, setShowChat] = useState(false);
   const { isMobile } = useSidebarContext();
@@ -104,7 +74,7 @@ export default function Chat() {
     }
   }, [userData.UserId, chatMessage, ref]);
 
-  // Optimisation du regroupement des messages par date
+  // Regroupement des messages par date
   const chatMessageGrouped = useMemo(() => {
     return chatMessage.reduce((acc, item) => {
       const today = new Date();
@@ -167,78 +137,8 @@ export default function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-120px)] max-h-[800px] min-h-[500px] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      {/* Flux Audio / Vidéo HTML5 cachés */}
-      <audio ref={remoteAudio} autoPlay className="hidden" />
-
-      {/* VISIO VIDEO EN PLEIN ÉCRAN */}
-      {callType === "video" && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
-          <video
-            ref={remoteVideo}
-            autoPlay
-            className="h-full w-full object-cover"
-          />
-          <video
-            ref={localVideo}
-            autoPlay
-            muted
-            className="absolute bottom-5 right-5 h-36 w-36 rounded-lg border-2 border-white object-cover shadow-lg"
-          />
-          <div className="absolute top-5 right-5">
-            <button
-              onClick={() => {
-                endCall();
-                setCallType("audio");
-              }}
-              className="rounded bg-red-600 px-4 py-2 font-medium text-white transition hover:bg-red-700"
-            >
-              Raccrocher
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODALE : APPEL EN COURS */}
-      {isCalling && !callAccepted && (
-        <CallModal title="Appel en cours...">
-          <button
-            onClick={endCall}
-            className="rounded-md bg-red-500 px-5 py-2 text-white transition hover:bg-red-600"
-          >
-            Annuler
-          </button>
-        </CallModal>
-      )}
-
-      {/* MODALE : APPEL ENTRANT */}
-      {incomingCall && !callAccepted && (
-        <CallModal title="Appel entrant...">
-          <button
-            onClick={acceptCall}
-            className="rounded-md bg-green-500 px-5 py-2 text-white transition hover:bg-green-600"
-          >
-            Accepter
-          </button>
-          <button
-            onClick={endCall}
-            className="rounded-md bg-red-500 px-5 py-2 text-white transition hover:bg-red-600"
-          >
-            Refuser
-          </button>
-        </CallModal>
-      )}
-
-      {/* MODALE : APPEL AUDIO CONNECTÉ */}
-      {callAccepted && callType !== "video" && (
-        <CallModal title="Appel connecté...">
-          <button
-            onClick={endCall}
-            className="rounded-md bg-red-500 px-5 py-2 text-white transition hover:bg-red-600"
-          >
-            Raccrocher
-          </button>
-        </CallModal>
-      )}
+      {/* Gestion centralisée des modales et flux d'appels : transmission de l'état unique de useChat */}
+      <CallOverlay {...chat} />
 
       {/* Sidebar: Liste des Utilisateurs */}
       <div
@@ -335,9 +235,7 @@ export default function Chat() {
                     />
                     <span
                       className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                        isOnline
-                          ? "bg-green-500"
-                          : "bg-red-500"
+                        isOnline ? "bg-green-500" : "bg-red-500"
                       }`}
                     />
                   </div>
@@ -401,7 +299,7 @@ export default function Chat() {
         }`}
       >
         {!userData.UserId ? (
-          /* Empty State (Pas de conversation sélectionnée) */
+          /* Empty State */
           <div className="flex h-full flex-col items-center justify-center p-6 text-center">
             <div className="mb-4 rounded-full bg-blue-50 p-6 dark:bg-slate-800">
               <FontAwesomeIcon
@@ -422,7 +320,6 @@ export default function Chat() {
             {/* Header Chat */}
             <header className="flex items-center justify-between border-b border-slate-200 bg-white p-3.5 shrink-0 dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center gap-3">
-                {/* Back button (Mobile) */}
                 <button
                   onClick={() => setShowChat(false)}
                   className="mr-1 rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
@@ -535,9 +432,7 @@ export default function Chat() {
                             <div
                               className="leading-relaxed break-words [&_p]:mb-1 [&_ul]:list-disc [&_ul]:pl-4"
                               dangerouslySetInnerHTML={{
-                                __html: !chat.title && chat.content?.startsWith("<p>")
-                                  ? chat.content
-                                  : chat.content,
+                                __html: chat.content,
                               }}
                             />
 

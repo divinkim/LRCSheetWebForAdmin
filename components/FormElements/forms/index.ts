@@ -23,52 +23,52 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Liste des collaborateurs",
-                    href: "/dashboard/RH/usersList",
+                    href: "/dashboard/RH/users",
                     icon: faUsers
                 },
                 {
                     title: "Ajouter un poste",
-                    href: "/dashboard/ADMIN/addPost",
+                    href: "/dashboard/ADMIN/post/new",
                     icon: faPlusCircle
                 },
                 {
                     title: "Ajouter une entreprise",
-                    href: "/dashboard/OTHERS/addEnterprise",
+                    href: "/dashboard/OTHERS/enterprise/new",
                     icon: faBuildingUser
                 },
                 {
                     title: "Ajouter un département",
-                    href: "/dashboard/ADMIN/addDepartment",
+                    href: "/dashboard/ADMIN/department/new",
                     icon: faBuilding
                 },
                 {
                     title: "Ajouter un salaire",
-                    href: "/dashboard/COMPTA/addSalary",
+                    href: "/dashboard/COMPTA/salary/new",
                     icon: faMoneyBillWave
                 },
                 {
                     title: "Ajouter un type de contrat",
-                    href: "/dashboard/ADMIN/addContractType",
+                    href: "/dashboard/ADMIN/contract-type/new",
                     icon: faFileContract
                 },
                 {
                     title: "Ajouter un contrat",
-                    href: "/dashboard/ADMIN/addContract",
+                    href: "/dashboard/ADMIN/contract/new",
                     icon: faFileSignature
                 },
                 {
                     title: "Ajouter un arrondissement",
-                    href: "/dashboard/LOCALITY/addDistrict",
+                    href: "/dashboard/LOCALITY/district/new",
                     icon: faMapMarkedAlt
                 },
                 {
                     title: "Ajouter un quartier",
-                    href: "/dashboard/LOCALITY/addQuarter",
+                    href: "/dashboard/LOCALITY/quarter/new",
                     icon: faMapPin
                 },
                 {
                     title: "Ajouter une ville",
-                    href: "/dashboard/LOCALITY/addCity",
+                    href: "/dashboard/LOCALITY/city/new",
                     icon: faMapLocation
                 }
 

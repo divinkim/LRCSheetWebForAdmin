@@ -9,7 +9,7 @@ export const tablesModal = [
             links: [
                 {
                     title: "Ajouter un collaborateur",
-                    href: "../RH/addUser",
+                    href: "/dashboard/RH/user/new",
                     icon: faUserPlus
                 },
             ],
@@ -62,7 +62,7 @@ export const tablesModal = [
             links: [
                 {
                     title: "Ajouter une entreprise",
-                    href: "/pages/dashboard/OTHERS/addEnterprise",
+                    href: "/pages/dashboard/OTHERS/enterprise/new",
                     icon: faCalendarPlus
                 },
             ],
@@ -87,12 +87,12 @@ export const tablesModal = [
             links: [
                 {
                     title: "Ajouter un collaborateur au planning",
-                    href: "/dashboard/RH/addUserInPlanningOfWeek",
+                    href: "/dashboard/RH/roster/new",
                     icon: faCalendarPlus
                 },
                 {
                     title: "Modifier le planning d'un collaborateur",
-                    href: "/dashboard/RH/updateCollaboratorPlanning",
+                    href: "/dashboard/RH/roster/edit",
                     icon: faCalendarPlus
                 },
             ],

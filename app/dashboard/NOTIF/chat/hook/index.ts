@@ -2,9 +2,10 @@
 
 import { providers } from "@/index";
 import { useState, useEffect, useRef, useCallback } from "react";
-import SidebarHook from "@/components/Layouts/sidebar/hook";
+import { SidebarHook } from "@/components/Layouts/sidebar/hook";
 import socket from "@/socket";
 import { useSession } from "next-auth/react";
+import { getDefaultHighWaterMark } from "stream";
 
 type Users = {
     fcmToken: string;
@@ -32,16 +33,14 @@ type ChatMessage = {
 export function useChat() {
     const { data: session } = useSession();
 
-    //
     const sessionUserId = session?.user?.id ? Number(session.user.id) : null;
 
-    // Cast sécurisé évitant l'accès à session quand il est null
     type CustomUser = { id?: string; EnterpriseId?: number | string | null };
     const user = session?.user as CustomUser | undefined;
-    // Conversion explicite en number
-    const sessionEnterpriseId = user?.EnterpriseId ? Number(user.EnterpriseId) : null;
+    const sessionEnterpriseId = user?.EnterpriseId
+        ? Number(user.EnterpriseId)
+        : null;
 
-    // Convertir explicitement en number pour correspondre aux types des APIs/Users
     const [users, setUsers] = useState<Users[]>([]);
     const [usersCloned, setUsersCloned] = useState<Users[]>([]);
     const [AdminId, setAdminId] = useState<number | null>(null);
@@ -82,13 +81,20 @@ export function useChat() {
     const [incomingCall, setIncomingCall] = useState<any>(null);
     const [callAccepted, setCallAccepted] = useState(false);
     const [callType, setCallType] = useState<"audio" | "video">("audio");
-    const [callStatus, setCallStatus] = useState<"idle" | "ringing" | "accepted" | "rejected" | "ended">("idle");
+    const [callStatus, setCallStatus] = useState<
+        "idle" | "ringing" | "accepted" | "rejected" | "ended"
+    >("idle");
     const [callDuration, setCallDuration] = useState(0);
 
-    // REFS WEBRTC
-    const localVideo = useRef<HTMLVideoElement | null>(null);
-    const remoteVideo = useRef<HTMLVideoElement | null>(null);
-    const remoteAudio = useRef<HTMLAudioElement | null>(null);
+    // ÉTATS ET REFS DÉDIÉS AUX FLUX MEDIA (WEBRTC)
+    const [localStreamState, setLocalStreamState] = useState<MediaStream | null>(null);
+    const [remoteStreamState, setRemoteStreamState] = useState<MediaStream | null>(null);
+
+    // REFS SANS "| null" DANS LE GÉNÉRIQUE POUR COMPATIBILITÉ TS REACT
+    const localVideo = useRef<HTMLVideoElement>(null);
+    const remoteVideo = useRef<HTMLVideoElement>(null);
+    const remoteAudio = useRef<HTMLAudioElement>(null);
+
     const peerConnection = useRef<RTCPeerConnection | null>(null);
     const localStream = useRef<MediaStream | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,12 +104,18 @@ export function useChat() {
     // ==========================================
     // CALCUL DES NOTIFICATIONS PAR UTILISATEUR
     // ==========================================
-    const notificationsCompter = useCallback((senderId: number) => {
-        if (typeof window === "undefined") return 0;
-        const local = localStorage.getItem("storedNotificationsArray");
-        const stored = local ? JSON.parse(local) : (storedNotificationsArray || []);
-        return stored.filter((item: any) => Number(item.senderId) === senderId).length;
-    }, [storedNotificationsArray]);
+    const notificationsCompter = useCallback(
+        (senderId: number) => {
+            if (typeof window === "undefined") return 0;
+            const local = localStorage.getItem("storedNotificationsArray");
+            const stored = local
+                ? JSON.parse(local)
+                : storedNotificationsArray || [];
+            return stored.filter((item: any) => Number(item.senderId) === senderId)
+                .length;
+        },
+        [storedNotificationsArray]
+    );
 
     // ==========================================
     // 1. ENREGISTREMENT AUTOMATIQUE DU SOCKET
@@ -161,8 +173,13 @@ export function useChat() {
         peerConnection.current?.close();
         peerConnection.current = null;
 
-        localStream.current?.getTracks().forEach((track) => track.stop());
-        localStream.current = null;
+        if (localStream.current) {
+            localStream.current.getTracks().forEach((track) => track.stop());
+            localStream.current = null;
+        }
+
+        setLocalStreamState(null);
+        setRemoteStreamState(null);
 
         if (localVideo.current) localVideo.current.srcObject = null;
         if (remoteVideo.current) remoteVideo.current.srcObject = null;
@@ -171,7 +188,10 @@ export function useChat() {
 
     const initPeerConnection = useCallback((targetUserId: number) => {
         const pc = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+            ],
         });
 
         pc.onicecandidate = (event) => {
@@ -185,10 +205,16 @@ export function useChat() {
 
         pc.ontrack = (event) => {
             const remoteStream = event.streams[0];
-            if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
+            setRemoteStreamState(remoteStream);
+
+            if (remoteVideo.current) {
+                remoteVideo.current.srcObject = remoteStream;
+            }
             if (remoteAudio.current) {
                 remoteAudio.current.srcObject = remoteStream;
-                remoteAudio.current.play().catch((err) => console.log("Audio play error", err));
+                remoteAudio.current
+                    .play()
+                    .catch((err) => console.log("Erreur lecture audio distante :", err));
             }
         };
 
@@ -204,10 +230,12 @@ export function useChat() {
 
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
-                video: type === "video",
+                video: type === "video" ? { width: 1280, height: 720 } : false,
             });
 
             localStream.current = stream;
+            setLocalStreamState(stream);
+
             if (type === "video" && localVideo.current) {
                 localVideo.current.srcObject = stream;
             }
@@ -225,7 +253,7 @@ export function useChat() {
                 type,
             });
         } catch (error) {
-            console.error("Erreur lors de l'appel:", error);
+            console.error("Erreur lors de l'initialisation de l'appel :", error);
             endCall();
         }
     };
@@ -235,12 +263,16 @@ export function useChat() {
 
         try {
             const isVideo = incomingCall.type === "video";
+            setCallType(incomingCall.type || "audio");
+
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
-                video: isVideo,
+                video: isVideo ? { width: 1280, height: 720 } : false,
             });
 
             localStream.current = stream;
+            setLocalStreamState(stream);
+
             if (isVideo && localVideo.current) {
                 localVideo.current.srcObject = stream;
             }
@@ -248,7 +280,9 @@ export function useChat() {
             const pc = initPeerConnection(incomingCall.from);
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-            await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+            await pc.setRemoteDescription(
+                new RTCSessionDescription(incomingCall.offer)
+            );
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
@@ -262,7 +296,7 @@ export function useChat() {
             setCallStatus("accepted");
             startCallTimer();
         } catch (err) {
-            console.error("Erreur acceptation appel:", err);
+            console.error("Erreur lors de l'acceptation de l'appel :", err);
             rejectCall();
         }
     };
@@ -275,12 +309,14 @@ export function useChat() {
         setCallStatus("rejected");
         setIsCalling(false);
         stopCallTimer();
+        getData()
     };
 
     const endCall = () => {
         if (userData.UserId) {
             socket.emit("endCall", { to: userData.UserId });
         }
+        getData()
         cleanupWebRTC();
         stopCallTimer();
         setCallStatus("ended");
@@ -304,7 +340,9 @@ export function useChat() {
 
         const handleCallAnswered = async (data: any) => {
             if (peerConnection.current) {
-                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+                await peerConnection.current.setRemoteDescription(
+                    new RTCSessionDescription(data.answer)
+                );
                 setCallAccepted(true);
                 setCallStatus("accepted");
                 startCallTimer();
@@ -314,9 +352,11 @@ export function useChat() {
         const handleIceCandidate = async (data: any) => {
             if (peerConnection.current && data.candidate) {
                 try {
-                    await peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    await peerConnection.current.addIceCandidate(
+                        new RTCIceCandidate(data.candidate)
+                    );
                 } catch (err) {
-                    console.error("ICE error:", err);
+                    console.error("Erreur ICE Candidate :", err);
                 }
             }
         };
@@ -342,7 +382,9 @@ export function useChat() {
             if (datas.receiverId === String(currentUserId)) {
                 const local = localStorage.getItem("storedNotificationsArray");
                 const stored = local ? JSON.parse(local) : [];
-                const count = [...stored, datas].filter((item) => item.senderId === datas.senderId).length;
+                const count = [...stored, datas].filter(
+                    (item) => item.senderId === datas.senderId
+                ).length;
 
                 setNotificationCountLive({
                     status: true,
@@ -382,45 +424,55 @@ export function useChat() {
         const map = new Map();
         messages.forEach((msg) => {
             const time = new Date(msg.createdAt).getTime();
-            if (msg.senderId) map.set(msg.senderId, Math.max(map.get(msg.senderId) || 0, time));
-            if (msg.receiverId) map.set(msg.receiverId, Math.max(map.get(msg.receiverId) || 0, time));
+            if (msg.senderId)
+                map.set(msg.senderId, Math.max(map.get(msg.senderId) || 0, time));
+            if (msg.receiverId)
+                map.set(msg.receiverId, Math.max(map.get(msg.receiverId) || 0, time));
         });
 
-        return [...usersList].sort((a, b) => (map.get(b.UserId) || 0) - (map.get(a.UserId) || 0));
+        return [...usersList].sort(
+            (a, b) => (map.get(b.UserId) || 0) - (map.get(a.UserId) || 0)
+        );
     }
 
-    // ==========================================
-    // 5. FONCTIONS MESSAGERIE & RECHERCHE
-    // ==========================================
+    const getData = async () => {
+        const usersFcmTokens = await providers.API.getAll(
+            providers.APIUrl,
+            "getFcmTokens",
+            null
+        );
+
+        const filteredByEnterprise = usersFcmTokens.filter(
+            (item: { UserEnterpriseId: number }) =>
+                item.UserEnterpriseId === sessionEnterpriseId
+        );
+
+        const uniqueUsersMap = new Map<number, Users>();
+        filteredByEnterprise.forEach((item: Users) => {
+            if (!uniqueUsersMap.has(item.UserId)) {
+                uniqueUsersMap.set(item.UserId, item);
+            }
+        });
+        const uniqueUsers = Array.from(uniqueUsersMap.values());
+
+        const messages = await providers.API.getAll(
+            providers.APIUrl,
+            "getChatMessage",
+            null
+        );
+        const sortedUsers = sortUsersByFrequency(uniqueUsers, messages);
+
+        setUsers(sortedUsers);
+        setUsersCloned(sortedUsers);
+        setChatMessage(messages);
+        setLoader(false);
+    }
+
     useEffect(() => {
         (async () => {
             if (typeof window === "undefined" || !sessionEnterpriseId) return;
 
-            const usersFcmTokens = await providers.API.getAll(providers.APIUrl, "getFcmTokens", null);
-
-            // 1. Filtrer par entreprise
-            const filteredByEnterprise = usersFcmTokens.filter(
-                (item: { UserEnterpriseId: number }) => item.UserEnterpriseId === sessionEnterpriseId
-            );
-
-            // 2. DÉDOUBLONNER la liste des utilisateurs par leur UserId
-            const uniqueUsersMap = new Map<number, Users>();
-            filteredByEnterprise.forEach((item: Users) => {
-                if (!uniqueUsersMap.has(item.UserId)) {
-                    uniqueUsersMap.set(item.UserId, item);
-                }
-            });
-            const uniqueUsers = Array.from(uniqueUsersMap.values());
-
-            // 3. Charger les messages et trier
-            const messages = await providers.API.getAll(providers.APIUrl, "getChatMessage", null);
-            const sortedUsers = sortUsersByFrequency(uniqueUsers, messages);
-
-            // 4. Mettre à jour le state avec la liste sans doublons
-            setUsers(sortedUsers);
-            setUsersCloned(sortedUsers);
-            setChatMessage(messages);
-            setLoader(false);
+            getData()
         })();
     }, [sessionEnterpriseId]);
 
@@ -446,14 +498,19 @@ export function useChat() {
 
         setChatMessage((prev) => [...prev, newMessage]);
 
-        const response = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
-            content: data.content,
-            receiverId: userData.UserId,
-            senderId: currentUserId,
-            EnterpriseId: sessionEnterpriseId || 1,
-            file: data.files,
-            role: "Super-Admin",
-        });
+        const response = await providers.API.post(
+            providers.APIUrl,
+            "createChatMessage",
+            null,
+            {
+                content: data.content,
+                receiverId: userData.UserId,
+                senderId: currentUserId,
+                EnterpriseId: sessionEnterpriseId || 1,
+                file: data.files,
+                role: "Super-Admin",
+            }
+        );
 
         socket.emit("onSendChatData", {
             path: "/Dashboard/NOTIF/chat",
@@ -466,15 +523,20 @@ export function useChat() {
         setData((prev) => ({ ...prev, content: "", files: "" }));
 
         if (response) {
-            await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
-                path: "/dashboard/NOTIF/chat",
-                EnterpriseId: userData.EnterpriseId.toString(),
-                messagingType: "notification",
-                adminSectionIndex: "0",
-                adminPageIndex: "0",
-                senderId: String(currentUserId),
-                receiverId: String(userData.UserId),
-            });
+            await providers.API.post(
+                "https://vps118934.serveur-vps.net:4001",
+                "sendNotificationPush",
+                null,
+                {
+                    path: "/dashboard/NOTIF/chat",
+                    EnterpriseId: userData.EnterpriseId.toString(),
+                    messagingType: "notification",
+                    adminSectionIndex: "0",
+                    adminPageIndex: "0",
+                    senderId: String(currentUserId),
+                    receiverId: String(userData.UserId),
+                }
+            );
         }
     }
 
@@ -486,10 +548,15 @@ export function useChat() {
 
         const local = localStorage.getItem("storedNotificationsArray");
         const stored = local ? JSON.parse(local) : [];
-        const deleteItem = stored.filter((item: any) => Number(item.senderId) !== senderId);
+        const deleteItem = stored.filter(
+            (item: any) => Number(item.senderId) !== senderId
+        );
 
         setNotificationCountLive({ status: false, count: 0, UserId: 0 });
-        localStorage.setItem("storedNotificationsArray", JSON.stringify(deleteItem));
+        localStorage.setItem(
+            "storedNotificationsArray",
+            JSON.stringify(deleteItem)
+        );
     }
 
     function onSearch(value: string) {
@@ -498,7 +565,9 @@ export function useChat() {
                 item.User?.firstname.toLowerCase().includes(value.toLowerCase()) ||
                 item.User?.lastname.toLowerCase().includes(value.toLowerCase())
         );
-        const unique = Array.from(new Map(searchUsers.map((item) => [item.UserId, item])).values());
+        const unique = Array.from(
+            new Map(searchUsers.map((item) => [item.UserId, item])).values()
+        );
         setUsersCloned(unique);
     }
 
@@ -517,7 +586,7 @@ export function useChat() {
         usersCloned,
         setUsersCloned,
         onSearch,
-        UserId: currentUserId, // <-- AJOUTEZ CETTE LIGNE
+        UserId: currentUserId,
         AdminId,
         loader,
         notificationsCountLive,
@@ -532,6 +601,8 @@ export function useChat() {
         localVideo,
         remoteVideo,
         remoteAudio,
+        localStream: localStreamState,
+        remoteStream: remoteStreamState,
         callType,
         setCallType,
         callStatus,
@@ -539,5 +610,4 @@ export function useChat() {
         formatCallDuration,
         usersOnLine,
     };
-
 }

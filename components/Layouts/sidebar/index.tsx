@@ -18,8 +18,7 @@ import { cn } from "@/lib/utils";
 import socket from "@/socket";
 import { providers } from "@/index";
 import { useSidebarContext } from "./sidebar-context";
-import SidebarHook from "./hook";
-
+import { SidebarHook } from "./hook";
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
