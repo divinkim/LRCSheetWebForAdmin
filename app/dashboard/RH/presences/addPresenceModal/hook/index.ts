@@ -16,6 +16,7 @@ type User = {
 
 type Inputs = {
     arrivalTime: string,
+    departureTime: string,
     usersId: number[],
     enterprisesId: number[],
     planningsId: any[],
@@ -28,6 +29,7 @@ export default function useAddPresenceModal() {
     const [usersArrayCloned, setUsersArrayCloned] = useState<User[]>([]);
     const [inputs, setInputs] = useState<Inputs>({
         arrivalTime: "",
+        departureTime: "",
         usersId: [],
         planningsId: [],
         enterprisesId: [],
@@ -127,6 +129,7 @@ export default function useAddPresenceModal() {
             );
             setInputs({
                 arrivalTime: "",
+                departureTime:"",
                 usersId: [],
                 planningsId: [],
                 enterprisesId: [],

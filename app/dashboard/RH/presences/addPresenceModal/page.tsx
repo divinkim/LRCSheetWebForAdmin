@@ -7,7 +7,10 @@ import { ClipLoader } from "react-spinners";
 import { useState } from "react";
 
 export default function AddPresenceModal() {
-    const { usersArray, filterUserByName, onCheckBtnEvent, handleSubmit, isLoading, setInputs, inputs, selectAllProfile, deselectAllProfile } = useAddPresenceModal();
+    const { usersArray,
+        filterUserByName,
+        onCheckBtnEvent,
+        handleSubmit, isLoading, setInputs, inputs, selectAllProfile, deselectAllProfile } = useAddPresenceModal();
     return (
         <div className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm p-4">
 
@@ -50,7 +53,7 @@ export default function AddPresenceModal() {
 
                     {/* Heure + Date */}
 
-                    <div className="grid md:grid-cols-2 gap-5 mb-8">
+                    <div className="grid md:grid-cols-3 gap-5 mb-8">
                         <div>
                             <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
                                 Arrivée
@@ -62,6 +65,22 @@ export default function AddPresenceModal() {
                                     setInputs({
                                         ...inputs,
                                         arrivalTime: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+                                Départ
+                                {/* <span className="text-orange-500"> *</span> */}
+                            </label>
+                            <input
+                                type="time"
+                                onChange={(e) =>
+                                    setInputs({
+                                        ...inputs,
+                                        departureTime: e.target.value,
                                     })
                                 }
                                 className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"

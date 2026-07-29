@@ -280,7 +280,7 @@ export default function PresencesList() {
             />
           </div>
 
-          <div className="flex items-center gap-2.5 justify-end">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 lg:justify-end">
             <button
               onClick={exportToCSV}
               disabled={isLoading || presencesListCloned.length === 0}

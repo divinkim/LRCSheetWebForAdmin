@@ -8,7 +8,7 @@ export default withAuth(
         //Si une erreur de Refresh Token s'est produite (refresh expiré ou invalide côté backend)
         if (token?.error === "RefreshAccessTokenError") {
             // Redirection forcée vers la page de login avec nettoyage
-            const loginUrl = new URL("/login", req.url);
+            const loginUrl = new URL("/", req.url);
             loginUrl.searchParams.set("error", "SessionExpired");
             return NextResponse.redirect(loginUrl);
         }

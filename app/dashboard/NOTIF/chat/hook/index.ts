@@ -5,7 +5,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { SidebarHook } from "@/components/Layouts/sidebar/hook";
 import socket from "@/socket";
 import { useSession } from "next-auth/react";
-import { getDefaultHighWaterMark } from "stream";
 
 type Users = {
     fcmToken: string;
@@ -86,11 +85,14 @@ export function useChat() {
     >("idle");
     const [callDuration, setCallDuration] = useState(0);
 
-    // ÉTATS ET REFS DÉDIÉS AUX FLUX MEDIA (WEBRTC)
+    // NOUVEAU : État pour masquer/réduire l'overlay d'appel
+    const [isCallMinimized, setIsCallMinimized] = useState(false);
+
+    // ÉTATS ET REFS DÉDIÉS AUX FLUX MEDIA
     const [localStreamState, setLocalStreamState] = useState<MediaStream | null>(null);
     const [remoteStreamState, setRemoteStreamState] = useState<MediaStream | null>(null);
 
-    // REFS SANS "| null" DANS LE GÉNÉRIQUE POUR COMPATIBILITÉ TS REACT
+    // REFS
     const localVideo = useRef<HTMLVideoElement>(null);
     const remoteVideo = useRef<HTMLVideoElement>(null);
     const remoteAudio = useRef<HTMLAudioElement>(null);
@@ -99,11 +101,9 @@ export function useChat() {
     const localStream = useRef<MediaStream | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+    const iceCandidatesQueue = useRef<RTCIceCandidateInit[]>([]);
     const currentUserId = sessionUserId ?? AdminId;
 
-    // ==========================================
-    // CALCUL DES NOTIFICATIONS PAR UTILISATEUR
-    // ==========================================
     const notificationsCompter = useCallback(
         (senderId: number) => {
             if (typeof window === "undefined") return 0;
@@ -117,12 +117,8 @@ export function useChat() {
         [storedNotificationsArray]
     );
 
-    // ==========================================
-    // 1. ENREGISTREMENT AUTOMATIQUE DU SOCKET
-    // ==========================================
     useEffect(() => {
         if (!currentUserId) return;
-
         setAdminId(currentUserId);
 
         const registerSocket = () => {
@@ -134,15 +130,11 @@ export function useChat() {
         }
 
         socket.on("connect", registerSocket);
-
         return () => {
             socket.off("connect", registerSocket);
         };
     }, [currentUserId]);
 
-    // ==========================================
-    // 2. TIMERS & UTILITAIRES DE TEMPS
-    // ==========================================
     const startCallTimer = useCallback(() => {
         if (timerRef.current) clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
@@ -166,12 +158,10 @@ export function useChat() {
         ].join(":");
     }
 
-    // ==========================================
-    // 3. WEBRTC ENGINE (Appels Audio & Vidéo)
-    // ==========================================
     const cleanupWebRTC = useCallback(() => {
         peerConnection.current?.close();
         peerConnection.current = null;
+        iceCandidatesQueue.current = [];
 
         if (localStream.current) {
             localStream.current.getTracks().forEach((track) => track.stop());
@@ -185,6 +175,23 @@ export function useChat() {
         if (remoteVideo.current) remoteVideo.current.srcObject = null;
         if (remoteAudio.current) remoteAudio.current.srcObject = null;
     }, []);
+
+    const processIceCandidatesQueue = async () => {
+        if (peerConnection.current && peerConnection.current.remoteDescription) {
+            while (iceCandidatesQueue.current.length > 0) {
+                const candidate = iceCandidatesQueue.current.shift();
+                if (candidate) {
+                    try {
+                        await peerConnection.current.addIceCandidate(
+                            new RTCIceCandidate(candidate)
+                        );
+                    } catch (err) {
+                        console.error("Erreur d'ajout ICE en attente :", err);
+                    }
+                }
+            }
+        }
+    };
 
     const initPeerConnection = useCallback((targetUserId: number) => {
         const pc = new RTCPeerConnection({
@@ -204,17 +211,8 @@ export function useChat() {
         };
 
         pc.ontrack = (event) => {
-            const remoteStream = event.streams[0];
-            setRemoteStreamState(remoteStream);
-
-            if (remoteVideo.current) {
-                remoteVideo.current.srcObject = remoteStream;
-            }
-            if (remoteAudio.current) {
-                remoteAudio.current.srcObject = remoteStream;
-                remoteAudio.current
-                    .play()
-                    .catch((err) => console.log("Erreur lecture audio distante :", err));
+            if (event.streams && event.streams[0]) {
+                setRemoteStreamState(event.streams[0]);
             }
         };
 
@@ -227,6 +225,7 @@ export function useChat() {
             setIsCalling(true);
             setCallType(type);
             setCallStatus("ringing");
+            setIsCallMinimized(false);
 
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
@@ -235,10 +234,6 @@ export function useChat() {
 
             localStream.current = stream;
             setLocalStreamState(stream);
-
-            if (type === "video" && localVideo.current) {
-                localVideo.current.srcObject = stream;
-            }
 
             const pc = initPeerConnection(userData.UserId);
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -253,7 +248,7 @@ export function useChat() {
                 type,
             });
         } catch (error) {
-            console.error("Erreur lors de l'initialisation de l'appel :", error);
+            console.error("Erreur initialisation appel :", error);
             endCall();
         }
     };
@@ -273,16 +268,15 @@ export function useChat() {
             localStream.current = stream;
             setLocalStreamState(stream);
 
-            if (isVideo && localVideo.current) {
-                localVideo.current.srcObject = stream;
-            }
-
             const pc = initPeerConnection(incomingCall.from);
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
             await pc.setRemoteDescription(
                 new RTCSessionDescription(incomingCall.offer)
             );
+
+            await processIceCandidatesQueue();
+
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
@@ -294,9 +288,10 @@ export function useChat() {
             setIsCalling(true);
             setCallAccepted(true);
             setCallStatus("accepted");
+            setIsCallMinimized(false);
             startCallTimer();
         } catch (err) {
-            console.error("Erreur lors de l'acceptation de l'appel :", err);
+            console.error("Erreur acceptation appel :", err);
             rejectCall();
         }
     };
@@ -308,15 +303,17 @@ export function useChat() {
         setIncomingCall(null);
         setCallStatus("rejected");
         setIsCalling(false);
+        setIsCallMinimized(false);
         stopCallTimer();
-        getData()
+        getData();
     };
 
     const endCall = () => {
-        if (userData.UserId) {
-            socket.emit("endCall", { to: userData.UserId });
+        const targetId = userData.UserId || incomingCall?.from;
+        if (targetId) {
+            socket.emit("endCall", { to: targetId });
         }
-        getData()
+        getData();
         cleanupWebRTC();
         stopCallTimer();
         setCallStatus("ended");
@@ -324,17 +321,16 @@ export function useChat() {
         setCallAccepted(false);
         setIncomingCall(null);
         setIsCalling(false);
+        setIsCallMinimized(false);
     };
 
-    // ==========================================
-    // 4. LISTENERS WEBSOCKET TEMPS RÉEL
-    // ==========================================
     useEffect(() => {
         const handleIncomingCall = (data: any) => {
             if (Number(data.to) === Number(currentUserId)) {
                 setCallType(data.type || "audio");
                 setIncomingCall(data);
                 setCallStatus("ringing");
+                setIsCallMinimized(false);
             }
         };
 
@@ -343,6 +339,8 @@ export function useChat() {
                 await peerConnection.current.setRemoteDescription(
                     new RTCSessionDescription(data.answer)
                 );
+                await processIceCandidatesQueue();
+
                 setCallAccepted(true);
                 setCallStatus("accepted");
                 startCallTimer();
@@ -350,13 +348,20 @@ export function useChat() {
         };
 
         const handleIceCandidate = async (data: any) => {
-            if (peerConnection.current && data.candidate) {
-                try {
-                    await peerConnection.current.addIceCandidate(
-                        new RTCIceCandidate(data.candidate)
-                    );
-                } catch (err) {
-                    console.error("Erreur ICE Candidate :", err);
+            if (data.candidate) {
+                if (
+                    peerConnection.current &&
+                    peerConnection.current.remoteDescription
+                ) {
+                    try {
+                        await peerConnection.current.addIceCandidate(
+                            new RTCIceCandidate(data.candidate)
+                        );
+                    } catch (err) {
+                        console.error("Erreur ICE Candidate :", err);
+                    }
+                } else {
+                    iceCandidatesQueue.current.push(data.candidate);
                 }
             }
         };
@@ -364,6 +369,7 @@ export function useChat() {
         const handleCallRejected = () => {
             setCallStatus("rejected");
             setIsCalling(false);
+            setIsCallMinimized(false);
             cleanupWebRTC();
             stopCallTimer();
         };
@@ -376,9 +382,11 @@ export function useChat() {
             setCallAccepted(false);
             setIncomingCall(null);
             setIsCalling(false);
+            setIsCallMinimized(false);
         };
 
         const handleGetChatData = (datas: any) => {
+            getData()
             if (datas.receiverId === String(currentUserId)) {
                 const local = localStorage.getItem("storedNotificationsArray");
                 const stored = local ? JSON.parse(local) : [];
@@ -417,24 +425,6 @@ export function useChat() {
         };
     }, [currentUserId, cleanupWebRTC, startCallTimer, stopCallTimer]);
 
-    // ==========================================
-    // 5. FONCTIONS MESSAGERIE & RECHERCHE
-    // ==========================================
-    function sortUsersByFrequency(usersList: Users[], messages: ChatMessage[]) {
-        const map = new Map();
-        messages.forEach((msg) => {
-            const time = new Date(msg.createdAt).getTime();
-            if (msg.senderId)
-                map.set(msg.senderId, Math.max(map.get(msg.senderId) || 0, time));
-            if (msg.receiverId)
-                map.set(msg.receiverId, Math.max(map.get(msg.receiverId) || 0, time));
-        });
-
-        return [...usersList].sort(
-            (a, b) => (map.get(b.UserId) || 0) - (map.get(a.UserId) || 0)
-        );
-    }
-
     const getData = async () => {
         const usersFcmTokens = await providers.API.getAll(
             providers.APIUrl,
@@ -466,13 +456,27 @@ export function useChat() {
         setUsersCloned(sortedUsers);
         setChatMessage(messages);
         setLoader(false);
+    };
+
+    function sortUsersByFrequency(usersList: Users[], messages: ChatMessage[]) {
+        const map = new Map();
+        messages.forEach((msg) => {
+            const time = new Date(msg.createdAt).getTime();
+            if (msg.senderId)
+                map.set(msg.senderId, Math.max(map.get(msg.senderId) || 0, time));
+            if (msg.receiverId)
+                map.set(msg.receiverId, Math.max(map.get(msg.receiverId) || 0, time));
+        });
+
+        return [...usersList].sort(
+            (a, b) => (map.get(b.UserId) || 0) - (map.get(a.UserId) || 0)
+        );
     }
 
     useEffect(() => {
         (async () => {
             if (typeof window === "undefined" || !sessionEnterpriseId) return;
-
-            getData()
+            getData();
         })();
     }, [sessionEnterpriseId]);
 
@@ -609,5 +613,7 @@ export function useChat() {
         callDuration,
         formatCallDuration,
         usersOnLine,
+        isCallMinimized,
+        setIsCallMinimized,
     };
 }

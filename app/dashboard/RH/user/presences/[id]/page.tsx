@@ -48,66 +48,50 @@ const CalendarPage = () => {
     const fetchEvents = async () => {
 
       try {
-
+        setLoading(true)
         const id = window.location.pathname.split("/").pop();
-
-        const response = await providers.API.getAll(
-
+        const user = await providers.API.getOne(
           providers.APIUrl,
-
+          "getUser",
+          Number(id))
+          ;
+        const response = await providers.API.getAll(
+          providers.APIUrl,
           "getAttendances",
-
           Number(id))
           ;
 
+        setData({
+          firstname: user.firstname,
+          lastname: user.lastname,
+          dailySalary: user.Salary.dailySalary,
+          netSalary: user.Salary.netSalary,
+          photo: user.photo,
+          poste: user.Post.title,
+          Enterprise: { name: user.Enterprise.name, logo: user.Enterprise.logo, id: user.EnterpriseId }
+        })
         setAttendances(response);
-
         const formatted: CalendarEvent[] = response
-
           .filter((item: any) => new Date(item.createdAt).getDay() !== 0)
-
           .map((item: any) => {
-
             const {
-
               id,
-
               arrivalTime,
-
               departureTime,
-
               createdAt,
-
               status,
-
               User,
-
               Salary,
-
               Planning,
-
             } = item;
 
-
-
             const dateOnly = createdAt.split("T")[0];
-
             const start = `${dateOnly}T${arrivalTime}`;
-
             const end = `${dateOnly}T${departureTime}`;
-
-
-
             let calendarColor = "Primary";
-
             if (status === "A temps") calendarColor = "Success";
-
             else if (status === "En retard") calendarColor = "Warning";
-
             else if (status === "Absent") calendarColor = "Danger";
-
-
-
             return {
 
               id: id.toString(),
@@ -139,23 +123,13 @@ const CalendarPage = () => {
               }
 
             };
-
           });
-
-
-
         setEvents(formatted);
-
-
-
         setEvents(formatted);
-
-
-
       } catch (error) {
-
         console.error("Erreur événements :", error);
-
+      } finally {
+        setLoading(false)
       }
 
     };
@@ -411,9 +385,7 @@ const CalendarPage = () => {
           <button
             className="
               rounded-xl
-              bg-gradient-to-r
-              from-blue-700
-              to-blue-600
+            bg-green-600
               px-8
               py-3
               font-semibold
