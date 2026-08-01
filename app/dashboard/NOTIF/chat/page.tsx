@@ -117,11 +117,11 @@ export default function Chat() {
       content: message?.content ?? "Laissez un message",
       date: message?.createdAt
         ? new Date(message.createdAt).toLocaleDateString([], {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
         : "",
     };
   };
@@ -142,13 +142,12 @@ export default function Chat() {
 
       {/* Sidebar: Liste des Utilisateurs */}
       <div
-        className={`flex flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 transition-all duration-300 ${
-          isMobile && showChat
+        className={`flex flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 transition-all duration-300 ${isMobile && showChat
             ? "hidden"
             : isMobile && !showChat
-            ? "w-full"
-            : "w-full max-w-[360px] lg:max-w-[400px]"
-        }`}
+              ? "w-full"
+              : "w-full max-w-[360px] lg:max-w-[400px]"
+          }`}
       >
         {/* En-tête Sidebar */}
         <header className="flex items-center justify-between border-b border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
@@ -184,7 +183,7 @@ export default function Chat() {
               const latestMsg = getLatestChatMessage(item.UserId);
               const unreadCount =
                 notificationsCountLive?.status &&
-                notificationsCountLive?.UserId === item.UserId
+                  notificationsCountLive?.UserId === item.UserId
                   ? notificationsCountLive.count
                   : notificationsCompter(item.UserId);
 
@@ -206,21 +205,15 @@ export default function Chat() {
                       receiverId: item.UserId,
                     });
                     setShowChat(true);
-                    removeNotificationCount(item.UserId);
-                    localStorage.setItem(
-                      "receiverId",
-                      JSON.stringify(item.UserId)
-                    );
                     socket.emit("onReadMessage", {
-                      senderId: item.UserId,
-                      receiverId: Number(currentUserId),
+                      senderId: UserId,
+                      receiverId: item.UserId,
                     });
                   }}
-                  className={`flex items-center gap-3 border-b border-slate-100 p-3.5 cursor-pointer transition-colors dark:border-slate-700/60 ${
-                    isSelected
+                  className={`flex items-center gap-3 border-b border-slate-100 p-3.5 cursor-pointer transition-colors dark:border-slate-700/60 ${isSelected
                       ? "bg-blue-50/80 border-l-4 border-l-blue-600 dark:bg-slate-800 dark:border-l-amber-400"
                       : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                  }`}
+                    }`}
                 >
                   {/* Avatar + Indicator en ligne */}
                   <div className="relative shrink-0">
@@ -234,9 +227,8 @@ export default function Chat() {
                       className="h-12 w-12 rounded-full object-cover ring-2 ring-transparent"
                     />
                     <span
-                      className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                        isOnline ? "bg-green-500" : "bg-red-500"
-                      }`}
+                      className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${isOnline ? "bg-green-500" : "bg-red-500"
+                        }`}
                     />
                   </div>
 
@@ -294,9 +286,8 @@ export default function Chat() {
 
       {/* Main Chat Box */}
       <div
-        className={`flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-950/50 ${
-          isMobile && !showChat ? "hidden" : "flex"
-        }`}
+        className={`flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-950/50 ${isMobile && !showChat ? "hidden" : "flex"
+          }`}
       >
         {!userData.UserId ? (
           /* Empty State */
@@ -338,11 +329,10 @@ export default function Chat() {
                     className="h-10 w-10 rounded-full object-cover"
                   />
                   <span
-                    className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
-                      usersOnLine.includes(userData.UserId)
+                    className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900 ${usersOnLine.includes(userData.UserId)
                         ? "bg-green-500"
                         : "bg-red-500"
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -411,16 +401,14 @@ export default function Chat() {
                       return (
                         <div
                           key={chat.id || idx}
-                          className={`flex ${
-                            isMe ? "justify-end" : "justify-start"
-                          }`}
+                          className={`flex ${isMe ? "justify-end" : "justify-start"
+                            }`}
                         >
                           <div
-                            className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
-                              isMe
+                            className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${isMe
                                 ? "bg-blue-600 text-white rounded-br-none"
                                 : "bg-white text-slate-700 rounded-bl-none border border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
-                            }`}
+                              }`}
                           >
                             {chat.title && (
                               <p className="font-semibold text-sm mb-1">
@@ -443,11 +431,10 @@ export default function Chat() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   href={`${providers.APIUrl}/images/${chat.file}`}
-                                  className={`flex items-center gap-2 p-2 rounded-lg text-sm font-medium transition ${
-                                    isMe
+                                  className={`flex items-center gap-2 p-2 rounded-lg text-sm font-medium transition ${isMe
                                       ? "bg-blue-700 hover:bg-blue-800 text-white"
                                       : "bg-slate-50 hover:bg-slate-100 text-blue-600 dark:bg-slate-900 dark:text-amber-400"
-                                  }`}
+                                    }`}
                                 >
                                   <FontAwesomeIcon
                                     icon={faFileAlt}
@@ -477,11 +464,10 @@ export default function Chat() {
 
                             {/* Horodatage */}
                             <div
-                              className={`mt-1 text-[10px] text-right ${
-                                isMe
+                              className={`mt-1 text-[10px] text-right ${isMe
                                   ? "text-blue-100"
                                   : "text-slate-600 dark:text-slate-400"
-                              }`}
+                                }`}
                             >
                               {new Date(chat.createdAt).toLocaleTimeString(
                                 [],

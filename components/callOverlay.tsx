@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { CallModal } from "./callModal";
 
 type CallOverlayProps = {
@@ -12,9 +11,9 @@ type CallOverlayProps = {
   endCall: () => void;
   acceptCall: () => void;
   rejectCall: () => void;
-  remoteAudio: React.RefObject<HTMLAudioElement>;
-  remoteVideo: React.RefObject<HTMLVideoElement>;
-  localVideo: React.RefObject<HTMLVideoElement>;
+  remoteAudio: (node: HTMLAudioElement | null) => void;
+  remoteVideo: (node: HTMLVideoElement | null) => void;
+  localVideo: (node: HTMLVideoElement | null) => void;
   setCallType: (type: "audio" | "video") => void;
   localStream?: MediaStream | null;
   remoteStream?: MediaStream | null;
@@ -38,62 +37,11 @@ export default function CallOverlay(props: CallOverlayProps) {
     remoteVideo,
     localVideo,
     setCallType,
-    localStream,
-    remoteStream,
     isCallMinimized = false,
     setIsCallMinimized,
     callDuration = 0,
     formatCallDuration,
   } = props;
-
-  // 1. Synchronisation constante de l'audio distant
-  useEffect(() => {
-    if (remoteAudio?.current && remoteStream) {
-      if (remoteAudio.current.srcObject !== remoteStream) {
-        remoteAudio.current.srcObject = remoteStream;
-      }
-      remoteAudio.current
-        .play()
-        .catch((err) =>
-          console.warn("Erreur lecture audio distant :", err)
-        );
-    }
-  }, [remoteAudio, remoteStream, callAccepted]);
-
-  // 2. Synchronisation constante des flux vidéo (Local & Distant)
-  useEffect(() => {
-    if (callType === "video" && callAccepted && !isCallMinimized) {
-      if (remoteVideo?.current && remoteStream) {
-        if (remoteVideo.current.srcObject !== remoteStream) {
-          remoteVideo.current.srcObject = remoteStream;
-        }
-        remoteVideo.current
-          .play()
-          .catch((err) =>
-            console.warn("Erreur lecture vidéo distante :", err)
-          );
-      }
-
-      if (localVideo?.current && localStream) {
-        if (localVideo.current.srcObject !== localStream) {
-          localVideo.current.srcObject = localStream;
-        }
-        localVideo.current
-          .play()
-          .catch((err) =>
-            console.warn("Erreur lecture vidéo locale :", err)
-          );
-      }
-    }
-  }, [
-    callType,
-    callAccepted,
-    remoteStream,
-    localStream,
-    remoteVideo,
-    localVideo,
-    isCallMinimized,
-  ]);
 
   const activeUserProfile = incomingCall?.callerProfile || userData;
   const isCallActive = callAccepted || isCalling;
@@ -157,7 +105,7 @@ export default function CallOverlay(props: CallOverlayProps) {
                 className="absolute bottom-5 right-5 h-36 w-36 rounded-lg border-2 border-white object-cover shadow-lg z-10"
               />
 
-              {/* Contrôles en haut */}
+              {/* Contrôles en haut */}
               <div className="absolute top-5 right-5 z-20 flex gap-3">
                 <button
                   onClick={() =>

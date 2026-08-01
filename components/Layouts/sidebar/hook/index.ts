@@ -20,7 +20,7 @@ import {
   faBuilding,
   faBriefcase,
   faBuildingCircleArrowRight,
-  faCity,              
+  faCity,
 } from "@fortawesome/free-solid-svg-icons";
 
 export interface AppNotification {
@@ -131,6 +131,20 @@ export function useNotifications() {
       notifications.filter((n) => String(n.senderId) === String(userId)).length,
     [notifications]
   );
+
+  useEffect(() => {
+    const socketData = (data: { senderId: number, receiverId: number }) => {
+      const local = localStorage.getItem("storedNotificationsArray");
+      const stored: { senderId: string, receiverId: string }[] = local ? JSON.parse(local) : [];
+      const count = stored.filter(item => Number(item.senderId) !== data.receiverId && Number(item.receiverId) !== data.senderId)
+      setNotifications(count)
+      localStorage.setItem("storedNotificationsArray", JSON.stringify(count));
+    }
+    socket.on("removeNotificationsCount", socketData)
+    return () => {
+      socket.off("removeNotificationsCount", socketData)
+    }
+  }, [])
 
   return {
     notifications,
