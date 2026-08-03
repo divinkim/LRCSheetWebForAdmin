@@ -591,7 +591,7 @@ export default function UsersList() {
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
-                <span>Suivant</span>
+                <span>Précédent</span>
               </button>
 
               <button
@@ -599,7 +599,7 @@ export default function UsersList() {
                 disabled={page === maxPage}
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
               >
-                <span>Précédent</span>
+                <span>Suivant</span>
                 <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
               </button>
             </div>

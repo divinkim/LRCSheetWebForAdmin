@@ -171,14 +171,14 @@ export default function HomeComponent() {
     {
       icon: faUsers,
       backgroundColor: "#6366f1",
-      path: "/dashboard/RH/usersList",
+      path: "/dashboard/RH/users",
       title: "Collaborateurs",
       value: data.usersArray?.length || 0,
     },
     {
       icon: faBuilding,
       backgroundColor: "#0ea5e9",
-      path: "/dashboard/OTHERS/enterprisesList",
+      path: "/dashboard/OTHERS/enterprises",
       title: "Entreprises",
       value: data.enterprisesArray?.length || 0,
     },
