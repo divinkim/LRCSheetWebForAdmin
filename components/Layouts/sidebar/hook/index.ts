@@ -5,21 +5,20 @@ import socket from "@/socket";
 import { getFirebaseMessaging } from "@/firebase/firebaseConfig";
 import { onMessage } from "firebase/messaging";
 
-// Importation d'icônes FontAwesome plus spécifiques et pertinentes
 import {
-  faUsers,
-  faUserPlus,
-  faGear,
   faComments,
-  faPaperPlane,
+  faBullhorn,
   faCalendarPlus,
+  faClipboardList,
+  faUserPlus,
+  faUsers,
+  faUserCheck,
   faCalendarDays,
-  faClock,
   faFileLines,
   faFileContract,
   faBuilding,
   faBriefcase,
-  faBuildingCircleArrowRight,
+  faBuildingCircleCheck,
   faCity,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -133,18 +132,21 @@ export function useNotifications() {
   );
 
   useEffect(() => {
-    const socketData = (data: { senderId: number, receiverId: number }) => {
+    const socketData = (data: { senderId: number; receiverId: number }) => {
       const local = localStorage.getItem("storedNotificationsArray");
-      const stored: { senderId: string, receiverId: string }[] = local ? JSON.parse(local) : [];
-      const count = stored.filter(item => Number(item.senderId) !== data.receiverId && Number(item.receiverId) !== data.senderId)
-      setNotifications(count)
+      const stored: { senderId: string; receiverId: string }[] = local ? JSON.parse(local) : [];
+      const count = stored.filter(
+        (item) =>
+          Number(item.senderId) !== data.receiverId && Number(item.receiverId) !== data.senderId
+      );
+      setNotifications(count);
       localStorage.setItem("storedNotificationsArray", JSON.stringify(count));
-    }
-    socket.on("removeNotificationsCount", socketData)
+    };
+    socket.on("removeNotificationsCount", socketData);
     return () => {
-      socket.off("removeNotificationsCount", socketData)
-    }
-  }, [])
+      socket.off("removeNotificationsCount", socketData);
+    };
+  }, []);
 
   return {
     notifications,
@@ -187,13 +189,20 @@ export function SidebarHook() {
     getPageCount: getPageNotificationsCount,
   } = useNotifications();
 
-  // Menu dynamique Aside avec icônes adaptées
+  // Menu dynamique avec icônes pro et pertinentes
   const ItemAside = [
     {
       title: "💬 Communication",
       ItemLists: [
         { title: "Messagerie & Tchat", href: "/dashboard/NOTIF/chat", icon: faComments },
-        { title: "Notifications groupées", href: "/dashboard/NOTIF/notifications", icon: faPaperPlane },
+        { title: "Notifications groupées", href: "/dashboard/NOTIF/notifications", icon: faBullhorn },
+      ],
+    },
+    {
+      title: "🛎️ Réception & RDV",
+      ItemLists: [
+        { title: "Nouveau rendez-vous", href: "/dashboard/APPOINTMENT/new", icon: faCalendarPlus },
+        { title: "Liste des rendez-vous", href: "/dashboard/APPOINTMENT/list", icon: faClipboardList },
       ],
     },
     {
@@ -201,7 +210,7 @@ export function SidebarHook() {
       ItemLists: [
         { title: "Ajouter un collaborateur", href: "/dashboard/RH/user/new", icon: faUserPlus },
         { title: "Liste des collaborateurs", href: "/dashboard/RH/users", icon: faUsers },
-        { title: "Présences", href: "/dashboard/RH/presences", icon: faClock },
+        { title: "Présences", href: "/dashboard/RH/presences", icon: faUserCheck },
         { title: "Nouveau planning", href: "/dashboard/RH/planning/new", icon: faCalendarPlus },
         { title: "Plannings horaires", href: "/dashboard/RH/roster", icon: faCalendarDays },
       ],
@@ -218,8 +227,8 @@ export function SidebarHook() {
     {
       title: "🏢 Autres",
       ItemLists: [
-        { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleArrowRight },
-        { title: "enterprises", href: "/dashboard/OTHERS/enterprise", icon: faCity },
+        { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleCheck },
+        { title: "Entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faCity },
       ],
     },
   ];

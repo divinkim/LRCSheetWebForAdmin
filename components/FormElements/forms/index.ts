@@ -323,17 +323,17 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Liste des entreprises",
-                    href: "/dashboard/OTHERS/enterprisesList",
+                    href: "/dashboard/OTHERS/enterprise/list",
                     icon: faUsers
                 },
                 {
                     title: "Ajouter un ville",
-                    href: "/dashboard/ADMIN/addCity",
+                    href: "/dashboard/LOCALITY/city/new",
                     icon: faPlusCircle
                 },
                 {
                     title: "Ajouter un pays",
-                    href: "/dashboard/ADMIN/addCountry",
+                    href: "/dashboard/LOCALITY/country/new",
                     icon: faBuilding
                 },
             ],
@@ -1124,6 +1124,77 @@ export const formElements = [
                 //     alias: "CountriesTypeId"
                 // },
             ],
+        },
+        addAppointment: {
+            titleForm: "Formulaire d'enregistrement d'un rendez-vous",
+            inputs: [
+                {
+                    label: "Nom complet du visiteur",
+                    placeholder: "Ex: Jean Dupont",
+                    requireField: true,
+                    type: "text",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "fullName"
+                },
+                {
+                    label: "Numéro de téléphone",
+                    placeholder: "Ex: 06xxxxxxx",
+                    requireField: true,
+                    type: "tel",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "phone"
+                },
+                {
+                    label: "Adresse Email",
+                    placeholder: "Ex: email@gmail.com",
+                    requireField: false,
+                    type: "email",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "email"
+                },
+                {
+                    label: "Personne à visiter (Collaborateur)",
+                    placeholder: "Sélectionner un collaborateur...",
+                    requireField: true,
+                    type: "number",
+                    selectedInput: true,
+                    textarea: false,
+                    alias: "UserId",
+                    dynamicOptions: {
+                        status: true
+                    }
+                },
+                {
+                    label: "Date du rendez-vous",
+                    placeholder: "Sélectionner la date...",
+                    requireField: true,
+                    type: "date",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "date"
+                },
+                {
+                    label: "Heure du rendez-vous",
+                    placeholder: "HH:MM",
+                    requireField: false,
+                    type: "time",
+                    selectedInput: false,
+                    textarea: false,
+                    alias: "time"
+                },
+                {
+                    label: "Motif de la visite",
+                    placeholder: "Saisissez la raison du rendez-vous...",
+                    requireField: true,
+                    type: "text",
+                    selectedInput: false,
+                    textarea: true,
+                    alias: "reason"
+                },
+            ]
         }
     }
 ];
