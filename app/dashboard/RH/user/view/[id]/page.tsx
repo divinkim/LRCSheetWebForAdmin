@@ -18,7 +18,7 @@ import {
   faArrowLeft,
   faCheckCircle
 } from "@fortawesome/free-solid-svg-icons";
-import useUserProfile from "../../presences/hook";
+import useUserProfile from "../../presences/[id]/hook";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { providers } from "@/index";
 import Link from "next/link";

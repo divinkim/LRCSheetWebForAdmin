@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
-
+import { useToast } from "@/components/toast";
 export type InputsValue = {
   name: string;
   description: string;
@@ -63,7 +63,7 @@ export default function useAddEnterprise() {
   const { data: session } = useSession();
   const adminRole = (session?.user as any)?.role || null;
   const enterpriseIdOfAdmin = (session?.user as any)?.EnterpriseId || null;
-
+  const toast = useToast();
   // États des données
   const [inputs, setInputs] = useState<InputsValue>(INITIAL_INPUTS);
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
@@ -203,12 +203,10 @@ export default function useAddEnterprise() {
     // Validation des champs obligatoires
     for (const [key, value] of Object.entries(requiredFields)) {
       if (!value) {
-        return providers.alertMessage(
-          false,
-          "Champs invalides",
-          "Veuillez remplir tous les champs obligatoires",
-          null
-        );
+        toast.error("Champs invalides",
+          "Veuillez renseigner tous les champs obligatoires."
+        )
+        return
       }
     }
 
@@ -224,17 +222,17 @@ export default function useAddEnterprise() {
 
       if (response.status) {
         localStorage.removeItem("inputMemoryOfAddEnterprisePage");
+        toast.success(
+          "Bravo",
+          "Entreprise enregistrée avec succès."
+        )
       }
 
-      providers.alertMessage(
-        response.status,
-        response.title,
-        response.message,
-        response.status ? "/dashboard/ADMIN/addPost" : null
-      );
     } catch (error) {
-      console.error("Erreur lors de la création de l'entreprise:", error);
-      providers.alertMessage(false, "Erreur", "Une erreur est survenue lors de l'enregistrement", null);
+      console.log(error);
+      toast.error('Erreur',
+        error instanceof Error ? error.message : "Erreur survenue."
+      )
     } finally {
       setIsLoading(false);
     }

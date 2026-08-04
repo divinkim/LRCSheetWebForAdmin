@@ -228,7 +228,7 @@ export function SidebarHook() {
       title: "🏢 Autres",
       ItemLists: [
         { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleCheck },
-        { title: "Entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faCity },
+        { title: "Liste des entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faCity },
       ],
     },
   ];

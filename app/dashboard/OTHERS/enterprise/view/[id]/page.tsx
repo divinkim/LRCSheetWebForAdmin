@@ -242,8 +242,8 @@ export default function ViewEnterprise() {
           {/* Boutons d'action */}
           <div className="flex items-center gap-3">
             <Link
-              href={`/dashboard/ADMIN/updateEnterprise/${enterprise?.id}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-md shadow-blue-600/10 active:scale-95"
+              href={`/dashboard/OTHERS/enterprise/edit/${enterprise?.id}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all shadow-md shadow-blue-600/10 active:scale-95"
             >
               <FontAwesomeIcon icon={faPen} />
               <span>Modifier</span>
@@ -415,11 +415,11 @@ export default function ViewEnterprise() {
                   <span className="text-slate-600 dark:text-slate-400 font-medium">Statut</span>
                   {enterprise?.subscriptionStatus === "onGoing" ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
-                      ● En cours
+                      ● Actif
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold border border-rose-500/20">
-                      ● Expiré
+                      ● Inactif
                     </span>
                   )}
                 </div>

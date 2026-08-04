@@ -545,7 +545,7 @@ export default function AppointmentsList() {
                             title="Consulter"
                             onClick={() =>
                               checkAccessAndExecute(() => {
-                                router.push(`/dashboard/appointments/view/${item.id}`);
+                                router.push(`/dashboard/APPOINTMENT/view/${item.id}`);
                               })
                             }
                             className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-all"

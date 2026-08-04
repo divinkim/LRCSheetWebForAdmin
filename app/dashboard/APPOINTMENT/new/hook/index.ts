@@ -40,8 +40,8 @@ export function useAppointment() {
         UserId: null,
         date: "",
         time: null,
-        status: "",
-        reason: "PEDDING"
+        status: "PEDDING",
+        reason: ""
     })
     useEffect(() => {
         if (sessionStatus === "loading") return;
