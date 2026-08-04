@@ -199,7 +199,7 @@ export function SidebarHook() {
       ],
     },
     {
-      title: "🛎️ Réception & RDV",
+      title: "🪪 Réception & RDV",
       ItemLists: [
         { title: "Nouveau rendez-vous", href: "/dashboard/APPOINTMENT/new", icon: faCalendarPlus },
         { title: "Liste des rendez-vous", href: "/dashboard/APPOINTMENT/list", icon: faClipboardList },

@@ -40,8 +40,9 @@ export function useAppointment() {
         UserId: null,
         date: "",
         time: null,
-        status: "PEDDING",
-        reason: ""
+        status: "PENDING",
+        reason: "",
+        EnterpriseId: sessionEnterpriseId,
     })
     useEffect(() => {
         if (sessionStatus === "loading") return;
