@@ -346,14 +346,14 @@ export default function ListEnterprise() {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Link
-                            href={`/dashboard/enterprise/OTHERS/view/${enterprise.id}`}
+                            href={`/dashboard/OTHERS/enterprise/view/${enterprise.id}`}
                             className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                             title="Voir"
                           >
                             <FontAwesomeIcon icon={faEye} />
                           </Link>
                           <Link
-                            href={`/dashboard/enterprise/OTHERS/edit/${enterprise.id}`}
+                            href={`/dashboard/OTHERS/enterprise/edit/${enterprise.id}`}
                             className="p-2 text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                             title="Modifier"
                           >

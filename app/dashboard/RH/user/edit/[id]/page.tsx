@@ -6,7 +6,7 @@ import { faSpinner, faUserPen, faImage } from "@fortawesome/free-solid-svg-icons
 import { formElements } from "@/components/FormElements/forms";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
-import { UpdateUserHookModal } from "../hook";
+import { UpdateUserHookModal } from "./hook";
 
 export default function UpdateUser() {
   const {

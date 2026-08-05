@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { providers } from "@/index";
-
+import { useToast } from "@/components/toast";
 export type InputsValue = {
   firstname: string | null;
   lastname: string | null;
@@ -36,7 +36,7 @@ export function UpdateUserHookModal() {
   const { data: session, status: sessionStatus } = useSession();
   const params = useParams();
   const userId = params?.id ? Number(params.id) : null;
-
+  const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   // Session
@@ -504,21 +504,11 @@ export function UpdateUserHookModal() {
         },
         userId
       );
-
-      providers.alertMessage(
-        response.status,
-        response.title,
-        response.message,
-        response.status ? "/dashboard/RH/updateUser/" + userId : null
-      );
+      toast.success("Bravo", "Collaborateur modifié avec succès.");
+      window.location.reload();
     } catch (error) {
       console.error("Erreur lors de la mise à jour :", error);
-      providers.alertMessage(
-        false,
-        "Erreur",
-        "Une erreur est survenue lors de la mise à jour.",
-        null
-      );
+      toast.error("Oups", error instanceof Error ? error.message : "Erreur lors de la mise à jour")
     } finally {
       setIsLoading(false);
     }
