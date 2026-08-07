@@ -357,7 +357,8 @@ function getDeductionPercent(
   monthIndex: number
 ): number {
   if (status === "Absent") return 100;
-
+  console.log(departureTime)
+  console.log(endTime)
   const parts = arrivalTime.split(":");
   const minutes = Number(parts[1] || 0);
   const startHour = startTime.slice(0, 2);
@@ -371,7 +372,7 @@ function getDeductionPercent(
   if (
     monthIndex >= 4 &&
     status === "A temps" &&
-    (!departureTime || departureTime < endTime)
+    (!departureTime || departureTime < endTime?.slice(0, 5))
   ) {
     return 10;
   }
@@ -430,13 +431,12 @@ const renderEventContent = (eventInfo: any, currentMonth: number) => {
     <div className="w-full rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-3">
         <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-            status === "A temps"
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status === "A temps"
               ? "bg-green-100 text-green-700"
               : status === "En retard"
-              ? "bg-orange-100 text-orange-700"
-              : "bg-red-100 text-red-700"
-          }`}
+                ? "bg-orange-100 text-orange-700"
+                : "bg-red-100 text-red-700"
+            }`}
         >
           {status}
         </span>
