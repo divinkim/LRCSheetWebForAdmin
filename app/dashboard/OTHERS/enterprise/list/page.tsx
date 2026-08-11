@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import Swal from "sweetalert2";
 import { useToast } from "@/components/toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,6 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
 
+// --- TYPES ---
 export type EnterpriseType = {
   id?: number;
   name: string;
@@ -50,31 +52,68 @@ export type EnterpriseType = {
   nui: string | null;
   subscriptionType: string;
   subscriptionStatus: string;
+  MainEnterpriseId?: number | null;
   [key: string]: any;
 };
 
 export default function ListEnterprise() {
+  const { data: session, status } = useSession();
+  const toast = useToast();
+
+  // Déstructuration sécurisée des données de session
+  const user = session?.user as any;
+  const adminRole = user?.adminRole ?? "";
+  const mainEnterpriseId = Number(user?.MainEnterpriseId || 0);
+  const enterpriseId = Number(user?.EnterpriseId || 0);
+
+  // États locaux
   const [enterprises, setEnterprises] = useState<EnterpriseType[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const toast = useToast()
+
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 8;
 
-  // Récupération des données
+  // Récupération et filtrage des entreprises selon le rôle
   const fetchEnterprises = async () => {
+    if (status === "loading") return;
+
+    if (status !== "authenticated" || !session?.user) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
-      if (Array.isArray(res)) {
-        setEnterprises(res);
-      } else if (res?.data && Array.isArray(res.data)) {
-        setEnterprises(res.data);
+      const rawEnterprises: EnterpriseType[] = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+          ? res.data
+          : [];
+
+      let filtered: EnterpriseType[] = [];
+
+      if (adminRole === "Super_Admin_Platform") {
+        filtered = rawEnterprises;
+      } else if (adminRole === "Super_Admin_Enterprise") {
+        filtered = rawEnterprises.filter(
+          (emp) =>
+            emp.MainEnterpriseId === mainEnterpriseId ||
+            emp.id === mainEnterpriseId
+        );
+      } else if (adminRole === "Enterprise_Admin") {
+        filtered = rawEnterprises.filter(
+          (emp) => emp.id === enterpriseId
+        );
       }
+
+      setEnterprises(filtered);
     } catch (error) {
       console.error("Erreur lors du chargement des entreprises:", error);
+      toast.error("Erreur", "Impossible de charger les entreprises");
     } finally {
       setIsLoading(false);
     }
@@ -82,8 +121,7 @@ export default function ListEnterprise() {
 
   useEffect(() => {
     fetchEnterprises();
-  }, []);
-
+  }, [status, session, adminRole, mainEnterpriseId, enterpriseId]);
   // Suppression
   const handleDelete = async (id?: number) => {
     if (!id) return;
@@ -94,14 +132,14 @@ export default function ListEnterprise() {
       text: "Cette action est irréversible et supprimera l'entreprise.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#dc2626", // Rouge (rose-600 Tailwind)
-      cancelButtonColor: "#64748b",  // Gris (slate-500 Tailwind)
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
       confirmButtonText: "Oui, supprimer !",
       cancelButtonText: "Annuler",
-      reverseButtons: true, // Met "Annuler" à gauche et "Supprimer" à droite
+      reverseButtons: true,
     });
 
-    // Si l'utilisateur clique sur "Oui, supprimer !"
+    //Si l'utilisateur clique sur "Oui, supprimer !"
     if (result.isConfirmed) {
       try {
         await providers.API.delete("https://vps118934.serveur-vps.net:4001", "deleteEnterprise", id);
@@ -158,7 +196,7 @@ export default function ListEnterprise() {
           </div>
 
           <Link
-            href="/dashboard/RH/enterprise/add"
+            href="/dashboard/OTHERS/enterprise/new"
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-xl shadow-sm transition-all shrink-0"
           >
             <FontAwesomeIcon icon={faPlus} />
@@ -352,6 +390,7 @@ export default function ListEnterprise() {
                           >
                             <FontAwesomeIcon icon={faEye} />
                           </Link>
+
                           <Link
                             href={`/dashboard/OTHERS/enterprise/edit/${enterprise.id}`}
                             className="p-2 text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
@@ -359,13 +398,18 @@ export default function ListEnterprise() {
                           >
                             <FontAwesomeIcon icon={faPen} />
                           </Link>
-                          <button
-                            onClick={() => handleDelete(enterprise.id)}
-                            className="p-2 text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                            title="Supprimer"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
+                          {
+                            adminRole === "Super_Admin_Platform" && (
+                              <button
+                                onClick={() => handleDelete(enterprise.id)}
+                                className="p-2 text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                                title="Supprimer"
+                              >
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
+                            )
+                          }
+
                         </div>
                       </td>
                     </tr>

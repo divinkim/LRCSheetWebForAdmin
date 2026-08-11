@@ -16,6 +16,7 @@ export default function UpdateCompany() {
     setInputs,
     isLoading,
     handleSubmit,
+    adminRole
   } = UpdateCompanyHookModal();
 
   return (
@@ -63,7 +64,7 @@ export default function UpdateCompany() {
                   <FontAwesomeIcon icon={faBuilding} className="text-sm" />
                 </div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  { "Formulaire de modification"}
+                  {"Formulaire de modification"}
                 </h2>
               </div>
               <p className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -98,7 +99,7 @@ export default function UpdateCompany() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {formElements.map((element) =>
                 element.addOrUpdateEnterprise?.inputs?.map((e) => (
-                  <div key={e.alias} className={cn("flex flex-col gap-2", e.textarea && "md:col-span-2 xl:col-span-3")}>
+                  <div key={e.alias} className={cn("flex flex-col gap-2", e.textarea && "md:col-span-2 xl:col-span-3", ["subscriptionStatus", "subscriptionType"].includes(e.alias) && adminRole !== "Super_Admin_Platform" && "hidden")}>
                     <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                       {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                       {e.label}
@@ -141,19 +142,19 @@ export default function UpdateCompany() {
                         </option>
                         {e.dynamicOptions?.status
                           ? dynamicArrayData
-                              .find((item: any) => item.alias === e.alias)
-                              ?.arrayData?.map((option: any) => (
-                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                  {option.title}
-                                </option>
-                              ))
+                            .find((item: any) => item.alias === e.alias)
+                            ?.arrayData?.map((option: any) => (
+                              <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                {option.title}
+                              </option>
+                            ))
                           : staticArrayData
-                              .find((item: any) => item.alias === e.alias)
-                              ?.arrayData?.map((option: any) => (
-                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                  {option.title}
-                                </option>
-                              ))}
+                            .find((item: any) => item.alias === e.alias)
+                            ?.arrayData?.map((option: any) => (
+                              <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                {option.title}
+                              </option>
+                            ))}
                       </select>
                     ) : (
                       /* RENDU INPUT STANDARD / FILE */

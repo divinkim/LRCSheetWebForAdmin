@@ -82,7 +82,8 @@ export default function HomeComponent() {
 
     const userEnterpriseId = Number((session.user as any).EnterpriseId);
     const userId = Number(session.user.id);
-
+    const MainEnterpriseId = Number((session.user as any).MainEnterpriseId);
+    const adminRole = (session.user as any).adminRole;
 
     (async () => {
       try {
@@ -90,20 +91,32 @@ export default function HomeComponent() {
         const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
         let filteredUsers = users;
 
-        if (userEnterpriseId !== 1) {
+        if (adminRole !== "Super_Admin_Platform" && adminRole !== "Super_Admin_Enterprise") {
           filteredUsers = users.filter(
             (u: { EnterpriseId: number }) => u.EnterpriseId === userEnterpriseId
           );
+        } else if (adminRole === "Super_Admin_Enterprise") {
+          filteredUsers = users.filter(
+            (u: { Enterprise: { MainEnterpriseId: number } }) => u.Enterprise.MainEnterpriseId === MainEnterpriseId
+          );
         }
+
         const enterprises = await providers.API.getAll(
           "https://vps118934.serveur-vps.net:4001",
           "getEnterprises",
           null
         );
+
+        let filteredEnterprises = enterprises
+
+        if (adminRole === "Super_Admin_Enterprise") {
+          filteredEnterprises.filter((item: { MainEnterpriseId: number }) => item.MainEnterpriseId === MainEnterpriseId)
+        }
+
         setData((prevData) => ({
           ...prevData,
           usersArray: filteredUsers,
-          enterprisesArray: enterprises,
+          enterprisesArray: filteredEnterprises,
         }));
 
         const fcmToken = localStorage.getItem("adminFcmToken");
@@ -129,17 +142,17 @@ export default function HomeComponent() {
         const currentYear = new Date().getFullYear();
         let filteredAttendances = [];
 
-        if (userEnterpriseId !== 1) {
+        if (adminRole === "Super_Admin_Platform") {
           filteredAttendances = allAttendances.filter(
             (a: { EnterpriseId: number; mounth: number; createdAt: string }) =>
               a.EnterpriseId === userEnterpriseId &&
               a.mounth === monthValue &&
               new Date(a.createdAt).getFullYear() === currentYear
           );
-        } else {
+        } else if (adminRole === "Super_Admin_Enterprise") {
           filteredAttendances = allAttendances.filter(
-            (a: { EnterpriseId: number; mounth: number; createdAt: string }) =>
-              [1, 2, 3, 4].includes(a.EnterpriseId ?? 0) &&
+            (a: { Enterprise: { MainEnterpriseId: number }; mounth: number; createdAt: string }) =>
+              a.Enterprise.MainEnterpriseId === MainEnterpriseId &&
               a.mounth === monthValue &&
               new Date(a.createdAt).getFullYear() === currentYear
           );
@@ -178,7 +191,7 @@ export default function HomeComponent() {
     {
       icon: faBuilding,
       backgroundColor: "#0ea5e9",
-      path: "/dashboard/OTHERS/enterprises",
+      path: "/dashboard/OTHERS/enterprise/list",
       title: "Entreprises",
       value: data.enterprisesArray?.length || 0,
     },

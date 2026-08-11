@@ -470,6 +470,17 @@ export const formElements = [
                     }
                 },
                 {
+                    label: "Entreprise principale",
+                    placeholder: "Sélectionner l'entreprise principale",
+                    requireField: false,
+                    type: "number",
+                    selectedInput: true,
+                    alias: "MainEnterpriseId",
+                    dynamicOptions: {
+                        status: true
+                    }
+                },
+                {
                     label: "Status d'abonnement",
                     placeholder: "Sélectionner le status...",
                     requireField: false,
@@ -545,9 +556,7 @@ export const formElements = [
                 },
             ],
         },
-
         //Formulaire du type de contrat
-
         addTypeContratUser: {
             navigationsLinks: [
                 {

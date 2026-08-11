@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
+import { useToast } from "@/components/toast";
 
 export type InputsValue = {
   name: string;
@@ -20,6 +21,7 @@ export type InputsValue = {
   latitude: string;
   longitude: string;
   CityId: number | null;
+  MainEnterpriseId: number | null,
   City: {
     name: string;
   };
@@ -48,7 +50,7 @@ export default function useUpdateEnterprise() {
   const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
   const [adminRole, setAdminRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
+  const toast = useToast();
   // État des inputs
   const [inputs, setInputs] = useState<InputsValue>({
     name: "",
@@ -66,6 +68,7 @@ export default function useUpdateEnterprise() {
     latitude: "",
     longitude: "",
     CityId: null,
+    MainEnterpriseId: null,
     City: { name: "" },
     CountryId: null,
     Country: { name: "" },
@@ -83,10 +86,10 @@ export default function useUpdateEnterprise() {
       // Récupération de l'ID d'entreprise (URL ou fallback session)
       const enterpriseIdFromUrl = window.location.href.split("/").pop();
       const currentEnterpriseId = (user as any)?.EnterpriseId || null
-      const role = (user as any)?.role || null;
+      const adminRole = (user as any)?.adminRole || null;
 
       if (currentEnterpriseId) setEnterpriseId(String(currentEnterpriseId));
-      if (role) setAdminRole(role);
+      if (adminRole) setAdminRole(adminRole);
 
       // Récupération de la mémoire locale si elle existe
       const getInputMemory = localStorage.getItem("inputMemoryOfAddEnterprisePage");
@@ -95,13 +98,13 @@ export default function useUpdateEnterprise() {
         return;
       }
 
-      // Chargement depuis l'API si pas de mémoire locale
+      //Chargement depuis l'API si pas de mémoire locale
       if (currentEnterpriseId) {
         const enterprisesList = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
         setEnterprises(enterprisesList);
 
         const currentEnterprise = enterprisesList.find(
-          (item: { id: number }) => item.id === Number(currentEnterpriseId)
+          (item: { id: number }) => item.id === Number(enterpriseIdFromUrl)
         );
 
         if (currentEnterprise) {
@@ -121,6 +124,7 @@ export default function useUpdateEnterprise() {
             latitude: currentEnterprise.latitude || "",
             longitude: currentEnterprise.longitude || "",
             CityId: currentEnterprise.CityId,
+            MainEnterpriseId: currentEnterprise.MainEnterpriseId,
             City: {
               name: currentEnterprise.City?.name || "",
             },
@@ -181,6 +185,12 @@ export default function useUpdateEnterprise() {
         .map((item) => ({ value: item.id, title: item.name })),
     },
     {
+      alias: "MainEnterpriseId",
+      arrayData: getEnterprises
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
       alias: "DepartmentPostId",
       arrayData: getDepartmentPosts
         .filter((item) => item.id && item.name)
@@ -209,55 +219,58 @@ export default function useUpdateEnterprise() {
         { title: "Expiré", value: "expired" },
       ],
     },
+    {
+      alias: "subscriptionType",
+      arrayData: [
+        { title: "Premium", value: "premium" },
+        { title: "Pro", value: "pro" },
+        { title: "Standard", value: "standard" },
+      ],
+    },
   ];
 
   // Soumission des modifications
   const handleSubmit = async () => {
-    const requiredFields = {
-      name: inputs.name,
-      description: inputs.description,
-      logo: inputs.logo,
-      activityDomain: inputs.activityDomain,
-      phone: inputs.phone,
-      CityId: inputs.CityId,
-      CountryId: inputs.CountryId,
-      latitude: inputs.latitude,
-      longitude: inputs.longitude,
-    };
+    try {
+      const requiredFields = {
+        name: inputs.name,
+        description: inputs.description,
+        logo: inputs.logo,
+        activityDomain: inputs.activityDomain,
+        phone: inputs.phone,
+        CityId: inputs.CityId,
+        CountryId: inputs.CountryId,
+        latitude: inputs.latitude,
+        longitude: inputs.longitude,
+      };
 
-    for (const [key, value] of Object.entries(requiredFields)) {
-      if (!value) {
-        return providers.alertMessage(
-          false,
-          "Champs invalides",
-          "Veuillez remplir tous les champs obligatoires",
-          null
-        );
+      for (const [key, value] of Object.entries(requiredFields)) {
+        if (!value) {
+         return toast.error("Champs invalides", "Veuillez renseigner tous les champs obligatoires.")
+        }
       }
+
+      setIsLoading(true);
+
+      const response = await providers.API.update(
+        "https://vps118934.serveur-vps.net:4001",
+        "updateEnterprise",
+        null,
+        inputs,
+        Number(enterpriseId)
+      );
+      
+      if (response.status) {
+        localStorage.removeItem("inputMemoryOfAddEnterprisePage");
+        toast.success("Bravo", "Mise à jour effectuée avec succès.")
+      }
+
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
     }
 
-    setIsLoading(true);
-
-    const response = await providers.API.update(
-      providers.APIUrl,
-      "updateEnterprise",
-      null,
-      inputs,
-      Number(enterpriseId)
-    );
-
-    if (response.status) {
-      localStorage.removeItem("inputMemoryOfAddEnterprisePage");
-    }
-
-    providers.alertMessage(
-      response.status,
-      response.title,
-      response.message,
-      response.status ? "/dashboard/ADMIN/addPost" : null
-    );
-
-    setIsLoading(false);
   };
 
   return {

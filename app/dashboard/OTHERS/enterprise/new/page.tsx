@@ -105,15 +105,12 @@ export default function AddEnterprise() {
               {formElements.map((element) =>
                 element.addOrUpdateEnterprise?.inputs?.map((e: any) => {
                   // Règle de masquage dynamique si nécessaire
-                  const isHidden = e.alias === "adminService" && ["Super-Admin", "Supervisor-Admin", "client", null].includes(inputs.role);
-                  if (isHidden) return null;
-
                   return (
                     <div
                       key={e.alias}
                       className={cn(
                         "flex flex-col gap-2",
-                        e.textarea && "md:col-span-2 xl:col-span-3"
+                        e.textarea && "md:col-span-2 xl:col-span-3", ["subscriptionStatus", "subscriptionType"].includes(e.alias) && adminRole !== "Super_Admin_Platform" && "hidden"
                       )}
                     >
                       <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
@@ -172,19 +169,19 @@ export default function AddEnterprise() {
                           </option>
                           {e.dynamicOptions?.status
                             ? dynamicArrayData
-                                .find((item: any) => item.alias === e.alias)
-                                ?.arrayData?.map((option: any) => (
-                                  <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                    {option.title}
-                                  </option>
-                                ))
+                              .find((item: any) => item.alias === e.alias)
+                              ?.arrayData?.map((option: any) => (
+                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                  {option.title}
+                                </option>
+                              ))
                             : staticArrayData
-                                .find((item: any) => item.alias === e.alias)
-                                ?.arrayData?.map((option: any) => (
-                                  <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                    {option.title}
-                                  </option>
-                                ))}
+                              .find((item: any) => item.alias === e.alias)
+                              ?.arrayData?.map((option: any) => (
+                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                                  {option.title}
+                                </option>
+                              ))}
                         </select>
                       )}
 

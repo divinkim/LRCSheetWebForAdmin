@@ -61,7 +61,7 @@ const INITIAL_INPUTS: InputsValue = {
 export default function useAddEnterprise() {
   // Authentification & Session NextAuth
   const { data: session } = useSession();
-  const adminRole = (session?.user as any)?.role || null;
+  const adminRole = (session?.user as any)?.adminRole || null;
   const enterpriseIdOfAdmin = (session?.user as any)?.EnterpriseId || null;
   const toast = useToast();
   // États des données
@@ -156,6 +156,12 @@ export default function useAddEnterprise() {
         .map((item) => ({ value: item.id, title: item.name })),
     },
     {
+      alias: "MainEnterpriseId",
+      arrayData: getEnterprises
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
       alias: "DepartmentPostId",
       arrayData: getDepartmentPosts
         .filter((item) => item.id && item.name)
@@ -182,6 +188,14 @@ export default function useAddEnterprise() {
       arrayData: [
         { title: "En cours", value: "onGoing" },
         { title: "Expiré", value: "expired" },
+      ],
+    },
+    {
+      alias: "subscriptionType",
+      arrayData: [
+        { title: "Premium", value: "premium" },
+        { title: "Pro", value: "pro" },
+        { title: "Standard", value: "standard" },
       ],
     },
   ];

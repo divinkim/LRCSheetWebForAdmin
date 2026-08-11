@@ -41,47 +41,66 @@ type UserData = {
   Enterprise?: {
     name: string | null;
     logo: string | null;
+    MainEnterpriseId: number | null
   };
 };
 
-const REQUIRED_ADMIN_ROLES = ["Super-Admin", "Supervisor-Admin"];
+const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"];
 
 export default function UsersList() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const toast = useToast();
 
-  const [search, setSearch] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
-  const [usersList, setUsersList] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Pagination
-  const [page, setPage] = useState(1);
+  // Configuration & Constantes
   const limit = 8;
 
-  // Droits d'accès
-  const userRole = (session?.user as any)?.adminRole ?? "";
-  const hasAdminAccess = REQUIRED_ADMIN_ROLES.includes(userRole);
+  // 1. Déstructuration sécurisée des données de session
+  const user = session?.user as any;
+  const adminRole = user?.adminRole ?? "";
+  const mainEnterpriseId = Number(user?.MainEnterpriseId || 0);
+  const enterpriseId = Number(user?.EnterpriseId || 0);
+  const hasAdminAccess = REQUIRED_ADMIN_ROLES.includes(adminRole);
 
-  // 1. Chargement des données
+  // 2. États locaux
+  const [usersList, setUsersList] = useState<UserData[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  // 3. Récupération des données utilisateurs
   useEffect(() => {
     async function fetchUsers() {
-      if (status !== "authenticated" || !session?.user) return;
+      if (status === "loading") return;
+
+      if (status !== "authenticated" || !session?.user) {
+        setLoading(false);
+        return;
+      }
+
+      if (!REQUIRED_ADMIN_ROLES.includes(adminRole)) return window.location.href = "/home";
 
       try {
         setLoading(true);
-        const enterpriseId = (session.user as any).EnterpriseId;
         const data = await providers.API.getAll(providers.APIUrl, "getUsers", null);
+        const rawUsers: UserData[] = data || [];
 
-        if (enterpriseId === 1) {
-          setUsersList(data || []);
-        } else {
-          const filtered = (data || []).filter(
-            (user: any) => user.EnterpriseId === enterpriseId
+        let filtered: UserData[] = [];
+
+        if (adminRole === "Super_Admin_Platform") {
+          filtered = rawUsers;
+        } else if (adminRole === "Super_Admin_Enterprise") {
+          filtered = rawUsers.filter(
+            (u) => u.Enterprise?.MainEnterpriseId === mainEnterpriseId
           );
-          setUsersList(filtered);
+        } else if (adminRole === "Enterprise_Admin") {
+          filtered = rawUsers.filter(
+            (u) => u.EnterpriseId === enterpriseId
+          );
         }
+
+        setUsersList(filtered);
       } catch (error) {
         toast.error("Erreur", "Erreur lors de la récupération des collaborateurs");
         console.error("Erreur fetchUsers:", error);
@@ -91,9 +110,9 @@ export default function UsersList() {
     }
 
     fetchUsers();
-  }, [session, status]);
+  }, [status, session, adminRole, mainEnterpriseId, enterpriseId]);
 
-  // 2. Métriques KPI Top Dashboard
+  // 4. Métriques KPI
   const stats = useMemo(() => {
     const totalUsers = usersList.length;
     const activeUsers = usersList.filter((u) => u.status === true).length;
@@ -108,10 +127,11 @@ export default function UsersList() {
     };
   }, [usersList]);
 
-  // 3. Filtrage & Recherche
+  // 5. Filtrage & Recherche
   const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
     return usersList.filter((user) => {
-      const query = search.trim().toLowerCase();
       const matchesSearch =
         !query ||
         user.firstname?.toLowerCase().includes(query) ||
@@ -128,13 +148,15 @@ export default function UsersList() {
     });
   }, [usersList, search, selectedStatus]);
 
-  // 4. Calculs de Pagination
+  //Pagination & Découpage des données
   const maxPage = Math.max(1, Math.ceil(filteredUsers.length / limit));
+
   const currentData = useMemo(() => {
     const startIdx = (page - 1) * limit;
     return filteredUsers.slice(startIdx, startIdx + limit);
   }, [filteredUsers, page, limit]);
 
+  //Gestionnaires d'événements (Handlers)
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
@@ -145,7 +167,6 @@ export default function UsersList() {
     setPage(1);
   };
 
-  // Contrôle des accès
   const checkAccessAndExecute = (action: () => void) => {
     if (!hasAdminAccess) {
       Swal.fire({
@@ -161,7 +182,6 @@ export default function UsersList() {
     }
     action();
   };
-
   // Export CSV
   const exportToCSV = useCallback(() => {
     const headers = ["Nom", "Prénom", "Email", "Genre", "Entreprise", "Statut"];
@@ -361,21 +381,18 @@ export default function UsersList() {
               <span className="hidden sm:inline">Exporter</span>
             </button>
 
-            {tablesModal.flatMap((e) =>
-              e.usersList.links.map((item, idx) => (
-                <Link
-                  key={idx}
-                  href={item.href || "#"}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-all dark:bg-blue-600 dark:hover:bg-blue-500"
-                >
-                  <FontAwesomeIcon
-                    icon={item.icon || faUserPlus}
-                    className="text-sm"
-                  />
-                  <span>{item.title}</span>
-                </Link>
-              ))
-            )}
+
+            <Link
+              href="/dashboard/RH/user/new"
+              className={`inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-all dark:bg-blue-600 dark:hover:bg-blue-500 ${!["Super_Admin_Platform", "Super_Admin_Enterprise"].includes(adminRole) ? "hidden" : "block"}`}
+            >
+              <FontAwesomeIcon
+                icon={faUserPlus}
+                className="text-sm"
+              />
+              <span>Ajouter un colaborateur</span>
+            </Link>
+
           </div>
         </div>
 
@@ -500,16 +517,14 @@ export default function UsersList() {
                       {/* Statut */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${
-                            user.status
-                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400"
-                              : "bg-rose-500/10 text-rose-600 border border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400"
-                          }`}
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${user.status
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400"
+                            : "bg-rose-500/10 text-rose-600 border border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400"
+                            }`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              user.status ? "bg-emerald-500" : "bg-rose-500"
-                            }`}
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${user.status ? "bg-emerald-500" : "bg-rose-500"
+                              }`}
                           />
                           {user.status ? "Actif" : "Inactif"}
                         </span>

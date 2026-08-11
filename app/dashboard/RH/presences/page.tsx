@@ -27,7 +27,7 @@ import AddPresenceModal from "./addPresenceModal/page";
 import UpdatePresenceModal from "./updatePresenceModal/page";
 import { useToast } from "@/components/toast";
 
-const REQUIRED_ADMIN_ROLES = ["Super-Admin", "Supervisor-Admin"];
+const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise"];
 
 export default function PresencesList() {
   const { presencesListCloned = [], adminRole, onSearch, isLoading } = PresencesListHookModal();

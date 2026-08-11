@@ -48,14 +48,17 @@ const CalendarPage = () => {
   /* ------------------------------------------------------
     Calculs des statistiques et du salaire
   ------------------------------------------------------ */
+
   const calculateMonthStats = useCallback(
     (attendanceData: any[], monthIndex: number, year: number, dailySalaryVal: number) => {
+      // Filtrage robuste prenant en compte les variations de chaînes de date
       const monthlyAttendances = attendanceData.filter((item: { createdAt: string }) => {
+        if (!item.createdAt) return false;
         const date = new Date(item.createdAt);
         return date.getMonth() === monthIndex && date.getFullYear() === year;
       });
 
-      // Calcul des présences / retards / absences
+      // Calcul précis des présences / retards / absences
       const presCount = monthlyAttendances.filter((a) => a.status === "A temps").length;
       const latesCount = monthlyAttendances.filter((a) => a.status === "En retard").length;
       const absCount = monthlyAttendances.filter((a) => a.status === "Absent").length;
@@ -64,26 +67,33 @@ const CalendarPage = () => {
       setLates(latesCount);
       setAbsences(absCount);
 
-      // Calcul du salaire
-      const calculatedSalary = monthlyAttendances.reduce((total, attendance) => {
-        const deductionPercent = getDeductionPercent(
-          attendance.status,
-          attendance.arrivalTime || "",
-          attendance.departureTime?.slice(0, 5) || "",
-          attendance.Planning?.startTime || "",
-          attendance.Planning?.endTime?.slice(0, 5) || "",
+      let totalSalaryCalculated = 0;
+
+      for (const attendance of monthlyAttendances) {
+        const status = attendance.status || "";
+        const arrivalTime = attendance.arrivalTime || "";
+        const departureTime = attendance.departureTime || "";
+        const startTime = attendance?.Planning?.startTime || "00:00";
+        const endTime = attendance?.Planning?.endTime || "00:00";
+
+        const result = getData(
+          arrivalTime,
+          departureTime,
+          startTime,
+          endTime,
+          status,
+          dailySalaryVal,
           monthIndex
         );
 
-        const deductionAmount = Math.round((deductionPercent / 100) * dailySalaryVal);
-        return total + (dailySalaryVal - deductionAmount);
-      }, 0);
+        // Cumul du solde calculé après déductions et arrondis
+        totalSalaryCalculated += result.dailySalary;
+      }
 
-      setTotalSalary(calculatedSalary.toString());
+      setTotalSalary(String(totalSalaryCalculated));
     },
     []
   );
-
   /* ------------------------------------------------------
      📌 Chargement global des données (Profil + Événements)
   ------------------------------------------------------ */
@@ -294,7 +304,7 @@ const CalendarPage = () => {
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
             <p className="text-sm font-medium text-blue-600">Salaire calculé</p>
             <h2 className="mt-3 text-2xl font-bold text-blue-700">
-              {Number(totalSalary).toLocaleString("fr-FR")} FCFA
+              {Math.round(Number(totalSalary)).toLocaleString("fr-FR")} FCFA
             </h2>
           </div>
         </div>
@@ -357,16 +367,16 @@ function getDeductionPercent(
   monthIndex: number
 ): number {
   if (status === "Absent") return 100;
-  console.log(departureTime)
-  console.log(endTime)
+
   const parts = arrivalTime.split(":");
   const minutes = Number(parts[1] || 0);
   const startHour = startTime.slice(0, 2);
 
   if (status === "En retard") {
+
     if (minutes <= 15 && arrivalTime < `${startHour}:30`) return 10;
     if (minutes > 15 && arrivalTime < `${startHour}:30`) return 15;
-    if (arrivalTime >= `${startHour}:30`) return 50;
+    if (arrivalTime > `${startHour}:30`) return 50;
   }
 
   if (
@@ -432,10 +442,10 @@ const renderEventContent = (eventInfo: any, currentMonth: number) => {
       <div className="mb-3">
         <span
           className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status === "A temps"
-              ? "bg-green-100 text-green-700"
-              : status === "En retard"
-                ? "bg-orange-100 text-orange-700"
-                : "bg-red-100 text-red-700"
+            ? "bg-green-100 text-green-700"
+            : status === "En retard"
+              ? "bg-orange-100 text-orange-700"
+              : "bg-red-100 text-red-700"
             }`}
         >
           {status}

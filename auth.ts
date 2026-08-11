@@ -49,7 +49,7 @@ export const authOptions = {
                             password: credentials.password,
                         }
                     );
-
+                    console.log(data)
                     return {
                         id: data.user.id.toString(),
                         firstname: data.user.firstname,
@@ -61,6 +61,7 @@ export const authOptions = {
                         adminRole: data.user.adminRole,
                         EnterpriseId: data.user.EnterpriseId,
                         adminService: data.user.adminService,
+                        MainEnterpriseId: data.user.MainEnterpriseId
                     };
                 } catch (error) {
                     throw new Error(
@@ -84,6 +85,7 @@ export const authOptions = {
                     refreshToken: user.refreshToken,
                     adminRole: user.adminRole,
                     EnterpriseId: user.EnterpriseId,
+                    MainEnterpriseId: user.MainEnterpriseId,
                     adminService: user.adminService,
                     //DÉFINITION DE L'EXPIRATION : 10 min à partir de maintenant
                     authTokenExpiresIn: Date.now() + 60 * 60 * 1000,
@@ -115,7 +117,7 @@ export const authOptions = {
             return session;
         },
     },
-    
+
     pages: {
         signIn: "/",
     },

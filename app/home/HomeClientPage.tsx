@@ -19,7 +19,7 @@ import HomeComponent from "./hook";
 import GetAnnualGain from "../dashboard/STATS/page";
 import SubscriptionEpiredComponent from "@/components/subscriptionExpiredComponent/page";
 
-const REQUIRED_ADMIN_ROLES = ["Super-Admin", "Supervisor-Admin"];
+const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"];
 
 export default function HomePage() {
   const { data: session } = useSession();
@@ -71,8 +71,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
       <div className="mx-auto max-w-7xl space-y-8">
-        
-        {/* 🌟 BANNIÈRE D'ACCUEIL PRO */}
+
+        {/*  BANNIÈRE D'ACCUEIL PRO */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition-all">
           {/* Halo d'ambiance en tâche de fond */}
           <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-amber-400/10 blur-3xl dark:bg-amber-500/10" />
@@ -137,7 +137,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {cardComponent.map((card, index) => {
             // Masquer la 3ème carte si non autorisé
-            if (index === 2 && !hasAdminAccess) return null;
+            if (!hasAdminAccess) return null;
 
             return (
               <Link
@@ -161,7 +161,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Bouton Consulter / Oeil */}
-                    {index !== 2 && (
+                    {!hasAdminAccess && (
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-amber-500 dark:group-hover:text-slate-950 shadow-sm">
                         <FontAwesomeIcon icon={faEye} className="text-xs" />
                       </div>
