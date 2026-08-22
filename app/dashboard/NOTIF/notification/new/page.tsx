@@ -77,7 +77,7 @@ export default function Notifications() {
                         </div>
                         <hr className='w-full lg:mt-0 dark:border-gray-500' />
                         <div className="flex w-full flex-wrap space-x-2 relative top-6 font-semibold items-center">
-                            {inputs.emails.length>0 && (<p>A: </p>)}
+                            {inputs.emails.length > 0 && (<p>A: </p>)}
                             {
                                 inputs.emails.length > 0 ?
                                     inputs.emails.map((email) => (

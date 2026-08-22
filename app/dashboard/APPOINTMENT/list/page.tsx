@@ -45,7 +45,7 @@ export type AppointmentData = {
   };
 };
 
-const REQUIRED_ADMIN_ROLES = ["Super-Admin", "Supervisor-Admin"];
+const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Admin_Enterprise", "Reception_Admin"];
 
 export default function AppointmentsList() {
   const router = useRouter();
@@ -529,7 +529,7 @@ export default function AppointmentsList() {
 
                       {/* Motif */}
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300 max-w-xs truncate">
-                        {item.reason}
+                        {item.reason ? item.reason?.slice(0, 7) + "..." : ""}
                       </td>
 
                       {/* Statut */}

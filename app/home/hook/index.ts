@@ -120,8 +120,9 @@ export default function HomeComponent() {
         }));
 
         const fcmToken = localStorage.getItem("adminFcmToken");
+        console.log("le token fcm", fcmToken)
         if (fcmToken) {
-          await providers.API.post(
+          const res = await providers.API.post(
             "https://vps118934.serveur-vps.net:4001",
             "sendFcmToken",
             null,
@@ -131,6 +132,7 @@ export default function HomeComponent() {
               fcmToken,
             }
           );
+          console.log(res)
         }
 
         const allAttendances = await providers.API.getAll(

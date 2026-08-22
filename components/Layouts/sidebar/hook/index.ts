@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import socket from "@/socket";
 import { getFirebaseMessaging } from "@/firebase/firebaseConfig";
 import { onMessage } from "firebase/messaging";
-
 import {
   faComments,
   faBullhorn,
@@ -20,7 +19,9 @@ import {
   faBriefcase,
   faBuildingCircleCheck,
   faCity,
+  faBullseye,
 } from "@fortawesome/free-solid-svg-icons";
+import { useSession } from "next-auth/react";
 
 export interface AppNotification {
   path?: string;
@@ -28,9 +29,31 @@ export interface AppNotification {
   adminPageIndex?: number | string;
   senderId?: number | string;
   receiverId?: number | string;
+  messagingType?: string;
 }
 
 const STORAGE_KEY = "storedNotificationsArray";
+
+// Helper IndexedDB
+async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("NotificationDB", 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("notifications")) return resolve([]);
+
+      const tx = db.transaction("notifications", "readwrite");
+      const store = tx.objectStore("notifications");
+      const getAllReq = store.getAll();
+
+      getAllReq.onsuccess = () => {
+        store.clear();
+        resolve(getAllReq.result || []);
+      };
+    };
+  });
+}
 
 // ==========================================
 // 1. Hook de gestion des notifications
@@ -41,13 +64,15 @@ export function useNotifications() {
     const local = localStorage.getItem(STORAGE_KEY);
     return local ? JSON.parse(local) : [];
   });
+  const { data: session } = useSession();
+  const enterpriseId = Number((session?.user as any)?.EnterpriseId || "");
 
-  // Persistance automatique dans localStorage
+  // Persistance automatique unique dans localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
   }, [notifications]);
 
-  // Sync IndexedDB au chargement
+  // Sync IndexedDB au chargement initial
   useEffect(() => {
     async function syncBackgroundNotifications() {
       try {
@@ -68,23 +93,22 @@ export function useNotifications() {
     if (!messaging) return;
 
     const unsubscribe = onMessage(messaging, (remoteMessage) => {
-      const enterpriseId = localStorage.getItem("EnterpriseId");
-      if (Number(remoteMessage.data?.EnterpriseId) === Number(enterpriseId)) {
-        const newNotif: AppNotification = {
-          path: remoteMessage.data?.path,
-          adminSectionIndex: remoteMessage.data?.adminSectionIndex,
-          adminPageIndex: remoteMessage.data?.adminPageIndex,
-          senderId: remoteMessage.data?.senderId,
-          receiverId: remoteMessage.data?.receiverId,
-        };
-        setNotifications((prev) => [...prev, newNotif]);
-      }
+      console.log(remoteMessage)
+      const newNotif: AppNotification = {
+        path: remoteMessage.data?.path,
+        adminSectionIndex: remoteMessage.data?.adminSectionIndex,
+        adminPageIndex: remoteMessage.data?.adminPageIndex,
+        senderId: remoteMessage.data?.senderId,
+        receiverId: remoteMessage.data?.receiverId,
+        messagingType: remoteMessage.data?.messagingType
+      };
+      setNotifications((prev) => [...prev, newNotif]);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Sockets WebSockets
+  // Centralisation des événements WebSockets
   useEffect(() => {
     const userId = localStorage.getItem("UserId");
 
@@ -131,23 +155,6 @@ export function useNotifications() {
     [notifications]
   );
 
-  useEffect(() => {
-    const socketData = (data: { senderId: number; receiverId: number }) => {
-      const local = localStorage.getItem("storedNotificationsArray");
-      const stored: { senderId: string; receiverId: string }[] = local ? JSON.parse(local) : [];
-      const count = stored.filter(
-        (item) =>
-          Number(item.senderId) !== data.receiverId && Number(item.receiverId) !== data.senderId
-      );
-      setNotifications(count);
-      localStorage.setItem("storedNotificationsArray", JSON.stringify(count));
-    };
-    socket.on("removeNotificationsCount", socketData);
-    return () => {
-      socket.off("removeNotificationsCount", socketData);
-    };
-  }, []);
-
   return {
     notifications,
     setNotifications,
@@ -155,27 +162,6 @@ export function useNotifications() {
     getPageCount,
     getUserCount,
   };
-}
-
-// Helper IndexedDB
-async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("NotificationDB", 2);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains("notifications")) return resolve([]);
-
-      const tx = db.transaction("notifications", "readwrite");
-      const store = tx.objectStore("notifications");
-      const getAllReq = store.getAll();
-
-      getAllReq.onsuccess = () => {
-        store.clear();
-        resolve(getAllReq.result || []);
-      };
-    };
-  });
 }
 
 // ==========================================
@@ -189,49 +175,60 @@ export function SidebarHook() {
     getPageCount: getPageNotificationsCount,
   } = useNotifications();
 
-  // Menu dynamique avec icônes pro et pertinentes
-  const ItemAside = [
-    {
-      title: "💬 Communication",
-      ItemLists: [
-        { title: "Messagerie & Tchat", href: "/dashboard/NOTIF/chat", icon: faComments },
-        { title: "Notifications groupées", href: "/dashboard/NOTIF/notifications", icon: faBullhorn },
-      ],
-    },
-    {
-      title: "🪪 Réception & RDV",
-      ItemLists: [
-        { title: "Nouveau rendez-vous", href: "/dashboard/APPOINTMENT/new", icon: faCalendarPlus },
-        { title: "Liste des rendez-vous", href: "/dashboard/APPOINTMENT/list", icon: faClipboardList },
-      ],
-    },
-    {
-      title: "👥 Gestion RH",
-      ItemLists: [
-        { title: "Ajouter un collaborateur", href: "/dashboard/RH/user/new", icon: faUserPlus },
-        { title: "Liste des collaborateurs", href: "/dashboard/RH/users", icon: faUsers },
-        { title: "Présences", href: "/dashboard/RH/presences", icon: faUserCheck },
-        { title: "Nouveau planning", href: "/dashboard/RH/planning/new", icon: faCalendarPlus },
-        { title: "Plannings horaires", href: "/dashboard/RH/roster", icon: faCalendarDays },
-      ],
-    },
-    {
-      title: "⚙️ Administration",
-      ItemLists: [
-        { title: "Rapports", href: "/dashboard/ADMIN/reporting", icon: faFileLines },
-        { title: "Nouveau contrat", href: "/dashboard/ADMIN/contract/new", icon: faFileContract },
-        { title: "Nouveau Département", href: "/dashboard/ADMIN/department/new", icon: faBuilding },
-        { title: "Nouveau Poste", href: "/dashboard/ADMIN/post/new", icon: faBriefcase },
-      ],
-    },
-    {
-      title: "🏢 Autres",
-      ItemLists: [
-        { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleCheck },
-        { title: "Liste des entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faCity },
-      ],
-    },
-  ];
+  const { data: session } = useSession();
+  const adminRole = String((session?.user as any)?.adminRole || "");
+
+
+  const accessToPage = useCallback((adminRoles: string[]) => {
+    return adminRoles.includes(adminRole);
+  }, [adminRole]);
+
+  // Utilisation de useMemo pour éviter de recalculer le menu à chaque rendu
+  const ItemAside = useMemo(() => {
+    return [
+      {
+        title: "💬 Communication",
+        ItemLists: [
+          { title: "Messagerie & Tchat", href: "/dashboard/NOTIF/chat", icon: faComments, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
+          // { title: "Notifications groupées", href: "/dashboard/NOTIF/grouped-notification/new", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
+          { title: "Notifications", href: "/dashboard/NOTIF/notification/list", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+        ],
+      },
+      {
+        title: "🪪 Réception & RDV",
+        ItemLists: [
+          { title: "Nouveau rendez-vous", href: "/dashboard/APPOINTMENT/new", icon: faCalendarPlus, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+          { title: "Liste des rendez-vous", href: "/dashboard/APPOINTMENT/list", icon: faClipboardList, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+        ],
+      },
+      {
+        title: "👥 Gestion RH",
+        ItemLists: [
+          { title: "Ajouter un collaborateur", href: "/dashboard/RH/user/new", icon: faUserPlus, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Liste des collaborateurs", href: "/dashboard/RH/users", icon: faUsers, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Présences", href: "/dashboard/RH/presences", icon: faUserCheck, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Nouveau planning", href: "/dashboard/RH/planning/new", icon: faCalendarPlus, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Plannings horaires", href: "/dashboard/RH/roster", icon: faCalendarDays, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+        ],
+      },
+      {
+        title: "⚙️ Administration",
+        ItemLists: [
+          { title: "Rapports", href: "/dashboard/ADMIN/reporting", icon: faFileLines, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Nouveau contrat", href: "/dashboard/ADMIN/contract/new", icon: faFileContract, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Nouveau Département", href: "/dashboard/ADMIN/department/new", icon: faBuilding, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Nouveau Poste", href: "/dashboard/ADMIN/post/new", icon: faBriefcase, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+        ],
+      },
+      {
+        title: "🏢 Autres",
+        ItemLists: [
+          { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleCheck, access: accessToPage(["Super_Admin_Platform"]) },
+          { title: "Liste des entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faCity, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+        ],
+      },
+    ];
+  }, [accessToPage]);
 
   return {
     ItemAside,

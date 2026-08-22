@@ -19,6 +19,7 @@ import socket from "@/socket";
 import { providers } from "@/index";
 import { useSidebarContext } from "./sidebar-context";
 import { SidebarHook } from "./hook";
+import Swal from "sweetalert2";
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
@@ -34,7 +35,7 @@ export function Sidebar() {
   } = SidebarHook();
 
   // -------------------------------------------------------------
-  // 1. Initialisation de la Socket & FCM avec les données de Session
+  // Initialisation de la Socket & FCM avec les données de Session
   // -------------------------------------------------------------
   useEffect(() => {
     if (status !== "authenticated" || !session?.user) return;
@@ -66,7 +67,7 @@ export function Sidebar() {
   }, [session, status]);
 
   // -------------------------------------------------------------
-  // 2. Auto-ouverture de la section active selon l'URL (Pathname)
+  //Auto-ouverture de la section active selon l'URL (Pathname)
   // -------------------------------------------------------------
   useEffect(() => {
     ItemAside.forEach((section, sectionIndex) => {
@@ -78,7 +79,7 @@ export function Sidebar() {
   }, [pathname, ItemAside]);
 
   // -------------------------------------------------------------
-  // 3. Fermeture automatique sur Mobile
+  //Fermeture automatique sur Mobile
   // -------------------------------------------------------------
   useEffect(() => {
     if (isMobile) setIsOpen(false);
@@ -168,7 +169,7 @@ export function Sidebar() {
                       <span className="truncate">{aside.title}</span>
                       <div className="flex items-center gap-2">
                         {sectionBadgeCount > 0 && (
-                          <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse">
+                          <span className="px-2 py-0.5 text-xs relative left-2 font-bold bg-red-500 text-white rounded-full animate-pulse">
                             {sectionBadgeCount}
                           </span>
                         )}
@@ -199,8 +200,15 @@ export function Sidebar() {
                           return (
                             <Link
                               key={pageIndex}
-                              href={list.href ?? "/"}
+                              href={list.access ? list.href : "/home"}
                               onClick={() => {
+                                if (!list.access) {
+                                  return Swal.fire({
+                                    icon:'info',
+                                    title: "Violation d'accès",
+                                    text: "Vous n'avez aucun droit d'accéder à cette. Veuillez contacter votre administrateur"
+                                  })
+                                }
                                 if (isMobile) setIsOpen(false);
                                 if (sectionIndex !== 0 || pageIndex !== 0) {
                                   const filtered = storedNotificationsArray.filter(
@@ -226,8 +234,8 @@ export function Sidebar() {
 
                               {hasNotification && pageBadgeCount > 0 && (
                                 <span className={cn(
-                                  "px-1.5 py-0.5 text-[10px] font-bold rounded-full",
-                                  isActive ? "bg-slate-950 text-white" : "bg-red-500 text-white"
+                                  "px-2.5 py-0.5 text-[10px] relative left-2 font-bold rounded-full",
+                                  isActive ? "bg-red-500 text-white" : "bg-red-500 text-white"
                                 )}>
                                   {pageBadgeCount}
                                 </span>

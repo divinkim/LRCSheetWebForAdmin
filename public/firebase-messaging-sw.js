@@ -62,6 +62,7 @@ messaging.onBackgroundMessage(async (payload) => {
     path: payload?.data?.path || "/",
     adminSectionIndex: payload?.data?.adminSectionIndex || "0",
     adminPageIndex: payload?.data?.adminPageIndex || "0",
+    messagingType: payload?.data?.messagingType || "",
     senderId: payload?.data?.senderId,
     receiverId: payload?.data?.receiverId,
   };

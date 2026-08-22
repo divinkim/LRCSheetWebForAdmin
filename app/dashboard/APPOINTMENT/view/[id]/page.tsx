@@ -42,7 +42,7 @@ function AppointmentSkeleton() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 font-sans animate-pulse">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Titre Skeleton */}
         <div className="h-7 w-64 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
 
@@ -123,17 +123,16 @@ export default function ViewAppointment() {
     (async () => {
       try {
         const id = window.location.href.split("/").pop();
-        if (id && !isNaN(Number(id))) {
-          const res = await providers.API.getOne(
-            "https://vps118934.serveur-vps.net:4001",
-            "getAppointment",
-            Number(id)
-          );
-            console.log(res)
-          if (res) {
-            setAppointment(res);
-          }
+        const res = await providers.API.getOne(
+          "https://vps118934.serveur-vps.net:4001",
+          "appointment",
+          Number(id)
+        );
+        console.log(res)
+        if (res) {
+          setAppointment(res);
         }
+
       } catch (error) {
         console.error("Erreur lors de la récupération du rendez-vous:", error);
       } finally {
@@ -280,7 +279,7 @@ export default function ViewAppointment() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Motif du Rendez-vous</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Motif ou raison</h3>
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-sm">

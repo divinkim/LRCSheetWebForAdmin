@@ -1,567 +1,846 @@
-"use client";
+'use client';
 
-import { useMemo, useState, useEffect, KeyboardEvent } from "react";
-import Link from "next/link";
-import { ClipLoader } from "react-spinners";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  faMessage,
-  faPaperclip,
-  faPhone,
-  faSearch,
-  faTimes,
-  faArrowLeft,
-  faPaperPlane,
-  faFolderOpen,
-  faFileAlt,
-  faVideo,
-} from "@fortawesome/free-solid-svg-icons";
+  User,
+  Phone,
+  Video,
+  Paperclip,
+  Send,
+  XCircle,
+  ArrowLeft,
+  Mic,
+  MicOff,
+  Camera,
+  CameraOff,
+  Volume2,
+} from 'lucide-react';
+import { useCollaboratorsChat } from './hook';
+import { providers } from '@/index';
+import { SidebarHook } from '@/components/Layouts/sidebar/hook';
+interface CallState {
+  isActive: boolean;
+  type: 'audio' | 'video';
+  isIncoming: boolean;
+  partner: {
+    id: number;
+    firstname: string;
+    lastname?: string;
+    photo?: string;
+  };
+  status: 'calling' | 'connected' | 'incoming';
+}
 
-import { providers } from "@/index";
-import socket from "@/socket";
-import { useSidebarContext } from "@/components/Layouts/sidebar/sidebar-context";
-import { useChat } from "./hook";
-
-// On importe uniquement CallOverlay
-import CallOverlay from "@/components/callOverlay";
-
-type ChatMessage = {
-  id?: number;
-  role: string;
-  receiverId: number;
-  senderId: number;
-  content: string;
-  file?: string;
-  createdAt: string;
-  title?: string | null;
-  callStatus?: boolean;
-  callDuration?: number;
+const ICE_SERVERS: RTCConfiguration = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ],
 };
 
-export default function Chat() {
-  const chat = useChat();
+export const CollaboratorsSkeleton = () => {
+  return (
+    <div className="flex h-screen w-full bg-slate-900 text-slate-100">
+      <div className="flex flex-col flex-1 bg-white max-w-md border-r border-slate-200">
+        <div className="px-4 py-6 bg-slate-900 flex justify-between items-center shadow-md animate-pulse">
+          <div className="h-6 w-32 bg-slate-800 rounded-md" />
+          <div className="h-6 w-24 bg-slate-800 rounded-full" />
+        </div>
+        <div className="flex-1 px-4 py-2 space-y-4 overflow-y-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((key) => (
+            <div key={key} className="flex items-center py-3.5 border-b border-slate-100 animate-pulse">
+              <div className="w-12 h-12 rounded-full bg-slate-200 mr-3 shrink-0" />
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="h-4 w-36 bg-slate-200 rounded-md" />
+                  <div className="h-3 w-10 bg-slate-200 rounded-md" />
+                </div>
+                <div className="h-3 w-48 bg-slate-100 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
+export default function ChatPage() {
   const {
-    userData,
-    setUserData,
-    data,
-    setData,
-    sendChatMessage,
-    chatMessage,
-    removeNotificationCount,
-    ref,
-    usersCloned,
-    onSearch,
-    UserId,
-    AdminId,
+    collaborators,
+    onlineUserIds,
+    conversations,
+    selectedCollaborator,
+    selectCollaborator,
+    messages,
+    inputText,
+    setInputText,
+    selectedFile,
+    setSelectedFile,
+    sendMessage,
+    socket,
     loader,
-    notificationsCountLive,
-    notificationsCompter,
-    startAudioCall,
-    startVideoCall,
-    usersOnLine,
-  } = chat;
+    currentUserId,
+  } = useCollaboratorsChat();
+  const { storedNotificationsArray, setStoredNotificationsArray } = SidebarHook()
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef<boolean>(true);
 
-  const [showChat, setShowChat] = useState(false);
-  const { isMobile } = useSidebarContext();
+  // Appels & WebRTC States
+  const [callState, setCallState] = useState<CallState | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [callDuration, setCallDuration] = useState(0);
 
-  const currentUserId = AdminId ?? UserId;
+  // WebRTC Refs
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Défilement automatique vers le bas lors du changement d'utilisateur ou de message
+  // Signalisation temporaire (stockage des offres/candidates entrantes)
+  const incomingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // SCROLL
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+  };
+
   useEffect(() => {
-    if (userData.UserId && ref?.current) {
-      ref.current.scrollIntoView({ behavior: "smooth" });
+    if (selectedCollaborator) {
+      isAtBottomRef.current = true;
+      scrollToBottom(false);
     }
-  }, [userData.UserId, chatMessage, ref]);
+  }, [selectedCollaborator]);
 
-  // Regroupement des messages par date
-  const chatMessageGrouped = useMemo(() => {
-    return chatMessage.reduce((acc, item) => {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
+  useEffect(() => {
+    if (messages.length > 0 && isAtBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [messages]);
 
-      const currentDate = new Date(item.createdAt);
-      let dateLabel = "";
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    isAtBottomRef.current = scrollHeight - scrollTop - clientHeight < 50;
+  };
 
-      if (today.toDateString() === currentDate.toDateString()) {
-        dateLabel = "Aujourd'hui";
-      } else if (yesterday.toDateString() === currentDate.toDateString()) {
-        dateLabel = "Hier";
-      } else {
-        dateLabel = currentDate.toLocaleDateString([], {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
+  // Chronomètre de communication
+  useEffect(() => {
+    if (callState?.status === 'connected') {
+      timerRef.current = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [callState?.status]);
+
+  // INITIALISATION ET ÉCOUTE WEBRTC / SOCKET
+  useEffect(() => {
+    if (!socket) return;
+
+    // 1. Appel entrant
+    socket.on('incomingCall', (data: any) => {
+      incomingOfferRef.current = data.offer || null;
+      setCallState({
+        isActive: true,
+        type: data.type || 'audio',
+        isIncoming: true,
+        status: 'incoming',
+        partner: {
+          id: data.from,
+          firstname: data.callerProfile?.firstname || 'Collaborateur',
+          lastname: data.callerProfile?.lastname || '',
+          photo: data.callerProfile?.photo,
+        },
+      });
+    });
+
+    // 2. L'interlocuteur a accepté l'appel
+    socket.on('callAnswered', async (data: { answer: RTCSessionDescriptionInit }) => {
+      setCallState((prev) => (prev ? { ...prev, status: 'connected' } : null));
+      if (pcRef.current && data.answer) {
+        await pcRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+      }
+    });
+
+    // 3. Réception d'un candidat ICE distant
+    socket.on('iceCandidate', async (data: { candidate: RTCIceCandidateInit }) => {
+      try {
+        if (pcRef.current && data.candidate) {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      } catch (e) {
+        console.error("Erreur lors de l'ajout du candidat ICE", e);
+      }
+    });
+
+    // 4. Appel rejeté ou terminé
+    socket.on('callRejected', () => handleEndCallLocal());
+    socket.on('callEnded', () => handleEndCallLocal());
+
+    return () => {
+      socket.off('incomingCall');
+      socket.off('callAnswered');
+      socket.off('iceCandidate');
+      socket.off('callRejected');
+      socket.off('callEnded');
+    };
+  }, [socket]);
+
+  // Création & Configuration de PeerConnection
+  const createPeerConnection = (targetUserId: number) => {
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+
+    // Envoi des candidats ICE au destinataire
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket?.emit('iceCandidate', {
+          to: targetUserId,
+          candidate: event.candidate,
         });
       }
+    };
 
-      if (!acc[dateLabel]) {
-        acc[dateLabel] = [];
+    // Réception du flux média distant (Voix + Vidéo)
+    pc.ontrack = (event) => {
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
       }
-      acc[dateLabel].push(item);
-      return acc;
-    }, {} as Record<string, ChatMessage[]>);
-  }, [chatMessage]);
+      event.streams[0].getTracks().forEach((track) => {
+        remoteStreamRef.current?.addTrack(track);
+      });
 
-  const getLatestChatMessage = (targetUserId: number) => {
-    const message = chatMessage
-      .filter(
-        (item) =>
-          (item.senderId === targetUserId && item.receiverId === currentUserId) ||
-          (item.senderId === currentUserId && item.receiverId === targetUserId)
-      )
-      .at(-1);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      }
+    };
+
+    pcRef.current = pc;
+    return pc;
+  };
+
+  // Démarrer un appel (Émetteur)
+  const triggerStartCall = async (type: 'audio' | 'video') => {
+    if (!selectedCollaborator) return;
+
+    setIsMuted(false);
+    setIsVideoOff(false);
+    setIsSpeakerOn(true);
+
+    setCallState({
+      isActive: true,
+      type,
+      isIncoming: false,
+      status: 'calling',
+      partner: {
+        id: selectedCollaborator.id,
+        firstname: selectedCollaborator.firstname,
+        lastname: selectedCollaborator.lastname,
+        photo: selectedCollaborator.photo,
+      },
+    });
+
+    try {
+      // Capture micro / caméra
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === 'video',
+      });
+
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      const pc = createPeerConnection(selectedCollaborator.id);
+
+      // Ajout des flux locaux
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      // Création de l'offre WebRTC
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socket?.emit('callUser', {
+        to: selectedCollaborator.id,
+        from: currentUserId,
+        type,
+        offer,
+        callerProfile: {
+          firstname: 'Mon Profil',
+          lastname: '',
+        },
+      });
+    } catch (err) {
+      console.error('Erreur accès média (micro/caméra):', err);
+      handleEndCallLocal();
+    }
+  };
+
+  // Accepter l'appel (Récepteur)
+  const acceptCall = async () => {
+    if (!callState) return;
+
+    try {
+      const type = callState.type;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === 'video',
+      });
+
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      const pc = createPeerConnection(callState.partner.id);
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      if (incomingOfferRef.current) {
+        await pc.setRemoteDescription(new RTCSessionDescription(incomingOfferRef.current));
+      }
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      setCallState((prev) => (prev ? { ...prev, status: 'connected' } : null));
+
+      socket?.emit('answerCall', {
+        to: callState.partner.id,
+        answer,
+      });
+    } catch (err) {
+      console.error("Erreur lors de l'acceptation de l'appel:", err);
+      hangUpCall();
+    }
+  };
+
+  // Raccrocher
+  const hangUpCall = () => {
+    if (callState) {
+      if (callState.status === 'incoming') {
+        socket?.emit('rejectCall', { to: callState.partner.id, from: currentUserId });
+      } else {
+        socket?.emit('endCall', { to: callState.partner.id, from: currentUserId });
+      }
+    }
+    handleEndCallLocal();
+  };
+
+  // Nettoyage local du PeerConnection et des flux Média
+  const handleEndCallLocal = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach((track) => track.stop());
+      remoteStreamRef.current = null;
+    }
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+
+    incomingOfferRef.current = null;
+    setCallState(null);
+    setCallDuration(0);
+  };
+
+  // Toggle Micro (Mute / Unmute)
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = isMuted;
+        setIsMuted(!isMuted);
+      }
+    }
+  };
+
+  // Toggle Caméra (On / Off)
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = isVideoOff;
+        setIsVideoOff(!isVideoOff);
+      }
+    }
+  };
+
+  // Toggle Haut-parleur / Sourdine audio distante
+  const toggleSpeaker = () => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = isSpeakerOn;
+      setIsSpeakerOn(!isSpeakerOn);
+    }
+  };
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const isUserOnline = (id: number) => {
+    return Array.isArray(onlineUserIds) && onlineUserIds.includes(id);
+  };
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!inputText.trim() && !selectedFile) return;
+    sendMessage();
+    isAtBottomRef.current = true;
+    setTimeout(() => scrollToBottom(true), 50);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile({
+        uri: URL.createObjectURL(file),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        file: file,
+      } as any);
+    }
+  };
+
+  const containsHtml = (text: string) => /<[a-z][\s\S]*>/i.test(text);
+
+  const formatMessageTime = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+  };
+
+  const renderLastMessageOrStatus = (collabId: number) => {
+    const online = isUserOnline(collabId);
+    const convState = conversations[collabId];
+
+    if (convState && convState.lastMessage) {
+      const cleanContent = convState.lastMessage.replace(/<[^>]*>?/gm, '');
+      return {
+        text: cleanContent,
+        time: formatMessageTime(convState.lastMessageDate),
+      };
+    }
 
     return {
-      content: message?.content ?? "Laissez un message",
-      date: message?.createdAt
-        ? new Date(message.createdAt).toLocaleDateString([], {
-          day: "numeric",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-        : "",
+      text: online ? 'Disponible pour discuter' : 'Hors ligne',
+      time: online ? 'en ligne' : '',
     };
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (data.content?.trim() || data.files) {
-        sendChatMessage();
-      }
-    }
-  };
+  function getNotificationCount(userId: number) {
+    const count = storedNotificationsArray.filter(item => Number(item.senderId) === userId
+      && item.messagingType === "chat"
+    );
+    return count.length;
+  }
+
+  function removeNoticationCount(userId: number) {
+    const notifications = storedNotificationsArray.filter(item => Number(item.senderId) !== userId
+      && item.messagingType === "chat"
+    );
+    console.log(notifications)
+    setStoredNotificationsArray(notifications);
+    localStorage.setItem("storedNotificationsArray", JSON.stringify(notifications))
+  }
+
+  if (loader) {
+    return <CollaboratorsSkeleton />;
+  }
 
   return (
-    <div className="flex h-[calc(100vh-120px)] max-h-[800px] min-h-[500px] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      {/* Gestion centralisée des modales et flux d'appels : transmission de l'état unique de useChat */}
-      <CallOverlay {...chat} />
+    <div className="flex h-[640px] w-full bg-slate-900 overflow-hidden font-sans relative">
+      {/* Élément HTML Audio/Video masqué pour restituer le son distant lors des appels audio uniquement */}
+      <audio ref={(el) => { if (el && remoteStreamRef.current && callState?.type === 'audio') el.srcObject = remoteStreamRef.current; }} autoPlay />
 
-      {/* Sidebar: Liste des Utilisateurs */}
-      <div
-        className={`flex flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 transition-all duration-300 ${isMobile && showChat
-            ? "hidden"
-            : isMobile && !showChat
-              ? "w-full"
-              : "w-full max-w-[360px] lg:max-w-[400px]"
-          }`}
-      >
-        {/* En-tête Sidebar */}
-        <header className="flex items-center justify-between border-b border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
-          <h1 className="text-xl font-bold text-slate-700 dark:text-white">
-            LRCSheet Chat
-          </h1>
-        </header>
-
-        {/* Barre de Recherche */}
-        <div className="p-3 border-b border-slate-200 dark:border-slate-700">
-          <div className="relative">
-            <input
-              type="text"
-              onChange={(e) => onSearch(e.target.value)}
-              placeholder="Rechercher un collaborateur..."
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-amber-400"
-            />
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-600 dark:text-slate-400"
-            />
+      <div className="flex w-full h-full bg-slate-100 overflow-hidden">
+        {/* SIDEBAR COLLABORATEURS */}
+        <div
+          className={`${selectedCollaborator ? 'hidden md:flex' : 'flex'
+            } w-full md:w-80 lg:w-96 flex-col bg-white border-r border-slate-200 shrink-0 h-full`}
+        >
+          <div className="px-4 py-5 bg-slate-900 flex justify-between items-center shadow-md">
+            <h1 className="text-xl font-bold text-white tracking-wide">Discussions</h1>
+            <span className="bg-amber-500 px-3 py-1 rounded-full text-xs font-bold text-slate-900">
+              LRCSheet Pro
+            </span>
           </div>
-        </div>
 
-        {/* Liste des conversations */}
-        <div className="flex-1 overflow-y-auto">
-          {usersCloned.length > 0 && !loader ? (
-            usersCloned.map((item, index) => {
-              if (item.UserId === currentUserId) return null;
-
-              const isSelected = userData.UserId === item.UserId;
-              const isOnline = usersOnLine.includes(item.UserId);
-              const latestMsg = getLatestChatMessage(item.UserId);
-              const unreadCount =
-                notificationsCountLive?.status &&
-                  notificationsCountLive?.UserId === item.UserId
-                  ? notificationsCountLive.count
-                  : notificationsCompter(item.UserId);
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {collaborators.map((item) => {
+              const online = isUserOnline(item.id);
+              const statusData = renderLastMessageOrStatus(item.id);
+              const isSelected = selectedCollaborator?.id === item.id;
 
               return (
-                <div
-                  key={item.UserId || index}
+                <button
+                  key={item.id}
                   onClick={() => {
-                    setUserData({
-                      UserId: item.UserId,
-                      fcmToken: item.fcmToken,
-                      lastname: item.User?.lastname || "",
-                      firstname: item.User?.firstname || "",
-                      photo: String(item.User?.photo || ""),
-                      email: item.User?.email || "",
-                      EnterpriseId: item.UserEnterpriseId,
-                    });
-                    setData({
-                      ...data,
-                      receiverId: item.UserId,
-                    });
-                    setShowChat(true);
-                    socket.emit("onReadMessage", {
-                      senderId: UserId,
-                      receiverId: item.UserId,
-                    });
+                    selectCollaborator(item)
+                    removeNoticationCount(item.id)
                   }}
-                  className={`flex items-center gap-3 border-b border-slate-100 p-3.5 cursor-pointer transition-colors dark:border-slate-700/60 ${isSelected
-                      ? "bg-blue-50/80 border-l-4 border-l-blue-600 dark:bg-slate-800 dark:border-l-amber-400"
-                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  className={`w-full text-left flex items-center px-4 py-3.5 transition-colors ${isSelected ? 'bg-slate-100' : 'hover:bg-slate-50 bg-white'
                     }`}
                 >
-                  {/* Avatar + Indicator en ligne */}
                   <div className="relative shrink-0">
-                    <img
-                      src={
-                        item?.User?.photo
-                          ? `${providers.APIUrl}/images/${item?.User?.photo}`
-                          : "/images/clientProfile.png"
-                      }
-                      alt="Avatar"
-                      className="h-12 w-12 rounded-full object-cover ring-2 ring-transparent"
-                    />
+                    {item.photo ? (
+                      <img
+                        src={`${providers.APIUrl}/images/${item.photo}`}
+                        alt={item.firstname}
+                        className="w-12 h-12 rounded-full object-cover bg-slate-100"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex justify-center items-center">
+                        <User className="w-5 h-5 text-slate-500" />
+                      </div>
+                    )}
                     <span
-                      className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${isOnline ? "bg-green-500" : "bg-red-500"
+                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${online ? 'bg-emerald-500' : 'bg-slate-300'
                         }`}
                     />
                   </div>
 
-                  {/* Infos Contact */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h2 className="text-sm font-semibold text-slate-700 truncate dark:text-slate-100">
-                        {item?.User?.firstname}{" "}
-                        {providers.reduceLengthOfText(
-                          item?.User?.lastname,
-                          12
-                        )}
-                      </h2>
-                      {latestMsg.date && (
-                        <span className="text-[11px] text-slate-600 shrink-0 dark:text-slate-400">
-                          {latestMsg.date}
-                        </span>
-                      )}
+                  <div className="flex-1 ml-3 overflow-hidden">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-semibold text-slate-800 truncate">
+                        {item.firstname} {item.lastname || ''}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium shrink-0 ml-1">
+                        {statusData.time}
+                      </span>
                     </div>
-
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-slate-600 truncate dark:text-slate-400">
-                        {providers.reduceLengthOfText(
-                          latestMsg.content.replace(/<[^>]*>/g, ""),
-                          28
-                        )}
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        {statusData.text}
                       </p>
-                      {unreadCount > 0 && (
-                        <span className="ml-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm">
-                          {unreadCount}
-                        </span>
-                      )}
+                      <p className={`${getNotificationCount(item.id) === 0 ? "hidden" : "block"} bg-red-500 text-xs text-white rounded-full py-1 px-2.5`}>
+                        {getNotificationCount(item.id)}
+                      </p>
                     </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : loader ? (
-            <div className="flex h-64 items-center justify-center">
-              <ClipLoader size={28} color="#2563eb" />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <FontAwesomeIcon
-                icon={faFolderOpen}
-                className="text-4xl text-slate-600 mb-2"
-              />
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Aucun contact trouvé
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Main Chat Box */}
-      <div
-        className={`flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-950/50 ${isMobile && !showChat ? "hidden" : "flex"
-          }`}
-      >
-        {!userData.UserId ? (
-          /* Empty State */
-          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <div className="mb-4 rounded-full bg-blue-50 p-6 dark:bg-slate-800">
-              <FontAwesomeIcon
-                icon={faMessage}
-                className="text-4xl text-blue-600 dark:text-amber-400"
-              />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-              Vos messages
-            </h3>
-            <p className="mt-1 text-sm text-slate-600 max-w-sm dark:text-slate-400">
-              Sélectionnez un collaborateur dans la liste de gauche pour démarrer ou continuer une discussion.
-            </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          /* Fenêtre de Conversation Active */
-          <div className="flex h-full flex-col">
-            {/* Header Chat */}
-            <header className="flex items-center justify-between border-b border-slate-200 bg-white p-3.5 shrink-0 dark:border-slate-700 dark:bg-slate-900">
-              <div className="flex items-center gap-3">
+        </div>
+
+        {/* ZONE DE CHAT */}
+        {selectedCollaborator ? (
+          <div className="flex-1 flex flex-col h-full bg-slate-100 min-w-0">
+            <div className="px-4 py-3 bg-slate-900  flex items-center justify-between shadow-sm shrink-0">
+              <div className="flex items-center min-w-0">
                 <button
-                  onClick={() => setShowChat(false)}
-                  className="mr-1 rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+                  onClick={() => selectCollaborator(null as any)}
+                  className="p-1.5 mr-2 rounded-full hover:bg-slate-800 text-white md:hidden"
+                  title="Retour"
                 >
-                  <FontAwesomeIcon icon={faArrowLeft} className="text-lg" />
+                  <ArrowLeft className="w-5 h-5" />
                 </button>
 
-                <div className="relative">
+                {selectedCollaborator.photo ? (
                   <img
-                    src={
-                      userData.photo
-                        ? `${providers.APIUrl}/images/${userData.photo}`
-                        : "/images/clientProfile.png"
-                    }
-                    alt="Profile"
-                    className="h-10 w-10 rounded-full object-cover"
+                    src={`${providers.APIUrl}/images/${selectedCollaborator.photo}`}
+                    alt={selectedCollaborator.firstname}
+                    className="w-10 h-10 rounded-full object-cover mr-3 bg-slate-800 border border-slate-700 shrink-0"
                   />
-                  <span
-                    className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900 ${usersOnLine.includes(userData.UserId)
-                        ? "bg-green-500"
-                        : "bg-red-500"
-                      }`}
-                  />
-                </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex justify-center items-center mr-3 shrink-0">
+                    <User className="w-5 h-5 text-slate-400" />
+                  </div>
+                )}
 
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-700 dark:text-white">
-                    {userData.firstname} {userData.lastname}
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold text-white truncate">
+                    {selectedCollaborator.firstname} {selectedCollaborator.lastname || ''}
                   </h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    {usersOnLine.includes(userData.UserId)
-                      ? "En ligne"
-                      : "Hors ligne"}
+                  <p className="text-xs text-amber-400 font-medium">
+                    {isUserOnline(selectedCollaborator.id) ? 'en ligne' : 'hors ligne'}
                   </p>
                 </div>
               </div>
 
-              {/* Actions Header (Appels WebRTC) */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center space-x-2 shrink-0">
                 <button
-                  onClick={startAudioCall}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
-                  title="Lancer un appel audio"
+                  onClick={() => {
+                    return
+                    triggerStartCall('audio')
+                  }}
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors"
+                  title="Appel Audio"
                 >
-                  <FontAwesomeIcon icon={faPhone} className="text-sm" />
+                  <Phone className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={startVideoCall}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
-                  title="Lancer un appel vidéo"
+                  onClick={() => {
+                    return
+                    triggerStartCall('video')
+                  }}
+                  className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
+                  title="Appel Vidéo"
                 >
-                  <FontAwesomeIcon icon={faVideo} className="text-sm" />
+                  <Video className="w-4 h-4" />
                 </button>
               </div>
-            </header>
+            </div>
 
-            {/* Zone des Messages (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {Object.keys(chatMessageGrouped).map((date) => {
-                const isGroupVisible = chatMessageGrouped[date].some(
-                  (item) =>
-                    (item.senderId === currentUserId &&
-                      item.receiverId === userData.UserId) ||
-                    (item.senderId === userData.UserId &&
-                      item.receiverId === currentUserId)
-                );
-
-                if (!isGroupVisible) return null;
+            {/* MESSAGES */}
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="flex-1 p-4 overflow-y-auto space-y-3"
+            >
+              {messages.map((item) => {
+                const isMe = item.senderId === currentUserId;
+                const isHtmlMessage = containsHtml(item.content);
 
                 return (
-                  <div key={date} className="space-y-4">
-                    {/* Date Divider */}
-                    <div className="flex items-center my-4">
-                      <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
-                      <span className="px-3 text-[11px] font-medium text-slate-600 bg-slate-100 rounded-full py-0.5 dark:bg-slate-800 dark:text-slate-400">
-                        {date}
-                      </span>
-                      <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
-                    </div>
-
-                    {/* Messages du groupe */}
-                    {chatMessageGrouped[date].map((chat, idx) => {
-                      const isMe = chat.senderId === currentUserId;
-                      const isOther = chat.senderId === userData.UserId;
-
-                      if (!isMe && !isOther) return null;
-
-                      return (
+                  <div
+                    key={item.id}
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-xs ${isMe
+                        ? 'bg-blue-600 text-white rounded-tr-none'
+                        : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'
+                        }`}
+                    >
+                      {isHtmlMessage ? (
                         <div
-                          key={chat.id || idx}
-                          className={`flex ${isMe ? "justify-end" : "justify-start"
-                            }`}
-                        >
-                          <div
-                            className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${isMe
-                                ? "bg-blue-600 text-white rounded-br-none"
-                                : "bg-white text-slate-700 rounded-bl-none border border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
-                              }`}
-                          >
-                            {chat.title && (
-                              <p className="font-semibold text-sm mb-1">
-                                {chat.title}
-                              </p>
-                            )}
-
-                            {/* Bulle Texte */}
-                            <div
-                              className="leading-relaxed break-words [&_p]:mb-1 [&_ul]:list-disc [&_ul]:pl-4"
-                              dangerouslySetInnerHTML={{
-                                __html: chat.content,
-                              }}
-                            />
-
-                            {/* Fichier Joint */}
-                            {chat.file && (
-                              <div className="mt-2 pt-2 border-t border-white/20 dark:border-slate-700">
-                                <a
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  href={`${providers.APIUrl}/images/${chat.file}`}
-                                  className={`flex items-center gap-2 p-2 rounded-lg text-sm font-medium transition ${isMe
-                                      ? "bg-blue-700 hover:bg-blue-800 text-white"
-                                      : "bg-slate-50 hover:bg-slate-100 text-blue-600 dark:bg-slate-900 dark:text-amber-400"
-                                    }`}
-                                >
-                                  <FontAwesomeIcon
-                                    icon={faFileAlt}
-                                    className="text-base"
-                                  />
-                                  <span className="truncate">
-                                    Pièce jointe
-                                  </span>
-                                </a>
-                              </div>
-                            )}
-
-                            {/* Statut d'appel */}
-                            {chat.callStatus && (
-                              <div className="flex items-center gap-1.5 mt-1.5 text-sm">
-                                <FontAwesomeIcon
-                                  icon={faPhone}
-                                  className={
-                                    chat.callStatus
-                                      ? "text-amber-400"
-                                      : "text-rose-400"
-                                  }
-                                />
-                                <span>{chat.callDuration ?? 0}s</span>
-                              </div>
-                            )}
-
-                            {/* Horodatage */}
-                            <div
-                              className={`mt-1 text-[10px] text-right ${isMe
-                                  ? "text-blue-100"
-                                  : "text-slate-600 dark:text-slate-400"
-                                }`}
-                            >
-                              {new Date(chat.createdAt).toLocaleTimeString(
-                                [],
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          className="prose prose-sm max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ __html: item.content }}
+                        />
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words leading-relaxed">
+                          {item.content}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 );
               })}
-              <div ref={ref} />
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Footer */}
-            <footer className="p-3 bg-white border-t border-slate-200 shrink-0 dark:border-slate-700 dark:bg-slate-900">
-              {/* Preview de fichier en cours d'envoi */}
-              {data.files && (
-                <div className="mb-2 flex items-center justify-between rounded-lg bg-blue-50 p-2 border border-blue-100 dark:bg-slate-800 dark:border-slate-700">
-                  <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-amber-400">
-                    <FontAwesomeIcon icon={faPaperclip} />
-                    <span className="font-medium truncate">{data.files}</span>
-                  </div>
-                  <button
-                    onClick={() => setData({ ...data, files: "" })}
-                    className="text-slate-600 hover:text-slate-700 dark:hover:text-slate-200"
-                  >
-                    <FontAwesomeIcon icon={faTimes} />
-                  </button>
+            {/* APERÇU FICHIER */}
+            {selectedFile && (
+              <div className="px-4 py-2 bg-amber-50 flex items-center justify-between border-t border-amber-200 shrink-0">
+                <div className="flex items-center truncate mr-2">
+                  <Paperclip className="w-4 h-4 text-amber-600 mr-2 shrink-0" />
+                  <span className="text-xs text-slate-700 font-medium truncate">
+                    {selectedFile.name}
+                  </span>
                 </div>
-              )}
-
-              <div className="flex items-end gap-2">
-                <input
-                  onChange={async (e) => {
-                    const files = e.target.files?.[0];
-                    if (!files) return;
-                    const response = await providers.API.post(
-                      providers.APIUrl,
-                      "sendFiles",
-                      null,
-                      { files }
-                    );
-                    setData({
-                      ...data,
-                      files: response.filename,
-                    });
-                  }}
-                  type="file"
-                  id="fileUpload"
-                  className="hidden"
-                />
-
-                {/* Bouton Pièce Jointe */}
-                <label
-                  htmlFor="fileUpload"
-                  className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-                  title="Joindre un fichier"
-                >
-                  <FontAwesomeIcon icon={faPaperclip} className="text-sm" />
-                </label>
-
-                {/* Champ Texte */}
-                <div className="flex-1">
-                  <textarea
-                    value={data.content}
-                    onChange={(e) =>
-                      setData({ ...data, content: e.target.value })
-                    }
-                    onKeyDown={handleKeyDown}
-                    placeholder="Écrivez votre message..."
-                    rows={1}
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 placeholder-slate-600 outline-none transition focus:border-blue-600 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:focus:border-amber-400"
-                  />
-                </div>
-
-                {/* Bouton Envoyer */}
                 <button
-                  onClick={sendChatMessage}
-                  disabled={!data.content?.trim() && !data.files}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+                  onClick={() => setSelectedFile(null)}
+                  className="text-red-600 hover:text-red-800"
                 >
-                  <FontAwesomeIcon icon={faPaperPlane} className="text-sm" />
+                  <XCircle className="w-5 h-5" />
                 </button>
               </div>
-            </footer>
+            )}
+
+            {/* FORMULAIRE SAISIE */}
+            <form
+              onSubmit={handleSendMessage}
+              className="p-3 bg-white flex items-center space-x-2 border-t border-slate-200 shrink-0"
+            >
+              <div className="flex-1 bg-slate-100 flex items-center rounded-full px-3 py-1.5 border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-1.5 text-slate-500 hover:text-slate-700 rounded-full"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Message..."
+                  className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 px-2 text-sm focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex justify-center items-center shadow-md transition-colors shrink-0"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="hidden md:flex flex-1 justify-center items-center dark:bg-slate-50 text-slate-400">
+            Sélectionnez une discussion pour commencer à échanger.
           </div>
         )}
       </div>
+
+      {/* MODALE WEBRTC D'APPEL AUDIO & VIDÉO */}
+      {callState?.isActive && (
+        <div className="fixed inset-0 z-50 bg-slate-950/95 flex flex-col justify-between items-center p-6 backdrop-blur-sm">
+          {/* Header Appel */}
+          <div className="flex flex-col items-center mt-4 z-10">
+            <div className="flex items-center bg-slate-900 px-4 py-1.5 rounded-full mb-2 border border-slate-800 space-x-2">
+              {callState.type === 'video' ? (
+                <Video className="w-4 h-4 text-blue-500" />
+              ) : (
+                <Phone className="w-4 h-4 text-blue-500" />
+              )}
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">
+                Appel {callState.type}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 font-medium">
+              {callState.status === 'calling' && 'Sonne...'}
+              {callState.status === 'incoming' && 'Appel entrant...'}
+              {callState.status === 'connected' && formatTimer(callDuration)}
+            </p>
+          </div>
+
+          {/* ZONE AFFICHAGE FLUX (AVATAR OU VIDÉO WEBRTC) */}
+          <div className="relative w-full max-w-2xl flex-1 flex justify-center items-center my-4 overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl">
+            {callState.type === 'video' && callState.status === 'connected' ? (
+              <>
+                {/* Vidéo de l'interlocuteur (Remote Stream) */}
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Micro-aperçu de ma propre vidéo (Local Stream) */}
+                <div className="absolute bottom-4 right-4 w-32 h-44 bg-slate-950 rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </>
+            ) : (
+              /* Affichage par défaut : Avatar de l'interlocuteur */
+              <div className="flex flex-col items-center">
+                {callState.partner.photo ? (
+                  <img
+                    src={`${providers.APIUrl}/images/${callState.partner.photo}`}
+                    alt={callState.partner.firstname}
+                    className="w-32 h-32 rounded-full border-4 border-blue-600 shadow-2xl object-cover"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-slate-900 border-4 border-blue-600 flex justify-center items-center shadow-2xl">
+                    <User className="w-16 h-16 text-slate-500" />
+                  </div>
+                )}
+                <h3 className="text-2xl font-bold text-white mt-5 text-center">
+                  {callState.partner.firstname} {callState.partner.lastname || ''}
+                </h3>
+              </div>
+            )}
+          </div>
+
+          {/* COMMANDES DE L'APPEL */}
+          <div className="w-full max-w-sm mb-6 z-10">
+            {callState.status === 'incoming' ? (
+              <div className="flex justify-around  items-center">
+                <button
+                  onClick={hangUpCall}
+                  className="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex justify-center items-center shadow-lg transition-transform hover:scale-105"
+                >
+                  <Phone className="w-7 h-7 rotate-[135deg]" />
+                </button>
+                <button
+                  onClick={acceptCall}
+                  className="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex justify-center items-center shadow-lg transition-transform hover:scale-105"
+                >
+                  <Phone className="w-7 h-7" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-6 items-center">
+                <div className="flex justify-around items-center w-full bg-slate-900/90 p-4 rounded-3xl border border-slate-800">
+                  <button
+                    onClick={toggleMute}
+                    className={`w-12 h-12 rounded-full flex justify-center items-center transition-colors ${isMuted ? 'bg-red-500 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'
+                      }`}
+                    title={isMuted ? 'Activer le micro' : 'Casser le micro'}
+                  >
+                    {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </button>
+
+                  {callState.type === 'video' && (
+                    <button
+                      onClick={toggleVideo}
+                      className={`w-12 h-12 rounded-full flex justify-center items-center transition-colors ${isVideoOff ? 'bg-red-500 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'
+                        }`}
+                      title={isVideoOff ? 'Activer la caméra' : 'Désactiver la caméra'}
+                    >
+                      {isVideoOff ? <CameraOff className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={toggleSpeaker}
+                    className={`w-12 h-12 rounded-full flex justify-center items-center transition-colors ${isSpeakerOn ? 'bg-blue-600 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'
+                      }`}
+                    title={isSpeakerOn ? 'Désactiver le son' : 'Activer le son'}
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={hangUpCall}
+                  className="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex justify-center items-center shadow-xl transition-transform hover:scale-105"
+                  title="Raccrocher"
+                >
+                  <Phone className="w-7 h-7 rotate-[135deg]" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
