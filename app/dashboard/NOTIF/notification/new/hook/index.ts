@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { providers } from "@/index";
 import Swal from "sweetalert2";
-
+import { useSession } from "next-auth/react";
+import { useToast } from "@/components/toast";
 type User = {
     lastname: string,
     firstname: string,
@@ -12,6 +13,11 @@ type User = {
     DepartmentPost: {
         name: string | undefined
     }
+    EnterpriseId: number,
+    Enterprise: {
+        MainEnterpriseId: number | null
+    },
+    status: boolean
 }
 
 export default function useNotifications() {
@@ -28,157 +34,172 @@ export default function useNotifications() {
     const [showModal, setShowModal] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
-    const [UserId, setUserId] = useState<number | null>(null);
-    const [email, setEmail] = useState<string | null>(null);
-    const [EnterpriseId, setEnterpriseId] = useState<number | null>(null);
+
     const [loader, setLoader] = useState(true);
+    const toast = useToast();
+    const { data: session } = useSession();
+    const EnterpriseId = Number((session?.user as any)?.EnterpiseId);
+    const UserId = Number((session?.user as any)?.UserId);
+    const email = String((session?.user as any)?.email);
+    const role = String((session?.user as any)?.adminRole);
+    const BASE_URL = "https://vps118934.serveur-vps.net:4001";
 
     useEffect(() => {
         (async () => {
-            if (typeof (window) === "undefined") return;
+            try {
+                if (typeof (window) === "undefined") return;
 
-            const EnterpriseId = localStorage.getItem("EnterpriseId");
-            const UserId = localStorage.getItem("UserId");
-            const email = localStorage.getItem("email");
+                const users = await providers.API.getAll(BASE_URL, "getUsers", null);
 
-            const getUsers = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-            const filtersUsersById = getUsers.filter((user: { EnterpriseId: number, status: boolean }) => user.EnterpriseId === Number(EnterpriseId) && user.status);
+                let getUsersbyAdminRole: User[] = users;
 
-            setUsers(filtersUsersById);
-            setUsersCloned(filtersUsersById);
-            setUserId(Number(UserId));
-            setEnterpriseId(Number(EnterpriseId));
-            setEmail(email);
+                console.log(role)
+
+                if (role === "Super_Admin_Platform") {
+                    setUsers(users);
+                    setUsersCloned(users)
+                } else if (role === "Super_Admin_Enterprise") {
+                    getUsersbyAdminRole = getUsersbyAdminRole.filter(user => user?.Enterprise?.MainEnterpriseId === Number(EnterpriseId) && user.status);
+                    setUsers(getUsersbyAdminRole);
+                    setUsersCloned(getUsersbyAdminRole)
+                } else if (role === "Enterprise_Admin") {
+                    getUsersbyAdminRole = getUsersbyAdminRole.filter(user => user.EnterpriseId === Number(EnterpriseId) && user.status);
+                    setUsers(getUsersbyAdminRole);
+                    setUsersCloned(getUsersbyAdminRole)
+                }
+                console.log(users)
+
+            } catch (error) {
+                console.log(error);
+            } finally {
+                setLoader(false)
+            }
         })()
-    }, []);
-
-    useEffect(() => {
-        (() => {
-           setLoader(false) 
-        })()
-    },[users])
+    }, [session?.user]);
 
     async function handleSubmit() {
-        if (typeof (window) === "undefined") return;
-        setIsLoading(true);
+        try {
+            if (!inputs.title.trim() || !inputs.content.trim()) {
+                toast.error(
+                    "Champs invalides",
+                    "Veuillez sélectionner un titre et saisir un contenu"
+                );
+                return;
+            }
 
-        const UserId = localStorage.getItem("UserId");
-        const EnterpriseId = localStorage.getItem("EnterpriseId");
+            setIsLoading(true);
 
-        if (!inputs.title || !inputs.content) {
-            setTimeout(() => {
-                setIsLoading(false);
-                Swal.fire({
-                    icon: "warning",
-                    title: "Champs invalide",
-                    text: "Veuillez sélectionner un titre et saisir un contenu"
-                })
-            }, 1000);
-            return;
-        }
 
-        const data = {
-            title: inputs.title,
-            content: inputs.content,
-            EnterpriseId: Number(EnterpriseId),
-            UserId: Number(UserId),
-            role: "Super-Admin",
-            files,
-        };
-
-        console.log("les inputs", inputs)
-
-        const sendMail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
-            subject: inputs.title,
-            content: inputs.content,
-            emails: ["contact@lrcgroup-app.com"],
-            senderEmail: "grcinfos@gmail.com",
-        });
-
-        for (const UserId of inputs.usersIds) {
-            const mail = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
-                subject: "Notification entrante!",
-                content: "Veuillez consulter votre messagerie au niveau de l'espace web LRCSheet.",
-                emails: inputs.emails,
-                senderEmail: "lrcsheet@gmail.com",
-            });
-            const notification = await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
-                path: "/dashboard/NOTIF/chat",
-                messagingType: "notification", //Niveau app mobile
-                EnterpriseId: Number(EnterpriseId),
-                adminSectionIndex: "0",
-                adminPageIndex: "0",
-                senderId: "40",
-                receiverId: String(UserId)
-            })
-            const chat = await providers.API.post(providers.APIUrl, "createChatMessage", null, {
-                content: inputs.content,
+            const data = {
                 title: inputs.title,
-                receiverId: UserId,
-                senderId: 40,
-                EnterpriseId: 1,
-                file: data.files,
-                role: "Super-Admin",
-            })
-            console.log(notification);
-            console.log(chat);
-            console.log(mail);
-        }
+                content: inputs.content,
+                EnterpriseId: Number(EnterpriseId),
+                UserId: Number(UserId),
+                role,
+                files,
+            };
 
-        console.log(sendMail)
+            // await providers.API.post(BASE_URL, "sendMail", null, {
+            //     subject: inputs.title,
+            //     content: inputs.content,
+            //     emails: inputs.emails,
+            //     senderEmail: "murphykimbatsa@gmail.com",
+            // });
 
-        // const response = await providers.API.post(providers.APIUrl, "sendRepport", null, data);
+            for (const receiverId of inputs.usersIds) {
+                const notification = await providers.API.post(BASE_URL, "sendNotificationPush", null, {
+                    path: "",
+                    messagingType: "general",
+                    EnterpriseId: String(EnterpriseId),
+                    senderId: UserId,
+                    receiverId: String(receiverId),
+                });
+                console.log(notification)
+                // providers.API.post(BASE_URL, "createChatMessage", null, {
+                //     content: inputs.content,
+                //     title: inputs.title,
+                //     receiverId: receiverId,
+                //     senderId: UserId,
+                //     EnterpriseId,
+                //     file: data.files,
+                //     role,
+                // })
+            }
 
-        const status = sendMail.status;
-        const message = sendMail.message;
-        const title = sendMail.title
-        const iconType = status ? "success" : "error";
-
-        if (status) {
-            setIsLoading(false);
             setInputs({
                 title: "",
                 content: "",
                 EnterpriseId: "",
                 UserId: "",
-                emails: [""],
-                usersIds: []
+                emails: [],
+                usersIds: [],
             });
             setFiles(null);
-        }
 
-        return Swal.fire({
-            icon: iconType,
-            title: title,
-            text: message,
-        })
+            toast.success(
+                "Bravo",
+                "Le collaborateur a été notifié avec succès."
+            );
+        } catch (error) {
+            console.error(error);
+            toast.error(
+                "Erreur",
+                error instanceof Error ? error.message : "Erreur réseau"
+            );
+        } finally {
+            setIsLoading(false);
+        }
     }
 
-    const onCheck = (email: string, UserId: number) => {
-        const checkEmailInEmailsArray = inputs.emails.includes(email) ?
-            inputs.emails.filter(item => item !== email) : [...inputs.emails, email];
-        const checkIsInUsersIdsArray = inputs.usersIds.includes(UserId) ?
-            inputs.usersIds.filter(item => item !== UserId) : [...inputs.usersIds, UserId];
+    const onCheck = (email: string, targetUserId: number) => {
+        const updatedEmails = inputs.emails.includes(email)
+            ? inputs.emails.filter((item) => item !== email)
+            : [...inputs.emails, email];
+
+        const updatedUsersIds = inputs.usersIds.includes(targetUserId)
+            ? inputs.usersIds.filter((item) => item !== targetUserId)
+            : [...inputs.usersIds, targetUserId];
+
         setInputs({
             ...inputs,
-            emails: checkEmailInEmailsArray,
-        })
-    }
-
-    console.log(inputs)
+            emails: updatedEmails,
+            usersIds: updatedUsersIds,
+        });
+    };
 
     function filterUsersByFullName(value: string) {
-        const users = usersCloned.filter(user => user.firstname.toLowerCase()?.includes(value.toLowerCase()) || user.lastname.toLowerCase()?.includes(value.toLowerCase()));
-        setUsers(users);
+        const query = value.toLowerCase();
+        const filtered = usersCloned.filter(
+            (user) =>
+                user.firstname.toLowerCase().includes(query) ||
+                user.lastname.toLowerCase().includes(query)
+        );
+        setUsers(filtered);
     }
 
     function filterUsersByDepartment(value: string) {
-        const users = usersCloned.filter(user => user.DepartmentPost?.name?.toLowerCase().includes(value.toLowerCase()));
-        setUsers(users)
+        const query = value.toLowerCase();
+        const filtered = usersCloned.filter((user) =>
+            user.DepartmentPost?.name?.toLowerCase().includes(query)
+        );
+        setUsers(filtered);
     }
 
 
     return {
-        isLoading, setIsLoading, inputs, handleSubmit, setInputs, showModal, setShowModal, users, onCheck, filterUsersByFullName, files, setFiles, filterUsersByDepartment, loader
+        isLoading,
+        setIsLoading,
+        inputs,
+        handleSubmit,
+        setInputs,
+        showModal,
+        setShowModal,
+        users,
+        onCheck,
+        filterUsersByFullName,
+        files,
+        setFiles,
+        filterUsersByDepartment,
+        loader
     }
 }

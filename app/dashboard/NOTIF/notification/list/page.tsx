@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import useNotifications from "../new/hook";
 import { useNotification } from "./hook";
+import { providers } from "@/index";
 export interface PrismaNotification {
     id: number;
     title: string | null;
@@ -32,12 +33,16 @@ export default function NotificationPage() {
     //     return () => clearTimeout(timer);
     // }, []);
 
-    const handleDeleteOne = (id: number) => {
+    const handleDeleteOne = async (id: number) => {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
+        const res = await providers.API.delete("https://vps118934.serveur-vps.net:4001", 'notification', id, {});
+        console.log(res)
     };
 
-    const handleClearAll = () => {
+    const handleClearAll = async () => {
         setNotifications([]);
+        const res = await providers.API.delete("https://vps118934.serveur-vps.net:4001", 'notifications', null, {});
+        console.log(res)
     };
 
     return (

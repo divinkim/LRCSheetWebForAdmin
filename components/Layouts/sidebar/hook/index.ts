@@ -17,9 +17,8 @@ import {
   faFileContract,
   faBuilding,
   faBriefcase,
-  faBuildingCircleCheck,
   faCity,
-  faBullseye,
+  faLandmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useSession } from "next-auth/react";
 
@@ -34,7 +33,6 @@ export interface AppNotification {
 
 const STORAGE_KEY = "storedNotificationsArray";
 
-// Helper IndexedDB
 async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("NotificationDB", 2);
@@ -55,9 +53,6 @@ async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
   });
 }
 
-// ==========================================
-// 1. Hook de gestion des notifications
-// ==========================================
 export function useNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     if (typeof window === "undefined") return [];
@@ -67,12 +62,10 @@ export function useNotifications() {
   const { data: session } = useSession();
   const enterpriseId = Number((session?.user as any)?.EnterpriseId || "");
 
-  // Persistance automatique unique dans localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
   }, [notifications]);
 
-  // Sync IndexedDB au chargement initial
   useEffect(() => {
     async function syncBackgroundNotifications() {
       try {
@@ -87,20 +80,19 @@ export function useNotifications() {
     syncBackgroundNotifications();
   }, []);
 
-  // Firebase Push Notifications
   useEffect(() => {
     const messaging = getFirebaseMessaging();
     if (!messaging) return;
 
     const unsubscribe = onMessage(messaging, (remoteMessage) => {
-      console.log(remoteMessage)
+      console.log(remoteMessage);
       const newNotif: AppNotification = {
         path: remoteMessage.data?.path,
         adminSectionIndex: remoteMessage.data?.adminSectionIndex,
         adminPageIndex: remoteMessage.data?.adminPageIndex,
         senderId: remoteMessage.data?.senderId,
         receiverId: remoteMessage.data?.receiverId,
-        messagingType: remoteMessage.data?.messagingType
+        messagingType: remoteMessage.data?.messagingType,
       };
       setNotifications((prev) => [...prev, newNotif]);
     });
@@ -108,7 +100,6 @@ export function useNotifications() {
     return () => unsubscribe();
   }, []);
 
-  // Centralisation des événements WebSockets
   useEffect(() => {
     const userId = localStorage.getItem("UserId");
 
@@ -164,9 +155,6 @@ export function useNotifications() {
   };
 }
 
-// ==========================================
-// 2. Hook complet pour la Sidebar (SidebarHook)
-// ==========================================
 export function SidebarHook() {
   const {
     notifications: storedNotificationsArray,
@@ -178,20 +166,21 @@ export function SidebarHook() {
   const { data: session } = useSession();
   const adminRole = String((session?.user as any)?.adminRole || "");
 
+  const accessToPage = useCallback(
+    (adminRoles: string[]) => {
+      return adminRoles.includes(adminRole);
+    },
+    [adminRole]
+  );
 
-  const accessToPage = useCallback((adminRoles: string[]) => {
-    return adminRoles.includes(adminRole);
-  }, [adminRole]);
-
-  // Utilisation de useMemo pour éviter de recalculer le menu à chaque rendu
   const ItemAside = useMemo(() => {
     return [
       {
         title: "💬 Communication",
         ItemLists: [
           { title: "Messagerie & Tchat", href: "/dashboard/NOTIF/chat", icon: faComments, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
-          // { title: "Notifications groupées", href: "/dashboard/NOTIF/grouped-notification/new", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
           { title: "Notifications", href: "/dashboard/NOTIF/notification/list", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+          { title: "Notifications groupées", href: "/dashboard/NOTIF/notification/new", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
         ],
       },
       {
@@ -223,8 +212,8 @@ export function SidebarHook() {
       {
         title: "🏢 Autres",
         ItemLists: [
-          { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faBuildingCircleCheck, access: accessToPage(["Super_Admin_Platform"]) },
-          { title: "Liste des entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faCity, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faCity, access: accessToPage(["Super_Admin_Platform"]) },
+          { title: "Liste des entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faLandmark, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
         ],
       },
     ];
