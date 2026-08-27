@@ -8,7 +8,7 @@ import {
     useCallback,
 } from "react";
 
-type ToastType = "success" | "error";
+type ToastType = "success" | "error" | "info";
 
 type ToastItem = {
     id: number;
@@ -20,6 +20,7 @@ type ToastItem = {
 type ToastContextType = {
     success: (title: string, message: string) => void;
     error: (title: string, message: string) => void;
+    info: (title: string, message: string) => void;
 };
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -61,8 +62,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         [pushToast]
     );
 
+    const info = useCallback(
+        (title: string, message: string) => {
+            pushToast("info", title, message);
+        },
+        [pushToast]
+    );
+
     return (
-        <ToastContext.Provider value={{ success, error }}>
+        <ToastContext.Provider value={{ success, error, info }}>
             {children}
 
             {/* UI */}
@@ -70,25 +78,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {toasts.map((t) => (
                     <div
                         key={t.id}
-                        className={`min-w-[280px] rounded-lg border p-4 shadow-lg animate-in slide-in-from-right ${t.type === "success"
-                            ? "border-green-200 bg-green-50"
-                            : "border-red-200 bg-red-50"
-                            }`}
+                        className={`min-w-[280px] rounded-lg border p-4 shadow-lg animate-in slide-in-from-right ${
+                            t.type === "success"
+                                ? "border-green-200 bg-green-50"
+                                : t.type === "error"
+                                ? "border-red-200 bg-red-50"
+                                : "border-blue-200 bg-blue-50"
+                        }`}
                     >
                         <p
-                            className={`font-semibold ${t.type === "success"
-                                ? "text-green-800"
-                                : "text-red-800"
-                                }`}
+                            className={`font-semibold ${
+                                t.type === "success"
+                                    ? "text-green-800"
+                                    : t.type === "error"
+                                    ? "text-red-800"
+                                    : "text-blue-800"
+                            }`}
                         >
-                            {t.type === "success" ? "✅" : "⛔"} {t.title}
+                            {t.type === "success"
+                                ? "✅"
+                                : t.type === "error"
+                                ? "⛔"
+                                : "ℹ️"}{" "}
+                            {t.title}
                         </p>
 
                         <p
-                            className={`text-sm ${t.type === "success"
-                                ? "text-green-700"
-                                : "text-red-700"
-                                }`}
+                            className={`text-sm ${
+                                t.type === "success"
+                                    ? "text-green-700"
+                                    : t.type === "error"
+                                    ? "text-red-700"
+                                    : "text-blue-700"
+                            }`}
                         >
                             {t.message}
                         </p>
@@ -109,5 +131,6 @@ export function useToast() {
     return {
         success: context.success,
         error: context.error,
+        info: context.info,
     };
 }

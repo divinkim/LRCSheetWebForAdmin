@@ -1,5 +1,5 @@
 'use client';
-
+import { useToast } from '@/components/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   User,
@@ -18,6 +18,7 @@ import {
 import { useCollaboratorsChat } from './hook';
 import { providers } from '@/index';
 import { SidebarHook } from '@/components/Layouts/sidebar/hook';
+
 interface CallState {
   isActive: boolean;
   type: 'audio' | 'video';
@@ -82,12 +83,12 @@ export default function ChatPage() {
     loader,
     currentUserId,
   } = useCollaboratorsChat();
-  const { storedNotificationsArray, setStoredNotificationsArray } = SidebarHook()
+  const { storedNotificationsArray, setStoredNotificationsArray } = SidebarHook();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef<boolean>(true);
-
+  const toast = useToast()
   // Appels & WebRTC States
   const [callState, setCallState] = useState<CallState | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -102,7 +103,7 @@ export default function ChatPage() {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Signalisation temporaire (stockage des offres/candidates entrantes)
+  // Signalisation temporaire
   const incomingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -149,7 +150,6 @@ export default function ChatPage() {
   useEffect(() => {
     if (!socket) return;
 
-    // 1. Appel entrant
     socket.on('incomingCall', (data: any) => {
       incomingOfferRef.current = data.offer || null;
       setCallState({
@@ -166,7 +166,6 @@ export default function ChatPage() {
       });
     });
 
-    // 2. L'interlocuteur a accepté l'appel
     socket.on('callAnswered', async (data: { answer: RTCSessionDescriptionInit }) => {
       setCallState((prev) => (prev ? { ...prev, status: 'connected' } : null));
       if (pcRef.current && data.answer) {
@@ -174,7 +173,6 @@ export default function ChatPage() {
       }
     });
 
-    // 3. Réception d'un candidat ICE distant
     socket.on('iceCandidate', async (data: { candidate: RTCIceCandidateInit }) => {
       try {
         if (pcRef.current && data.candidate) {
@@ -185,7 +183,6 @@ export default function ChatPage() {
       }
     });
 
-    // 4. Appel rejeté ou terminé
     socket.on('callRejected', () => handleEndCallLocal());
     socket.on('callEnded', () => handleEndCallLocal());
 
@@ -198,11 +195,9 @@ export default function ChatPage() {
     };
   }, [socket]);
 
-  // Création & Configuration de PeerConnection
   const createPeerConnection = (targetUserId: number) => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Envoi des candidats ICE au destinataire
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket?.emit('iceCandidate', {
@@ -212,7 +207,6 @@ export default function ChatPage() {
       }
     };
 
-    // Réception du flux média distant (Voix + Vidéo)
     pc.ontrack = (event) => {
       if (!remoteStreamRef.current) {
         remoteStreamRef.current = new MediaStream();
@@ -230,7 +224,6 @@ export default function ChatPage() {
     return pc;
   };
 
-  // Démarrer un appel (Émetteur)
   const triggerStartCall = async (type: 'audio' | 'video') => {
     if (!selectedCollaborator) return;
 
@@ -252,7 +245,6 @@ export default function ChatPage() {
     });
 
     try {
-      // Capture micro / caméra
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: type === 'video',
@@ -264,11 +256,8 @@ export default function ChatPage() {
       }
 
       const pc = createPeerConnection(selectedCollaborator.id);
-
-      // Ajout des flux locaux
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      // Création de l'offre WebRTC
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
@@ -288,7 +277,6 @@ export default function ChatPage() {
     }
   };
 
-  // Accepter l'appel (Récepteur)
   const acceptCall = async () => {
     if (!callState) return;
 
@@ -326,7 +314,6 @@ export default function ChatPage() {
     }
   };
 
-  // Raccrocher
   const hangUpCall = () => {
     if (callState) {
       if (callState.status === 'incoming') {
@@ -338,7 +325,6 @@ export default function ChatPage() {
     handleEndCallLocal();
   };
 
-  // Nettoyage local du PeerConnection et des flux Média
   const handleEndCallLocal = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -358,7 +344,6 @@ export default function ChatPage() {
     setCallDuration(0);
   };
 
-  // Toggle Micro (Mute / Unmute)
   const toggleMute = () => {
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
@@ -369,7 +354,6 @@ export default function ChatPage() {
     }
   };
 
-  // Toggle Caméra (On / Off)
   const toggleVideo = () => {
     if (localStreamRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
@@ -380,7 +364,6 @@ export default function ChatPage() {
     }
   };
 
-  // Toggle Haut-parleur / Sourdine audio distante
   const toggleSpeaker = () => {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.muted = isSpeakerOn;
@@ -438,6 +421,42 @@ export default function ChatPage() {
     return date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
   };
 
+  // Formate l'heure exacte HH:mm
+  const formatMessageHour = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Regroupement des messages par Date (Aujourd'hui, Hier, ou Date exacte)
+  const groupMessagesByDate = (msgList: any[]) => {
+    const groups: { [key: string]: any[] } = {};
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86400000;
+
+    msgList.forEach((msg) => {
+      const msgDate = msg.createdAt ? new Date(msg.createdAt) : new Date();
+      const msgDayTimestamp = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate()).getTime();
+
+      let label = '';
+      if (msgDayTimestamp === today) {
+        label = "Aujourd'hui";
+      } else if (msgDayTimestamp === yesterday) {
+        label = 'Hier';
+      } else {
+        label = msgDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      if (!groups[label]) {
+        groups[label] = [];
+      }
+      groups[label].push(msg);
+    });
+
+    return groups;
+  };
+
   const renderLastMessageOrStatus = (collabId: number) => {
     const online = isUserOnline(collabId);
     const convState = conversations[collabId];
@@ -457,29 +476,34 @@ export default function ChatPage() {
   };
 
   function getNotificationCount(userId: number) {
-    const count = storedNotificationsArray.filter(item => Number(item.senderId) === userId
-      && item.messagingType === "chat"
+    const count = storedNotificationsArray.filter(
+      (item) => Number(item.senderId) === userId && item.messagingType === 'chat'
     );
     return count.length;
   }
 
   function removeNoticationCount(userId: number) {
-    const notifications = storedNotificationsArray.filter(item => Number(item.senderId) !== userId
-      && item.messagingType === "chat"
+    const notifications = storedNotificationsArray.filter(
+      (item) => Number(item.senderId) !== userId && item.messagingType === 'chat'
     );
-    console.log(notifications)
     setStoredNotificationsArray(notifications);
-    localStorage.setItem("storedNotificationsArray", JSON.stringify(notifications))
+    localStorage.setItem('storedNotificationsArray', JSON.stringify(notifications));
   }
 
   if (loader) {
     return <CollaboratorsSkeleton />;
   }
 
+  const groupedMessages = groupMessagesByDate(messages);
+
   return (
-    <div className="flex h-[640px] w-full bg-slate-900 overflow-hidden font-sans relative">
-      {/* Élément HTML Audio/Video masqué pour restituer le son distant lors des appels audio uniquement */}
-      <audio ref={(el) => { if (el && remoteStreamRef.current && callState?.type === 'audio') el.srcObject = remoteStreamRef.current; }} autoPlay />
+    <div className="flex h-[640px] w-full dark:bg-slate-900 overflow-hidden font-sans relative">
+      <audio
+        ref={(el) => {
+          if (el && remoteStreamRef.current && callState?.type === 'audio') el.srcObject = remoteStreamRef.current;
+        }}
+        autoPlay
+      />
 
       <div className="flex w-full h-full bg-slate-100 overflow-hidden">
         {/* SIDEBAR COLLABORATEURS */}
@@ -499,13 +523,12 @@ export default function ChatPage() {
               const online = isUserOnline(item.id);
               const statusData = renderLastMessageOrStatus(item.id);
               const isSelected = selectedCollaborator?.id === item.id;
-
               return (
                 <button
                   key={item.id}
                   onClick={() => {
-                    selectCollaborator(item)
-                    removeNoticationCount(item.id)
+                    selectCollaborator(item);
+                    removeNoticationCount(item.id);
                   }}
                   className={`w-full text-left flex items-center px-4 py-3.5 transition-colors ${isSelected ? 'bg-slate-100' : 'hover:bg-slate-50 bg-white'
                     }`}
@@ -541,11 +564,13 @@ export default function ChatPage() {
                       <p className="text-xs text-slate-500 truncate mt-0.5">
                         {statusData.text}
                       </p>
-                      <p className={`${getNotificationCount(item.id) === 0 ? "hidden" : "block"} bg-red-500 text-xs text-white rounded-full py-1 px-2.5`}>
+                      <p
+                        className={`${getNotificationCount(item.id) === 0 ? 'hidden' : 'block'
+                          } bg-red-500 text-xs text-white rounded-full py-1 px-2.5`}
+                      >
                         {getNotificationCount(item.id)}
                       </p>
                     </div>
-
                   </div>
                 </button>
               );
@@ -556,7 +581,7 @@ export default function ChatPage() {
         {/* ZONE DE CHAT */}
         {selectedCollaborator ? (
           <div className="flex-1 flex flex-col h-full bg-slate-100 min-w-0">
-            <div className="px-4 py-3 bg-slate-900  flex items-center justify-between shadow-sm shrink-0">
+            <div className="px-4 py-3 bg-slate-900 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center min-w-0">
                 <button
                   onClick={() => selectCollaborator(null as any)}
@@ -591,7 +616,7 @@ export default function ChatPage() {
               <div className="flex items-center space-x-2 shrink-0">
                 <button
                   onClick={() => {
-                    return
+                    return toast.info("Infos", "ce service est momentanement indisponible")
                     triggerStartCall('audio')
                   }}
                   className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors"
@@ -601,7 +626,7 @@ export default function ChatPage() {
                 </button>
                 <button
                   onClick={() => {
-                    return
+                    return toast.info("Infos", "ce service est momentanement indisponible")
                     triggerStartCall('video')
                   }}
                   className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
@@ -612,41 +637,60 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* MESSAGES */}
+            {/* MESSAGES GROUPÉS PAR DATE */}
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
-              className="flex-1 p-4 overflow-y-auto space-y-3"
+              className="flex-1 p-4 overflow-y-auto space-y-4"
             >
-              {messages.map((item) => {
-                const isMe = item.senderId === currentUserId;
-                const isHtmlMessage = containsHtml(item.content);
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-xs ${isMe
-                        ? 'bg-blue-600 text-white rounded-tr-none'
-                        : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'
-                        }`}
-                    >
-                      {isHtmlMessage ? (
-                        <div
-                          className="prose prose-sm max-w-none dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: item.content }}
-                        />
-                      ) : (
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">
-                          {item.content}
-                        </p>
-                      )}
-                    </div>
+              {Object.keys(groupedMessages).map((dateLabel) => (
+                <div key={dateLabel} className="space-y-3">
+                  {/* Séparateur Date */}
+                  <div className="flex justify-center my-3">
+                    <span className="bg-slate-200 text-slate-600 text-[11px] font-semibold px-3 py-1 rounded-full shadow-xs">
+                      {dateLabel}
+                    </span>
                   </div>
-                );
-              })}
+
+                  {/* Messages du groupe */}
+                  {groupedMessages[dateLabel].map((item) => {
+                    const isMe = item.senderId === currentUserId;
+                    const isHtmlMessage = containsHtml(item.content);
+                    const formattedHour = formatMessageHour(item.createdAt);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-xs ${isMe
+                            ? 'bg-blue-600 text-white rounded-tr-none'
+                            : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'
+                            }`}
+                        >
+                          {isHtmlMessage ? (
+                            <div
+                              className="prose prose-sm max-w-none dark:prose-invert"
+                              dangerouslySetInnerHTML={{ __html: item.content }}
+                            />
+                          ) : (
+                            <p className="whitespace-pre-wrap break-words leading-relaxed">
+                              {item.content}
+                            </p>
+                          )}
+                          <div
+                            className={`text-[10px] mt-1 text-right font-medium ${isMe ? 'text-blue-100' : 'text-slate-400'
+                              }`}
+                          >
+                            {formattedHour}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
               <div ref={messagesEndRef} />
             </div>
 
@@ -697,9 +741,9 @@ export default function ChatPage() {
                 />
               </div>
 
-              <button
+              <button disabled={!inputText}
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex justify-center items-center shadow-md transition-colors shrink-0"
+                className={`${!inputText ? "opacity-50" : "opacity-100"} bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex justify-center items-center shadow-md transition-colors shrink-0`}
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -735,11 +779,10 @@ export default function ChatPage() {
             </p>
           </div>
 
-          {/* ZONE AFFICHAGE FLUX (AVATAR OU VIDÉO WEBRTC) */}
+          {/* ZONE AFFICHAGE FLUX */}
           <div className="relative w-full max-w-2xl flex-1 flex justify-center items-center my-4 overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl">
             {callState.type === 'video' && callState.status === 'connected' ? (
               <>
-                {/* Vidéo de l'interlocuteur (Remote Stream) */}
                 <video
                   ref={remoteVideoRef}
                   autoPlay
@@ -747,7 +790,6 @@ export default function ChatPage() {
                   className="w-full h-full object-cover"
                 />
 
-                {/* Micro-aperçu de ma propre vidéo (Local Stream) */}
                 <div className="absolute bottom-4 right-4 w-32 h-44 bg-slate-950 rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg">
                   <video
                     ref={localVideoRef}
@@ -759,7 +801,6 @@ export default function ChatPage() {
                 </div>
               </>
             ) : (
-              /* Affichage par défaut : Avatar de l'interlocuteur */
               <div className="flex flex-col items-center">
                 {callState.partner.photo ? (
                   <img
@@ -782,7 +823,7 @@ export default function ChatPage() {
           {/* COMMANDES DE L'APPEL */}
           <div className="w-full max-w-sm mb-6 z-10">
             {callState.status === 'incoming' ? (
-              <div className="flex justify-around  items-center">
+              <div className="flex justify-around items-center">
                 <button
                   onClick={hangUpCall}
                   className="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex justify-center items-center shadow-lg transition-transform hover:scale-105"
