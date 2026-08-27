@@ -34,26 +34,28 @@ export default function useNotifications() {
     const [showModal, setShowModal] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
-
+    const [UserId, setUserId] = useState<number | null>(null)
+    const [EnterpriseId, setEnterpriseId] = useState<number | null>(null)
+    const [role, setRole] = useState<string | null>(null)
     const [loader, setLoader] = useState(true);
     const toast = useToast();
     const { data: session } = useSession();
-    const EnterpriseId = Number((session?.user as any)?.EnterpiseId);
-    const UserId = Number((session?.user as any)?.UserId);
-    const email = String((session?.user as any)?.email);
-    const role = String((session?.user as any)?.adminRole);
+
     const BASE_URL = "https://vps118934.serveur-vps.net:4001";
 
     useEffect(() => {
         (async () => {
             try {
-                if (typeof (window) === "undefined") return;
+                const EnterpriseId = Number((session?.user as any)?.EnterpriseId);
+                const UserId = Number((session?.user as any)?.id);
+                const email = String((session?.user as any)?.email);
+                const role = String((session?.user as any)?.adminRole);
 
                 const users = await providers.API.getAll(BASE_URL, "getUsers", null);
 
                 let getUsersbyAdminRole: User[] = users;
 
-                console.log(role)
+                console.log(session?.user)
 
                 if (role === "Super_Admin_Platform") {
                     setUsers(users);
@@ -67,7 +69,9 @@ export default function useNotifications() {
                     setUsers(getUsersbyAdminRole);
                     setUsersCloned(getUsersbyAdminRole)
                 }
-                console.log(users)
+                setUserId(UserId);
+                setEnterpriseId(EnterpriseId);
+                setRole(role);
 
             } catch (error) {
                 console.log(error);
@@ -110,6 +114,8 @@ export default function useNotifications() {
                 const notification = await providers.API.post(BASE_URL, "sendNotificationPush", null, {
                     path: "",
                     messagingType: "general",
+                    title: inputs.title,
+                    content: inputs.content,
                     EnterpriseId: String(EnterpriseId),
                     senderId: UserId,
                     receiverId: String(receiverId),

@@ -99,53 +99,48 @@ function reduceLengthOfText(text: string, maxLength: number) {
 
 export class Api {
     async getOne(url: string, methodName: string, id: string | number) {
-        console.log(id)
         try {
-            const response = await fetch(`${url}/api/${methodName}/${id}`, {
+            const req = await fetch(`${url}/api/${methodName}/${id}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.log("Erreur:", error.message);
-                return
+            const res = await req.json();
+
+            if (!req.ok) {
+                throw new Error(res.message);
             }
 
-            const result = await response.json();
-            return result.datas;
+            return res.datas;
 
         } catch (error) {
-            console.error({ message: "Erreur réseau veuillez réessayer", error: error });
-            console.log(error)
+            throw error;
         }
     }
 
     async getAll(url: string, methodName: string, id: string | number | null) {
         try {
-            const request = id !== null ? `${url}/api/${methodName}/${id}` : `${url}/api/${methodName}`;
+            const endPoint = id !== null ? `${url}/api/${methodName}/${id}` : `${url}/api/${methodName}`;
 
-            const response = await fetch(request, {
+            const req = await fetch(endPoint, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.log({ Erreur: error.message });
-                return [];
+            const res = await req.json();
+
+            if (!req.ok) {
+                throw new Error(res.message);
             }
 
-            const result = await response.json();
-            console.log(result.datas);
-            return result.datas;
+            return res.datas;
 
         } catch (error) {
-            console.error({ message: "Une erreur est survenue lors de l'exécution de cette opération veuillez réessayer à nouveau!", error: error });
+            throw error;
         }
     }
 
@@ -176,18 +171,18 @@ export class Api {
                 body = JSON.stringify(data);
             }
 
-            const response = await fetch(url, {
+            const req = await fetch(url, {
                 method: 'PUT',
                 headers,
                 body,
             });
 
-            const result = await response.json();
+            const res = await req.json();
 
-            if (!response.ok) {
-                throw new Error(result.message) ?? "Erreur inconnue";
+            if (!req.ok) {
+                throw new Error(res.message) ?? "Erreur inconnue";
             }
-            return result;
+            return res;
 
         } catch (error) {
             console.error(error);
@@ -226,59 +221,90 @@ export class Api {
                 body = JSON.stringify(data);
             }
 
-            const response = await fetch(`${url}/api/${methodName}`, {
+            const req = await fetch(`${url}/api/${methodName}`, {
                 method: 'POST',
                 headers,
                 body,
             });
 
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.message) ?? "Erreur inconnue";
+            const res = await req.json();
+            if (!req.ok) {
+                throw new Error(res.message) ?? "Erreur inconnue";
             }
 
-            return result;
+            return res;
 
         } catch (error) {
-           throw error
+            throw error
         }
     }
 
-    async delete(APIUrl: string | null, methodName: string | null, UserId: number | null, data: Record<string, any> = {}) {
+    async delete(APIUrl: string, methodName: string, UserId: number, data: Record<string, any> = {}) {
         try {
             const endPoint = `${APIUrl}/api/${methodName}/${UserId}`;
 
             console.log(endPoint);
 
-            const request = await fetch(endPoint, {
-                method: "delete",
+            const req = await fetch(endPoint, {
+                method: "DELETE",
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data),
             });
 
-            const response = await request.json();
+            const res = await req.json();
 
-            if (!request.ok) {
-                return response;
+            if (!req.ok) {
+                throw new Error(res.message) ?? "Erreur inconnue";
             }
 
-            return response;
+            return res;
 
         } catch (error) {
-            return {
-                message: "Veuillez vérifier votre connexion au réseau !",
-                title: "Une erreur est survenue lors de l'exécution de ce processus.",
-                status: false,
+            throw error;
+        }
+    }
+
+    async deleteMany(APIUrl: string, methodName: string) {
+        try {
+            const endPoint = `${APIUrl}/api/${methodName}`;
+
+            console.log(endPoint);
+
+            const req = await fetch(endPoint, {
+                method: "delete",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const res = await req.json();
+
+            if (!req.ok) {
+                throw new Error(res.message) ?? "Erreur inconnue";
             }
+
+            return res;
+
+        } catch (error) {
+            throw error
         }
     }
 }
 
-export const API = new Api();
+const API = new Api();
 
-export const providers = { alertMessage, API, navigateBetweenMonths, daysOfWeek, filterDataOfAdministrationSection, verifyRequireField, APIUrl, reduceLengthOfText }
+export const providers = {
+    alertMessage,
+    API,
+    navigateBetweenMonths,
+    daysOfWeek,
+    filterDataOfAdministrationSection,
+    verifyRequireField,
+    APIUrl,
+    reduceLengthOfText
+}
 
 
 

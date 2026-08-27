@@ -41,7 +41,7 @@ export default function NotificationPage() {
 
     const handleClearAll = async () => {
         setNotifications([]);
-        const res = await providers.API.delete("https://vps118934.serveur-vps.net:4001", 'notifications', null, {});
+        const res = await providers.API.deleteMany("https://vps118934.serveur-vps.net:4001", 'notifications');
         console.log(res)
     };
 

@@ -19,6 +19,8 @@ import {
   faBriefcase,
   faCity,
   faLandmark,
+  faBellConcierge,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import { useSession } from "next-auth/react";
 
@@ -179,7 +181,7 @@ export function SidebarHook() {
         title: "💬 Communication",
         ItemLists: [
           { title: "Messagerie & Tchat", href: "/dashboard/NOTIF/chat", icon: faComments, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
-          { title: "Notifications", href: "/dashboard/NOTIF/notification/list", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+          { title: "Notifications", href: "/dashboard/NOTIF/notification/list", icon: faBell, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
           { title: "Notifications groupées", href: "/dashboard/NOTIF/notification/new", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
         ],
       },
