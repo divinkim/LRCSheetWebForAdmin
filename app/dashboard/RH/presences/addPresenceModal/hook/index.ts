@@ -2,6 +2,7 @@ import { providers } from "@/index";
 import { isResolvedLazyResult } from "next/dist/server/lib/lazy-result";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
+import { PresencesListHookModal } from "../../hook";
 import { useSession } from "next-auth/react";
 type User = {
     lastname: string,
@@ -36,6 +37,7 @@ export default function useAddPresenceModal() {
         salariesId: [],
         date: ""
     });
+    const { setPresencesListCloned, setPresencesList } = PresencesListHookModal()
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
     const { data: session } = useSession();
@@ -118,7 +120,7 @@ export default function useAddPresenceModal() {
                 return;
             }
             setIsLoading(true);
-            await providers.API.post(
+            const res = await providers.API.post(
                 "https://vps118934.serveur-vps.net:4001",
                 "postAttendancesFromAdmin", null,
                 inputs
@@ -127,9 +129,11 @@ export default function useAddPresenceModal() {
                 "Bravo",
                 "Horaires enregistrées avec succès"
             );
+            setPresencesListCloned(res.datas)
+            setPresencesList(res.datas)
             setInputs({
                 arrivalTime: "",
-                departureTime:"",
+                departureTime: "",
                 usersId: [],
                 planningsId: [],
                 enterprisesId: [],

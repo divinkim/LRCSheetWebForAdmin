@@ -20,12 +20,21 @@ type User = {
     status: boolean
 }
 
+type Data = {
+    title: string,
+    content: string,
+    usersIds: number[],
+    EnterpriseId: string,
+    UserId: string,
+    emails: string[]
+}
+
 export default function useNotifications() {
     const [isLoading, setIsLoading] = useState(false)
-    const [inputs, setInputs] = useState({
+    const [inputs, setInputs] = useState<Data>({
         title: "",
         content: "",
-        usersIds: [1],
+        usersIds: [],
         EnterpriseId: "",
         UserId: "",
         emails: [""]
@@ -102,7 +111,7 @@ export default function useNotifications() {
                 role,
                 files,
             };
-
+            console.log(inputs.usersIds)
             // await providers.API.post(BASE_URL, "sendMail", null, {
             //     subject: inputs.title,
             //     content: inputs.content,

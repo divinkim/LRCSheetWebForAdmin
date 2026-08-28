@@ -174,5 +174,7 @@ export function PresencesListHookModal() {
         usersCloned,
         setUsersCloned,
         isLoading,
+        setPresencesListCloned,
+        setPresencesList,
     };
 }

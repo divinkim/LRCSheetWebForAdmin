@@ -17,9 +17,8 @@ type UpdatePresence = {
     planningsId: any[],
     date: string,
 }
-
 export default function UpdatePresenceModal() {
-    const { onSelectAllUser, users, usersCloned, setUsersCloned } = PresencesListHookModal();
+    const { onSelectAllUser, users, usersCloned, setUsersCloned, setPresencesListCloned, setPresencesList } = PresencesListHookModal();
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
     const [inputs, setInputs] = useState<UpdatePresence>({
@@ -94,6 +93,9 @@ export default function UpdatePresenceModal() {
 
             if (status) {
                 toast.success(title, message);
+                console.log(response)
+                setPresencesListCloned(response.datas);
+                setPresencesList(response.datas)
                 setInputs({
                     usersId: [],
                     arrivalTime: null,
