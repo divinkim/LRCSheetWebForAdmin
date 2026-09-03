@@ -18,7 +18,7 @@ type UpdatePresence = {
     date: string,
 }
 export default function UpdatePresenceModal() {
-    const { onSelectAllUser, users, usersCloned, setUsersCloned, setPresencesListCloned, setPresencesList } = PresencesListHookModal();
+    const { onSelectAllUser, users, usersCloned, setUsersCloned, setPresencesListCloned, setPresencesList, presencesListCloned } = PresencesListHookModal();
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
     const [inputs, setInputs] = useState<UpdatePresence>({
@@ -93,20 +93,17 @@ export default function UpdatePresenceModal() {
 
             if (status) {
                 toast.success(title, message);
-                console.log(response)
-                setPresencesListCloned(response.datas);
-                setPresencesList(response.datas)
                 setInputs({
                     usersId: [],
-                    arrivalTime: null,
-                    breakStartTime: null,
-                    resumeTime: null,
-                    departureTime: null,
+                    arrivalTime: "",
+                    breakStartTime: "",
+                    resumeTime: "",
+                    departureTime: "",
                     salariesId: [],
                     enterprisesId: [],
                     planningsId: [],
                     date: "",
-                })
+                });
             }
         } catch (error) {
             console.log(error)

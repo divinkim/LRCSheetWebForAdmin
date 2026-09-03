@@ -37,7 +37,7 @@ export default function useNotifications() {
         usersIds: [],
         EnterpriseId: "",
         UserId: "",
-        emails: [""]
+        emails: []
     });
     const [files, setFiles] = useState<any>(null)
     const [showModal, setShowModal] = useState(false);
@@ -92,7 +92,7 @@ export default function useNotifications() {
 
     async function handleSubmit() {
         try {
-            if (!inputs.title.trim() || !inputs.content.trim()) {
+            if (!inputs.title.trim() || !inputs.content.trim() || inputs.usersIds.length === 0) {
                 toast.error(
                     "Champs invalides",
                     "Veuillez sélectionner un titre et saisir un contenu"

@@ -309,7 +309,7 @@ export const useCollaboratorsChat = () => {
       file: selectedFile ? selectedFile.name : undefined,
       createdAt: nowISO,
     };
-
+    setInputText('');
     setMessages((prev) => ({
       ...prev,
       [selectedCollaborator.id]: [...(prev[selectedCollaborator.id] || []), newMsg],
@@ -353,7 +353,6 @@ export const useCollaboratorsChat = () => {
       console.error("Erreur lors de l'envoi du message API :", error);
     }
 
-    setInputText('');
     setSelectedFile(null);
   };
 

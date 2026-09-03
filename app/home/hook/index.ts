@@ -200,7 +200,7 @@ export default function HomeComponent() {
     {
       icon: faHandHoldingDollar,
       backgroundColor: "#fb923c",
-      path: "/dashboard/STATS/annualGain",
+      path: "/home/#home",
       title: "Gain mensuel actuel (FCFA)",
       value: getTotalAttendanceDeductions(attendances),
     },

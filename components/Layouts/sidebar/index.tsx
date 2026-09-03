@@ -42,7 +42,7 @@ export function Sidebar() {
 
     const user = session.user;
     const userIdNumber = Number(user.id);
-    console.log(user)
+    // console.log(user)
     // Enregistrement Socket
     socket.emit("register", userIdNumber);
 

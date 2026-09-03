@@ -1,6 +1,4 @@
 "use client";
-
-import useSendRepport from "./hook";
 import { ClipLoader } from "react-spinners";
 import {
     faChevronLeft,
@@ -17,7 +15,6 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { providers } from "@/index";
 import useNotifications from "./hook";
-import Link from "next/link";
 
 // Composant Skeleton complet de la page
 function NotificationsSkeleton() {

@@ -120,7 +120,7 @@ export default function useAddPresenceModal() {
                 return;
             }
             setIsLoading(true);
-            const res = await providers.API.post(
+            await providers.API.post(
                 "https://vps118934.serveur-vps.net:4001",
                 "postAttendancesFromAdmin", null,
                 inputs
@@ -129,8 +129,7 @@ export default function useAddPresenceModal() {
                 "Bravo",
                 "Horaires enregistrées avec succès"
             );
-            setPresencesListCloned(res.datas)
-            setPresencesList(res.datas)
+           
             setInputs({
                 arrivalTime: "",
                 departureTime: "",

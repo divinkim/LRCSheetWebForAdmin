@@ -277,7 +277,7 @@ export default function AppointmentsList() {
           try {
             const response = await providers.API.delete(
               "https://vps118934.serveur-vps.net:4001",
-              "deleteAppointment",
+              "appointment",
               id,
               {}
             );

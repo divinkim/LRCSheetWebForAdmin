@@ -193,7 +193,7 @@ export default function ViewAppointment() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-wide">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-wide">
                 {appointment?.fullName || "Visiteur Inconnu"}
               </h2>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-0.5 flex items-center gap-2">
@@ -237,13 +237,13 @@ export default function ViewAppointment() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-6 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <FontAwesomeIcon icon={faCalendarCheck} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Planification du Rendez-vous</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Planification du Rendez-vous</h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                 <div>
                   <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date prévue</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2 text-base">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2 text-sm">
                     <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-600 dark:text-blue-400" />
                     {appointment?.date || "—"}
                   </p>
@@ -251,9 +251,9 @@ export default function ViewAppointment() {
 
                 <div>
                   <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Heure prévue</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2 text-base">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2 text-sm">
                     <FontAwesomeIcon icon={faClock} className="text-blue-600 dark:text-blue-400" />
-                    {appointment?.time ? new Date(appointment.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (appointment?.time || "Non spécifiée")}
+                    {appointment?.time ? appointment?.time : "Non spécifiée"}
                   </p>
                 </div>
 
@@ -279,7 +279,7 @@ export default function ViewAppointment() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Motif ou raison</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Motif ou raison</h3>
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-sm">
@@ -298,7 +298,7 @@ export default function ViewAppointment() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <FontAwesomeIcon icon={faCheckCircle} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Statut de la demande</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Statut de la demande</h3>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-sm">
@@ -311,13 +311,13 @@ export default function ViewAppointment() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <FontAwesomeIcon icon={faUserTie} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Agent Concerné</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Agent Concerné</h3>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-sm">
                 {appointment?.User ? (
                   <>
-                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                    <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                       {appointment.User.firstname} {appointment.User.lastname}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">

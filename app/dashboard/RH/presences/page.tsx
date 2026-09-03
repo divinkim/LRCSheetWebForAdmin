@@ -158,6 +158,7 @@ export default function PresencesList() {
                 onClick={() => {
                   setShowAddPresenceModal(false);
                   setShowUpdatePresenceModal(false);
+                  window.location.reload();
                 }}
                 className="absolute right-4 top-4 flex h-10 w-10 z-50 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
               >

@@ -30,6 +30,7 @@ export function useAppointment() {
     const sessionEnterpriseId = (session?.user as any)?.EnterpriseId
         ? Number((session?.user as any).EnterpriseId)
         : null;
+    const adminId = (session?.user as any)?.id
 
     // Listes dynamiques depuis l'API
     const [users, setUsers] = useState<any[]>([]);
@@ -157,17 +158,29 @@ export function useAppointment() {
                 reason: "",
             });
             setIsLoading(true);
-            const response = await providers.API.post(
+
+            // await providers.API.post(
+            //     "https://vps118934.serveur-vps.net:4001",
+            //     "appointment",
+            //     null,
+            //     inputs
+            // )
+
+            // toast.success("Bravo", "Rendez-vous enregistré");
+            await providers.API.post(
                 "https://vps118934.serveur-vps.net:4001",
-                "createAppointment",
+                "sendNotificationPush",
                 null,
-                inputs
+                {
+                    senderId: String(adminId),
+                    receiverId: String(inputs.UserId),
+                    messagingType: "general",
+                    title: "Demande de visite",
+                    content: `Vous avez une demande en cours de la part de ${inputs.fullName} à ${inputs.time}. Veuillez consulter la liste des rendez-vous au niveau de votre profil.`
+                }
             )
-            if (response.status) {
-                localStorage.removeItem("inputMemoryOfAddAppointmentPage");
-                toast.success("Bravo", "Rendez-vous enregistré");
-                window.location.reload();
-            }
+            // localStorage.removeItem("inputMemoryOfAddAppointmentPage");
+            // window.location.reload();
 
         } catch (error) {
             console.error("Erreur lors de la création :", error);
