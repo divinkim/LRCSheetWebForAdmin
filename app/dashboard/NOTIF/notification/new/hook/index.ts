@@ -39,7 +39,7 @@ export default function useNotifications() {
         UserId: "",
         emails: []
     });
-    const [files, setFiles] = useState<any>(null)
+    const [files, setFiles] = useState("")
     const [showModal, setShowModal] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
@@ -49,7 +49,7 @@ export default function useNotifications() {
     const [loader, setLoader] = useState(true);
     const toast = useToast();
     const { data: session } = useSession();
-
+    const [email, setEmail] = useState<string | null>(null)
     const BASE_URL = "https://vps118934.serveur-vps.net:4001";
 
     useEffect(() => {
@@ -81,7 +81,7 @@ export default function useNotifications() {
                 setUserId(UserId);
                 setEnterpriseId(EnterpriseId);
                 setRole(role);
-
+                setEmail(email)
             } catch (error) {
                 console.log(error);
             } finally {
@@ -126,8 +126,12 @@ export default function useNotifications() {
                     title: inputs.title,
                     content: inputs.content,
                     EnterpriseId: String(EnterpriseId),
+                    file: files,
                     senderId: UserId,
                     receiverId: String(receiverId),
+                    adminSectionIndex: "0",
+                    adminPageIndex: "1",
+                    email
                 });
                 console.log(notification)
                 // providers.API.post(BASE_URL, "createChatMessage", null, {
@@ -149,7 +153,7 @@ export default function useNotifications() {
                 emails: [],
                 usersIds: [],
             });
-            setFiles(null);
+            setFiles("");
 
             toast.success(
                 "Bravo",

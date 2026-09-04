@@ -19,7 +19,7 @@ export interface UserChatModel {
   receiverId?: number;
   EnterpriseId?: number;
   content?: string;
-  file?: string;
+  file: string | null;
   createdAt: string;
   updatedAt?: string;
   role?: string;
@@ -65,9 +65,9 @@ export const useCollaboratorsChat = () => {
   const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
   const [messages, setMessages] = useState<Record<number, ChatMessage[]>>({});
   const [inputText, setInputText] = useState('');
-  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loader, setLoader] = useState(true);
-
+  const [fileName, setFileName] = useState("");
   // Ref pour conserver la valeur courante de selectedCollaborator dans les callbacks Socket
   const selectedCollaboratorRef = useRef<Collaborator | null>(null);
   useEffect(() => {
@@ -91,13 +91,6 @@ export const useCollaboratorsChat = () => {
   }, [initialCollaborators, currentUserId]);
 
   // Nettoyage de l'URL temporaire de fichier (Blob)
-  useEffect(() => {
-    return () => {
-      if (selectedFile?.uri) {
-        URL.revokeObjectURL(selectedFile.uri);
-      }
-    };
-  }, [selectedFile]);
 
   // 2. Récupération de l'historique de l'API au chargement
   useEffect(() => {
@@ -259,28 +252,7 @@ export const useCollaboratorsChat = () => {
   };
 
   const pickDocument = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '*/*';
 
-    input.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (file) {
-        if (selectedFile?.uri) {
-          URL.revokeObjectURL(selectedFile.uri);
-        }
-        setSelectedFile({
-          name: file.name,
-          uri: URL.createObjectURL(file),
-          type: file.type,
-          size: file.size,
-          fileObject: file,
-        });
-      }
-    };
-
-    input.click();
   };
 
   const sendMessage = async () => {
@@ -288,17 +260,17 @@ export const useCollaboratorsChat = () => {
 
     const nowISO = new Date().toISOString();
 
-    const payload = {
-      path: inputText,
-      adminSectionIndex: '0',
-      adminPageIndex: '0',
-      senderId: String(currentUserId),
-      receiverId: [selectedCollaborator.id],
-      file: selectedFile ? selectedFile.name : undefined,
-    };
+    // const payload = {
+    //   path: inputText,
+    //   adminSectionIndex: '0',
+    //   adminPageIndex: '0',
+    //   senderId: String(currentUserId),
+    //   receiverId: [selectedCollaborator.id],
+    //   file: selectedFile ? selectedFile.name : undefined,
+    // };
 
     // 1. Émission Socket temps réel
-    socket.emit('onSendChatData', payload);
+    // socket.emit('onSendChatData', payload);
 
     // 2. Mise à jour optimiste de l'UI
     const newMsg: ChatMessage = {
@@ -306,7 +278,7 @@ export const useCollaboratorsChat = () => {
       senderId: currentUserId,
       receiverId: selectedCollaborator.id,
       content: inputText,
-      file: selectedFile ? selectedFile.name : undefined,
+      file: fileName,
       createdAt: nowISO,
     };
     setInputText('');
@@ -389,5 +361,6 @@ export const useCollaboratorsChat = () => {
     currentUserId,
     serverUrl,
     initialCollaborators,
+    setFileName
   };
 };

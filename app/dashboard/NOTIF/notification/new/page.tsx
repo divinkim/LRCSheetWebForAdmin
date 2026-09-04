@@ -320,7 +320,7 @@ export default function Notifications() {
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                const result = await providers.API.post(providers.APIUrl, "sendFiles", null, { file });
+                                                const result = await providers.API.post(providers.APIUrl, "sendFiles", null, { files: file });
                                                 setFiles(result.filename);
                                             }
                                         }}
@@ -330,7 +330,7 @@ export default function Notifications() {
                                 {files && (
                                     <div className="flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 px-3 py-2 rounded-xl text-xs text-amber-700 dark:text-amber-400 max-w-[200px]">
                                         <FontAwesomeIcon icon={faFileAlt} />
-                                        <span className="truncate">{files.name}</span>
+                                        <span className="truncate">{files}</span>
                                     </div>
                                 )}
                             </div>

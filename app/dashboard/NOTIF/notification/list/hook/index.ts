@@ -21,6 +21,7 @@ export interface Notification {
         lastname?: string;
         email?: string
     } | null;
+    file: string | null,
 }
 
 export function useNotification() {
@@ -38,7 +39,7 @@ export function useNotification() {
                     null
                 );
                 let filterdNotifications: Notification[] = notifications;
-        
+
                 if (adminRole === "Super_Admin_Platform") {
                     setNotifications(filterdNotifications)
                 } else if (adminRole === "Super_Admin_Enterprise") {

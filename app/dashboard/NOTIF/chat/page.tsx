@@ -13,6 +13,8 @@ import {
   MicOff,
   Camera,
   CameraOff,
+  FileText,
+  ExternalLink,
   Volume2,
 } from 'lucide-react';
 import { useCollaboratorsChat } from './hook';
@@ -82,6 +84,7 @@ export default function ChatPage() {
     socket,
     loader,
     currentUserId,
+    setFileName
   } = useCollaboratorsChat();
   const { storedNotificationsArray, setStoredNotificationsArray } = SidebarHook();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -392,13 +395,7 @@ export default function ChatPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile({
-        uri: URL.createObjectURL(file),
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        file: file,
-      } as any);
+      setSelectedFile(file);
     }
   };
 
@@ -665,20 +662,52 @@ export default function ChatPage() {
                       >
                         <div
                           className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-xs ${isMe
-                            ? 'bg-blue-600 text-white rounded-tr-none'
-                            : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'
+                              ? 'bg-blue-600 text-white rounded-tr-none'
+                              : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'
                             }`}
                         >
+                          {/* APERÇU / PIÈCE JOINTE SI PRESENTE */}
+                          {item.file && (
+                            <a
+                              href={`${providers.APIUrl}/images/${item.file}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center space-x-2 p-2 mb-2 rounded-lg border transition-colors ${isMe
+                                  ? 'bg-blue-700/50 border-blue-500/50 hover:bg-blue-700 text-white'
+                                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'
+                                }`}
+                            >
+                              <div
+                                className={`p-2 rounded-md ${isMe ? 'bg-blue-800 text-blue-200' : 'bg-slate-200 text-slate-600'
+                                  }`}
+                              >
+                                <FileText className="w-5 h-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold truncate">{item.file}</p>
+                                <p className={`text-[10px] ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
+                                  Cliquer pour ouvrir
+                                </p>
+                              </div>
+                              <ExternalLink className="w-4 h-4 shrink-0 opacity-70" />
+                            </a>
+                          )}
+
+                          {/* CONTENU TEXTE DU MESSAGE */}
                           {isHtmlMessage ? (
                             <div
                               className="prose prose-sm max-w-none dark:prose-invert"
                               dangerouslySetInnerHTML={{ __html: item.content }}
                             />
                           ) : (
-                            <p className="whitespace-pre-wrap break-words leading-relaxed">
-                              {item.content}
-                            </p>
+                            item.content && (
+                              <p className="whitespace-pre-wrap break-words leading-relaxed">
+                                {item.content}
+                              </p>
+                            )
                           )}
+
+                          {/* HEURE D'ENVOI */}
                           <div
                             className={`text-[10px] mt-1 text-right font-medium ${isMe ? 'text-blue-100' : 'text-slate-400'
                               }`}
@@ -718,19 +747,27 @@ export default function ChatPage() {
               className="p-3 bg-white flex items-center space-x-2 border-t border-slate-200 shrink-0"
             >
               <div className="flex-1 bg-slate-100 flex items-center rounded-full px-3 py-1.5 border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-1.5 text-slate-500 hover:text-slate-700 rounded-full"
+
+                <label
+                  className="p-1.5 text-slate-500 hover:text-slate-700 rounded-full cursor-pointer"
                 >
+                  <input
+                    type="file"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const res = await providers.API.post(providers.APIUrl, "sendFiles", null, {
+                          files: file
+                        });
+                        console.log(res)
+                        setSelectedFile(file)
+                        setFileName(res.filename)
+                      }
+                    }}
+                    className="hidden"
+                  />
                   <Paperclip className="w-5 h-5" />
-                </button>
+                </label>
 
                 <input
                   type="text"
@@ -741,9 +778,9 @@ export default function ChatPage() {
                 />
               </div>
 
-              <button disabled={!inputText}
+              <button disabled={!inputText && !selectedFile}
                 type="submit"
-                className={`${!inputText ? "opacity-50" : "opacity-100"} bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex justify-center items-center shadow-md transition-colors shrink-0`}
+                className={`${!inputText && !selectedFile ? "opacity-50" : "opacity-100"} bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex justify-center items-center shadow-md transition-colors shrink-0`}
               >
                 <Send className="w-4 h-4" />
               </button>
