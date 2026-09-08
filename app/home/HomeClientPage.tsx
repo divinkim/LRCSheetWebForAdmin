@@ -5,15 +5,15 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faEye,
   faSpinner,
   faArrowUpRightFromSquare,
   faChartPie,
   faBuilding,
   faShieldHalved,
   faCalendarDays,
-  faArrowTrendUp, // <-- Corrigé ici (faTrendingUp n'existe pas, faArrowTrendUp est l'équivalent gratuit)
+  faArrowTrendUp,
   faWandMagicSparkles,
+  faMagnifyingGlass,
 } from "@fortawesome/free-solid-svg-icons";
 
 import HomeComponent from "./hook";
@@ -33,16 +33,29 @@ interface UserSession {
 
 export default function HomePage() {
   const { data: session } = useSession();
-  const { cardComponent, enterprise, loader } = HomeComponent();
+
+  const {
+    cardComponent,
+    enterprise,
+    loader,
+  } = HomeComponent();
 
   const user = session?.user as UserSession | undefined;
+
   const userRole = user?.adminRole ?? "";
   const userName = user?.name ?? "Administrateur";
 
   const hasAdminAccess = useMemo(
-    () => REQUIRED_ADMIN_ROLES.includes(userRole as typeof REQUIRED_ADMIN_ROLES[number]),
+    () =>
+      REQUIRED_ADMIN_ROLES.includes(
+        userRole as typeof REQUIRED_ADMIN_ROLES[number]
+      ),
     [userRole]
   );
+
+  /* =====================================================
+     FORMATTERS
+  ===================================================== */
 
   const currencyFormatter = useMemo(
     () =>
@@ -54,82 +67,338 @@ export default function HomePage() {
     []
   );
 
-  const numberFormatter = useMemo(() => new Intl.NumberFormat("fr-FR"), []);
+  const numberFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
 
-  const formatCardValue = (index: number, value: number) => {
-    return index === 2 ? currencyFormatter.format(value) : numberFormatter.format(value);
+  /**
+   * Les cartes restent dynamiques.
+   *
+   * On détermine simplement si la valeur représente
+   * une somme d'argent à partir du titre de la carte.
+   */
+  const formatCardValue = (
+    title: string,
+    value: number
+  ) => {
+    const titleLower = title.toLowerCase();
+
+    const isCurrency =
+      titleLower.includes("gain") ||
+      titleLower.includes("solde") ||
+      titleLower.includes("revenu") ||
+      titleLower.includes("paiement") ||
+      titleLower.includes("montant") ||
+      titleLower.includes("déduction") ||
+      titleLower.includes("deduction");
+
+    return isCurrency
+      ? currencyFormatter.format(value)
+      : numberFormatter.format(value);
   };
+
+  /* =====================================================
+     LOADING
+  ===================================================== */
 
   if (loader) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center gap-6 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 bg-slate-950 text-slate-100">
         <div className="relative flex items-center justify-center">
           <div className="absolute h-24 w-24 animate-ping rounded-full bg-blue-500/10 blur-xl" />
+
           <div className="absolute h-16 w-16 animate-pulse rounded-full bg-amber-500/20 blur-md" />
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl backdrop-blur-xl">
+
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl backdrop-blur-xl">
             <FontAwesomeIcon
               icon={faSpinner}
-              className="text-2xl animate-spin text-gradient bg-gradient-to-r from-blue-400 to-amber-400 text-blue-500"
+              className="animate-spin text-2xl text-blue-500"
             />
           </div>
         </div>
+
         <div className="flex flex-col items-center gap-1">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 animate-pulse">
+          <p className="animate-pulse text-xs font-bold uppercase tracking-widest text-slate-400">
             LRCSheet Analytics
           </p>
-          <p className="text-[11px] text-slate-600">Chargement de votre environnement entreprise...</p>
+
+          <p className="text-[11px] text-slate-600">
+            Chargement de votre environnement entreprise...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f19]/5 bg-gradient-to-b from-slate-50 via-slate-50/50 to-slate-100/80 p-4 sm:p-6 lg:p-10 dark:from-slate-950 dark:via-slate-950/90 dark:to-slate-900 text-slate-800 dark:text-slate-100 transition-all duration-300">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div
+      className="
+        min-h-screen
+        bg-gradient-to-b
+        from-slate-50
+        via-slate-50
+        to-slate-100
+        px-3
+        py-4
+        text-slate-800
+        transition-all
+        duration-300
+        sm:px-5
+        sm:py-6
+        lg:px-7
+        lg:py-7
+        dark:from-slate-950
+        dark:via-slate-950
+        dark:to-slate-900
+        dark:text-slate-100
+      "
+    >
+      <div className="mx-auto max-w-[1500px] space-y-5 sm:space-y-6">
 
-        {/* HERO BANNER GLASSMORPHISM */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 p-6 sm:p-10 shadow-xl shadow-slate-200/50 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/60 dark:shadow-none transition-all">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-amber-400/20 to-orange-500/10 blur-3xl dark:from-amber-500/10 dark:to-orange-500/5" />
-          <div className="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-gradient-to-tr from-blue-600/20 to-indigo-500/10 blur-3xl dark:from-blue-600/15 dark:to-indigo-500/5" />
+        {/* =================================================
+            HEADER / HERO
+        ================================================= */}
 
-          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50/90 px-3.5 py-1 text-xs font-bold text-blue-700 border border-blue-200/60 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60 shadow-sm">
-                  <FontAwesomeIcon icon={faBuilding} className="text-[11px] text-blue-500" />
-                  {"Espace Entreprise"}
+        <section
+          className="
+            relative
+            overflow-hidden
+            rounded-2xl
+            border
+            border-slate-200/80
+            bg-white/80
+            shadow-sm
+            backdrop-blur-xl
+            dark:border-slate-800
+            dark:bg-slate-900/80
+          "
+        >
+          {/* Background decorations */}
+
+          <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
+
+          <div
+            className="
+              relative
+              flex
+              flex-col
+              gap-5
+              px-4
+              py-5
+              sm:px-6
+              sm:py-6
+              lg:flex-row
+              lg:items-center
+              lg:justify-between
+            "
+          >
+            {/* LEFT */}
+
+            <div className="min-w-0">
+
+              {/* BADGES */}
+
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+
+                <span
+                  className="
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    rounded-lg
+                    border
+                    border-blue-200
+                    bg-blue-50
+                    px-2.5
+                    py-1
+                    text-[10px]
+                    font-bold
+                    text-blue-700
+                    dark:border-blue-900
+                    dark:bg-blue-950/50
+                    dark:text-blue-300
+                  "
+                >
+                  <FontAwesomeIcon
+                    icon={faBuilding}
+                    className="text-[9px]"
+                  />
+
+                  Espace Entreprise
                 </span>
 
                 {hasAdminAccess && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50/90 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200/60 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/50 shadow-sm">
-                    <FontAwesomeIcon icon={faShieldHalved} className="text-[11px] text-amber-500" />
+                  <span
+                    className="
+                      inline-flex
+                      items-center
+                      gap-1.5
+                      rounded-lg
+                      border
+                      border-amber-200
+                      bg-amber-50
+                      px-2.5
+                      py-1
+                      text-[10px]
+                      font-bold
+                      text-amber-700
+                      dark:border-amber-900
+                      dark:bg-amber-950/40
+                      dark:text-amber-300
+                    "
+                  >
+                    <FontAwesomeIcon
+                      icon={faShieldHalved}
+                      className="text-[9px]"
+                    />
+
                     {userRole}
                   </span>
                 )}
 
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-600 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span
+                  className="
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    rounded-lg
+                    border
+                    border-emerald-200
+                    bg-emerald-50
+                    px-2.5
+                    py-1
+                    text-[10px]
+                    font-bold
+                    text-emerald-600
+                    dark:border-emerald-900
+                    dark:bg-emerald-950/40
+                    dark:text-emerald-400
+                  "
+                >
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+
                   Live Sync
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                Ravi de vous revoir, <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-300">{userName}</span>
+              {/* TITLE */}
+
+              <h1
+                className="
+                  text-2xl
+                  font-black
+                  tracking-tight
+                  text-slate-900
+                  sm:text-3xl
+                  dark:text-white
+                "
+              >
+                Tableau de bord
               </h1>
-              
-              <p className="max-w-2xl text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-400">
-                Supervisez vos indicateurs clés de performance, gérez vos souscriptions et suivez vos gains consolidés en temps réel.
+
+              <p
+                className="
+                  mt-1
+                  max-w-2xl
+                  text-xs
+                  font-medium
+                  leading-relaxed
+                  text-slate-500
+                  sm:text-sm
+                  dark:text-slate-400
+                "
+              >
+                Vue d'ensemble de votre entreprise et de ses performances.
+              </p>
+
+              <p className="mt-2 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                Ravi de vous revoir,{" "}
+                <span className="font-black text-blue-600 dark:text-blue-400">
+                  {userName}
+                </span>
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-3.5 rounded-2xl bg-slate-100/80 px-4 py-3 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/50 shadow-inner backdrop-blur-md">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-                  <FontAwesomeIcon icon={faCalendarDays} className="text-sm" />
+            {/* RIGHT */}
+
+            <div className="flex shrink-0 items-center gap-3">
+
+              {/* SEARCH */}
+
+              {/* <div
+                className="
+                  hidden
+                  items-center
+                  gap-2.5
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50/80
+                  px-3
+                  py-2.5
+                  lg:flex
+                  dark:border-slate-700
+                  dark:bg-slate-800/70
+                "
+              >
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
+                  className="text-xs text-slate-400"
+                />
+
+                <span className="text-[11px] font-medium text-slate-400">
+                  Rechercher...
+                </span>
+              </div> */}
+
+              {/* DATE */}
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2.5
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-3
+                  py-2.5
+                  shadow-sm
+                  dark:border-slate-700
+                  dark:bg-slate-800
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-8
+                    w-8
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-lg
+                    bg-blue-600
+                    text-white
+                  "
+                >
+                  <FontAwesomeIcon
+                    icon={faCalendarDays}
+                    className="text-xs"
+                  />
                 </div>
+
                 <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500">Date du jour</p>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 capitalize">
+                  <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                    Date
+                  </p>
+
+                  <p className="text-[10px] font-bold capitalize text-slate-800 dark:text-slate-200">
                     {new Date().toLocaleDateString("fr-FR", {
                       weekday: "short",
                       day: "numeric",
@@ -140,99 +409,406 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-
           </div>
-        </div>
-
+        </section>
+        {/* =================================================
+            SUBSCRIPTION EXPIRED
+        ================================================= */}
         {enterprise?.subscriptionStatus === "expired" && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 shadow-lg backdrop-blur-md">
+          <div
+            className="
+              overflow-hidden
+              rounded-2xl
+              border
+              border-rose-500/30
+              bg-rose-500/10
+              p-4
+              shadow-sm
+              backdrop-blur-md
+              sm:p-5
+            "
+          >
             <SubscriptionEpiredComponent />
           </div>
         )}
+        {/* =================================================
+            KPI CARDS
+        ================================================= */}
+        <section>
+          <div
+            className="
+              mb-3
+              flex
+              items-center
+              justify-between
+            "
+          >
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-white">
+                Indicateurs clés
+              </h2>
 
-        {/* GRILLE DES KPIS */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {cardComponent.map((card, index) => (
-            <Link
-              key={card.title || index}
-              href={card.path}
-              className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-200/70 bg-white/80 p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-blue-500/40 hover:shadow-2xl hover:shadow-blue-500/5 dark:border-slate-800/80 dark:bg-slate-900/80 dark:hover:border-blue-500/40 dark:hover:shadow-none"
-            >
-              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-amber-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <p className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Vue synthétique de votre activité
+              </p>
+            </div>
+          </div>
 
-              <div>
+          <div
+            className="
+              grid
+              grid-cols-1
+              gap-4
+              md:grid-cols-2
+              lg:grid-cols-3
+            "
+          >
+            {cardComponent.map((card, index) => (
+              <Link
+                key={card.title || index}
+                href={card.path}
+                className="
+                  group
+                  relative
+                  min-h-[190px]
+                  overflow-hidden
+                  rounded-2xl
+                  border
+                  border-slate-200/80
+                  bg-white
+                  p-5
+                  shadow-sm
+                  transition-all
+                  duration-300
+                  hover:-translate-y-1
+                  hover:border-blue-300
+                  hover:shadow-xl
+                  hover:shadow-blue-500/10
+                  dark:border-slate-800
+                  dark:bg-slate-900
+                  dark:hover:border-blue-700
+                  dark:hover:shadow-none
+                "
+              >
+                {/* TOP LINE */}
+
+                <div
+                  className="
+                    absolute
+                    inset-x-0
+                    top-0
+                    h-0.5
+                    bg-gradient-to-r
+                    from-blue-600
+                    via-indigo-500
+                    to-amber-400
+                    opacity-0
+                    transition-opacity
+                    duration-300
+                    group-hover:opacity-100
+                  "
+                />
+
+                {/* CARD HEADER */}
+
                 <div className="flex items-start justify-between">
+
                   <div
-                    style={{ backgroundColor: card.backgroundColor }}
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg ring-4 ring-slate-100/80 dark:ring-slate-800/60 transition-transform duration-300 group-hover:scale-110"
+                    style={{
+                      backgroundColor: card.backgroundColor,
+                    }}
+                    className="
+                      flex
+                      h-11
+                      w-11
+                      items-center
+                      justify-center
+                      rounded-xl
+                      text-white
+                      shadow-md
+                      ring-4
+                      ring-slate-50
+                      transition-transform
+                      duration-300
+                      group-hover:scale-105
+                      dark:ring-slate-800
+                    "
                   >
-                    <FontAwesomeIcon icon={card.icon} className="text-xl" />
+                    <FontAwesomeIcon
+                      icon={card.icon}
+                      className="text-lg"
+                    />
                   </div>
 
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-400 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white dark:bg-slate-800/80 dark:text-slate-400 dark:group-hover:bg-blue-600 dark:group-hover:text-white shadow-sm">
-                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-xs transition-transform group-hover:scale-110" />
+                  <div
+                    className="
+                      flex
+                      h-8
+                      w-8
+                      items-center
+                      justify-center
+                      rounded-lg
+                      bg-slate-50
+                      text-slate-400
+                      transition-all
+                      group-hover:bg-blue-600
+                      group-hover:text-white
+                      dark:bg-slate-800
+                      dark:text-slate-500
+                    "
+                  >
+                    <FontAwesomeIcon
+                      icon={faArrowUpRightFromSquare}
+                      className="text-[10px]"
+                    />
                   </div>
                 </div>
 
-                <div className="mt-8 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {/* VALUE */}
+
+                <div className="mt-5">
+
+                  <div className="flex items-center justify-between gap-2">
+
+                    <p
+                      className="
+                        truncate
+                        text-[11px]
+                        font-bold
+                        uppercase
+                        tracking-wider
+                        text-slate-400
+                        dark:text-slate-500
+                      "
+                    >
                       {card.title}
                     </p>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      <FontAwesomeIcon icon={faArrowTrendUp} className="text-[10px]" />
+
+                    {/* EVOLUTION */}
+
+                    <span
+                      className="
+                        inline-flex
+                        shrink-0
+                        items-center
+                        gap-1
+                        text-[10px]
+                        font-bold
+                        text-emerald-600
+                        dark:text-emerald-400
+                      "
+                    >
+                      <FontAwesomeIcon
+                        icon={faArrowTrendUp}
+                        className="text-[9px]"
+                      />
+
                       +0.0%
                     </span>
                   </div>
 
-                  <h3 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {formatCardValue(index, card.value)}
+                  <h3
+                    className="
+                      mt-2
+                      truncate
+                      text-2xl
+                      font-black
+                      tracking-tight
+                      text-slate-900
+                      transition-colors
+                      group-hover:text-blue-600
+                      sm:text-3xl
+                      dark:text-white
+                      dark:group-hover:text-blue-400
+                    "
+                  >
+                    {formatCardValue(
+                      card.title,
+                      card.value
+                    )}
                   </h3>
                 </div>
-              </div>
 
-              <div className="mt-8 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 pt-4">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Consulter les données
-                </span>
-                <span className="text-xs font-semibold text-slate-400 group-hover:translate-x-1 transition-transform">
-                  &rarr;
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+                {/* FOOTER */}
 
-        {/* SECTION STATISTIQUES ANNUELLES */}
-        {hasAdminAccess && (
-          <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 shadow-xl shadow-slate-200/40 dark:border-slate-800/80 dark:bg-slate-900/80 dark:shadow-none transition-all">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 dark:border-slate-800 px-8 py-6 bg-slate-50/50 dark:bg-slate-900/50">
-              <div className="flex items-center gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600 border border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400 shadow-inner">
-                  <FontAwesomeIcon icon={faChartPie} className="text-lg" />
+                <div
+                  className="
+                    mt-5
+                    flex
+                    items-center
+                    justify-between
+                    border-t
+                    border-slate-100
+                    pt-3
+                    dark:border-slate-800
+                  "
+                >
+                  <span
+                    className="
+                      text-[10px]
+                      font-semibold
+                      text-slate-400
+                      transition-colors
+                      group-hover:text-blue-600
+                      dark:group-hover:text-blue-400
+                    "
+                  >
+                    Consulter les données
+                  </span>
+
+                  <span
+                    className="
+                      text-xs
+                      font-bold
+                      text-slate-300
+                      transition-transform
+                      group-hover:translate-x-1
+                      group-hover:text-blue-600
+                      dark:text-slate-600
+                      dark:group-hover:text-blue-400
+                    "
+                  >
+                    →
+                  </span>
                 </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* =================================================
+            ANALYSE ANNUELLE
+            ⚠️ GetAnnualGain INCHANGÉ
+        ================================================= */}
+
+        {hasAdminAccess && (
+          <section
+            className="
+              overflow-hidden
+              rounded-2xl
+              border
+              border-slate-200/80
+              bg-white/80
+              shadow-sm
+              dark:border-slate-800
+              dark:bg-slate-900/80
+            "
+          >
+            {/* HEADER */}
+
+            <div
+              className="
+                flex
+                flex-col
+                gap-3
+                border-b
+                border-slate-100
+                bg-slate-50/50
+                px-4
+                py-4
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+                sm:px-5
+                dark:border-slate-800
+                dark:bg-slate-900/50
+              "
+            >
+              <div className="flex items-center gap-3">
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-blue-500/20
+                    bg-blue-600/10
+                    text-blue-600
+                    shadow-inner
+                    dark:text-blue-400
+                  "
+                >
+                  <FontAwesomeIcon
+                    icon={faChartPie}
+                    className="text-sm"
+                  />
+                </div>
+
                 <div>
-                  <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                    Analyse des Gains & Performances
-                    <FontAwesomeIcon icon={faWandMagicSparkles} className="text-xs text-amber-400" />
+
+                  <h2
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                      text-sm
+                      font-black
+                      tracking-tight
+                      text-slate-900
+                      sm:text-base
+                      dark:text-white
+                    "
+                  >
+                    Analyse des gains & performances
+
+                    <FontAwesomeIcon
+                      icon={faWandMagicSparkles}
+                      className="text-[10px] text-amber-400"
+                    />
                   </h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Rapports financiers, métriques de rendement et prévisions annuelles.
+
+                  <p className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                    Rapports financiers, métriques de rendement et tendances annuelles.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="rounded-xl bg-slate-100 dark:bg-slate-800/80 px-3.5 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
-                  Exercice {new Date().getFullYear()}
-                </span>
+              {/* YEAR */}
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                  self-start
+                  rounded-lg
+                  border
+                  border-slate-200
+                  bg-white
+                  px-3
+                  py-1.5
+                  text-[10px]
+                  font-bold
+                  text-slate-500
+                  sm:self-auto
+                  dark:border-slate-700
+                  dark:bg-slate-800
+                  dark:text-slate-300
+                "
+              >
+                <FontAwesomeIcon
+                  icon={faCalendarDays}
+                  className="text-blue-500"
+                />
+
+                Exercice {new Date().getFullYear()}
               </div>
             </div>
 
-            <div className="p-6 sm:p-8">
+            {/* =================================================
+                NE PAS TOUCHER
+            ================================================= */}
+
+            <div className="p-4 sm:p-6 lg:p-7">
               <GetAnnualGain />
             </div>
-          </div>
+
+          </section>
         )}
 
       </div>

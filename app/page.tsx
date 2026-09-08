@@ -106,7 +106,7 @@ export default function Home() {
                 flex h-11 w-11
                 items-center justify-center
                 rounded-xl
-                bg-blue-600
+                bg-white
                 shadow-lg
                 shadow-blue-600/20
               "
@@ -132,7 +132,7 @@ export default function Home() {
 
 
           {/* BADGE ADMIN */}
-          <div
+          {/* <div
             className="
               hidden sm:flex
               items-center gap-2
@@ -147,10 +147,8 @@ export default function Home() {
             <span className="text-[10px] font-bold uppercase tracking-wide text-blue-700">
               Admin
             </span>
-          </div>
-
+          </div> */}
         </div>
-
       </div>
 
 
@@ -172,7 +170,7 @@ export default function Home() {
 
           </div>
 
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="text-2xl font-extrabold tracking-tight text-amber-500 sm:text-3xl">
             Bienvenue, administrateur
           </h2>
 
@@ -188,7 +186,7 @@ export default function Home() {
             FORMULAIRE
         =================================================== */}
         <form
-          className="space-y-5"
+          className="space-y-5 relative -top-3"
         >
           {/* EMAIL */}
           <div>
@@ -601,13 +599,13 @@ export default function Home() {
                 <br />
 
                 <span className="text-blue-400">
-                  de manière professionnel
+                  de manière professionnelle
                 </span>
 
               </h2>
 
               <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 xl:text-lg">
-                Suivez vos activités, pilotez vos équipes,
+                Suivez vos activités, faites la gestion de vos collaborateurs,
                 optimisez vos ressources et faites grandir
                 votre entreprise.
               </p>
@@ -934,7 +932,6 @@ export default function Home() {
                 </div>
 
               </div>
-
             </div>
 
           </div>

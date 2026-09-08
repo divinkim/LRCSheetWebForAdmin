@@ -148,7 +148,7 @@ export function AnnualGainHook() {
 
     const YEARLY_LIMIT = MonthlyLimit * 12;
 
-    const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+    const [selectedMonthIndex, setSelectedMonthIndex] = useState(new Date().getMonth());
     const selectedMonth = monthlyBalances[selectedMonthIndex];
     const yearlySum = monthlyBalances.reduce((a, b) => a + b.value, 0);
 
