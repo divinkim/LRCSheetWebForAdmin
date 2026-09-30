@@ -150,17 +150,16 @@ export default function useAddUserInPlanningOfWeek() {
             setIsLoading(true);
 
             // Envoi du tableau d'objets `datas` à l'API
-            const response = await providers.API.post(
+            await providers.API.post(
                 "https://vps118934.serveur-vps.net:4001",
-                "createCollaboratorPlanning",
+                "users-plannings",
                 null,
                 datas
             );
 
-            if (response.status) {
-                setDatas([]);
-                toast.success(response.title, response.message);
-            }
+            setDatas([]);
+            toast.success("Félicitations", "Plannig créé avec succès");
+
         } catch (error) {
             toast.error(
                 "Erreur",

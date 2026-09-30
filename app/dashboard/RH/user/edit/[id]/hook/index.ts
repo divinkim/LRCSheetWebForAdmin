@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
+
 export type InputsValue = {
   firstname: string | null;
   lastname: string | null;
@@ -92,19 +93,19 @@ export function UpdateUserHookModal() {
     (async () => {
       try {
         const [enterprises, countries] = await Promise.all([
-          providers.API.getAll(providers.APIUrl, "getEnterprises", null),
-          providers.API.getAll(providers.APIUrl, "getCountries", null),
+          providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null),
+          providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null),
         ]);
 
-        setCountry(countries || []);
+        setCountry(countries.data);
 
         if (adminEnterpriseId && adminEnterpriseId !== 1) {
-          const filtered = (enterprises || []).filter(
+          const filtered = enterprises.data.filter(
             (e: { id: number }) => e.id === adminEnterpriseId
           );
           setGetEnterprises(filtered);
         } else {
-          setGetEnterprises(enterprises || []);
+          setGetEnterprises(enterprises.data);
         }
       } catch (error) {
         console.error("Erreur lors de l'initialisation :", error);
@@ -118,41 +119,39 @@ export function UpdateUserHookModal() {
 
     (async () => {
       try {
-        const getUser = await providers.API.getOne(
+        const getUser = await providers.API.getOne<UserResponseDto>(
           providers.APIUrl,
-          "getUser",
+          "users",
           userId
         );
 
-        if (getUser) {
-          setInputs({
-            firstname: getUser.firstname ?? null,
-            lastname: getUser.lastname ?? null,
-            birthDate: getUser.birthDate
-              ? new Date(getUser.birthDate).toISOString().split("T")[0]
-              : null,
-            gender: getUser.gender ?? null,
-            email: getUser.email ?? null,
-            password: getUser.password ?? null,
-            phone: getUser.phone ?? null,
-            EnterpriseId: getUser.EnterpriseId ?? null,
-            PostId: getUser.PostId ?? null,
-            SalaryId: getUser.SalaryId ?? null,
-            ContractTypeId: getUser.ContractTypeId ?? null,
-            ContractId: getUser.ContractId ?? null,
-            CountryId: getUser.CountryId ?? null,
-            PlanningId: getUser.PlanningId ?? null,
-            CityId: getUser.CityId ?? null,
-            DistrictId: getUser.DistrictId ?? null,
-            QuarterId: getUser.QuarterId ?? null,
-            photo: getUser.photo ?? null,
-            role: getUser.role ?? null,
-            DepartmentPostId: getUser.DepartmentPostId ?? null,
-            marialStatus: getUser.marialStatus ?? null,
-            adminService: getUser.adminService ?? null,
-            status: getUser.status ? "Actif" : "Inactif",
-          });
-        }
+        setInputs({
+          firstname: getUser.data.firstname ?? null,
+          lastname: getUser.data.lastname ?? null,
+          birthDate: getUser.data.birthDate
+            ? new Date(getUser.data.birthDate).toISOString().split("T")[0]
+            : null,
+          gender: getUser.data.gender ?? null,
+          email: getUser.data.email ?? null,
+          password: getUser.data.password ?? null,
+          phone: getUser.data.phone ?? null,
+          EnterpriseId: getUser.data.EnterpriseId ?? null,
+          PostId: getUser.data.PostId ?? null,
+          SalaryId: getUser.data.SalaryId ?? null,
+          ContractTypeId: getUser.data.ContractTypeId ?? null,
+          ContractId: getUser.data.ContractId ?? null,
+          CountryId: getUser.data.CountryId ?? null,
+          PlanningId: getUser.data.PlanningId ?? null,
+          CityId: getUser.data.CityId ?? null,
+          DistrictId: getUser.data.DistrictId ?? null,
+          QuarterId: getUser.data.QuarterId ?? null,
+          photo: getUser.data.photo ?? null,
+          role: getUser.data.role ?? null,
+          DepartmentPostId: getUser.data.DepartmentPostId ?? null,
+          marialStatus: getUser.data.marialStatus ?? null,
+          adminService: getUser.data.adminService ?? null,
+          status: getUser.data.status ? "Actif" : "Inactif",
+        });
       } catch (error) {
         console.error("Erreur lors de la récupération de l'utilisateur :", error);
       }
@@ -163,20 +162,20 @@ export function UpdateUserHookModal() {
   useEffect(() => {
     if (!inputs.EnterpriseId) return;
     (async () => {
-      const plannings = await providers.API.getAll(
+      const plannings = await providers.API.getAll<PlanningsResponseDto>(
         providers.APIUrl,
-        "getPlannings",
+        "plannings",
         null
       );
       if (adminRole !== "Super-Admin") {
         setPlannings(
-          (plannings || []).filter(
+          plannings.data.filter(
             (item: { EnterpriseId: number }) =>
               item.EnterpriseId === inputs.EnterpriseId
           )
         );
       } else {
-        setPlannings(plannings || []);
+        setPlannings(plannings.data);
       }
     })();
   }, [inputs.EnterpriseId, adminRole]);
@@ -188,20 +187,19 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const departments = await providers.API.getAll(
+      const departments = await providers.API.getAll<DepartmentsResponseDto>(
         providers.APIUrl,
-        "getDepartmentPosts",
+        "departments",
         null
       );
       if (adminRole !== "Super-Admin") {
         setGetDepartmentPosts(
-          (departments || []).filter(
-            (dept: { EnterpriseId: number }) =>
-              dept.EnterpriseId === inputs.EnterpriseId
+          departments.data.filter(
+            dept => dept.EnterpriseId === inputs.EnterpriseId
           )
         );
       } else {
-        setGetDepartmentPosts(departments || []);
+        setGetDepartmentPosts(departments.data);
       }
     })();
   }, [inputs.EnterpriseId, adminRole]);
@@ -213,14 +211,14 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const posts = await providers.API.getAll(
+      const posts = await providers.API.getAll<PostsResponseDto>(
         providers.APIUrl,
-        "getPosts",
+        "posts",
         null
       );
       setPosts(
-        (posts || []).filter(
-          (post: { EnterpriseId: number; DepartmentPostId: number }) =>
+        posts.data.filter(
+          post =>
             post.DepartmentPostId === inputs.DepartmentPostId &&
             post.EnterpriseId === inputs.EnterpriseId
         )
@@ -235,14 +233,14 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const salaries = await providers.API.getAll(
+      const salaries = await providers.API.getAll<SalariesResponseDto>(
         providers.APIUrl,
-        "getSalaries",
+        "salaries",
         null
       );
       setSalary(
-        (salaries || []).filter(
-          (salary: { EnterpriseId: number; PostId: number }) =>
+        salaries.data.filter(
+          salary =>
             salary.PostId === inputs.PostId &&
             salary.EnterpriseId === inputs.EnterpriseId
         )
@@ -257,14 +255,14 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const types = await providers.API.getAll(
+      const types = await providers.API.getAll<ContractTypesResponseDto>(
         providers.APIUrl,
-        "getContractTypes",
+        "contract-types",
         null
       );
       setContractTypes(
-        (types || []).filter(
-          (ct: { EnterpriseId: number }) => ct.EnterpriseId === inputs.EnterpriseId
+        types.data.filter(
+          ct => ct.EnterpriseId === inputs.EnterpriseId
         )
       );
     })();
@@ -277,14 +275,14 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const contracts = await providers.API.getAll(
+      const contracts = await providers.API.getAll<ContractsResponseDto>(
         providers.APIUrl,
-        "getContracts",
+        "contracts",
         null
       );
       setContracts(
-        (contracts || []).filter(
-          (c: { EnterpriseId: number; ContractTypeId: number }) =>
+        contracts.data.filter(
+          c =>
             c.ContractTypeId === inputs.ContractTypeId &&
             c.EnterpriseId === inputs.EnterpriseId
         )
@@ -299,13 +297,13 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const cities = await providers.API.getAll(
+      const cities = await providers.API.getAll<CitiesResponseDto>(
         providers.APIUrl,
-        "getCities",
+        "cities",
         null
       );
       setCity(
-        (cities || []).filter((city: any) => city.CountriesTypeId === inputs.CountryId)
+        cities.data.filter((city: any) => city.CountriesTypeId === inputs.CountryId)
       );
     })();
   }, [inputs.CountryId]);
@@ -317,13 +315,13 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const districts = await providers.API.getAll(
+      const districts = await providers.API.getAll<DistrictResponseDto>(
         providers.APIUrl,
-        "getDistricts",
+        "districts",
         null
       );
       setDistrict(
-        (districts || []).filter((district: any) => district.CityId === inputs.CityId)
+        (districts || []).data.filter((district: any) => district.CityId === inputs.CityId)
       );
     })();
   }, [inputs.CityId]);
@@ -335,13 +333,13 @@ export function UpdateUserHookModal() {
       return;
     }
     (async () => {
-      const quarters = await providers.API.getAll(
+      const quarters = await providers.API.getAll<QuartersResponseDto>(
         providers.APIUrl,
-        "getQuarters",
+        "quarters",
         null
       );
       setQuarter(
-        (quarters || []).filter((q: any) => q.DistrictId === inputs.DistrictId)
+        (quarters || []).data.filter((q: any) => q.DistrictId === inputs.DistrictId)
       );
     })();
   }, [inputs.DistrictId]);

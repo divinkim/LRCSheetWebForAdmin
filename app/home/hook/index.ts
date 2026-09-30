@@ -8,6 +8,7 @@ import {
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
+import { AttendanceListDto, AttendanceSingleResponseDto, AttendancesResponseDto, Enterprise, EnterprisesResponseDto, User, UsersResponseDto } from "@/types/global";
 
 type Attendances = {
   status: string;
@@ -29,9 +30,17 @@ type Attendances = {
   };
 };
 
+type Data = {
+  usersArray: User[],
+  enterprisesArray: Enterprise[],
+  totalAmount: [],
+  countriesArray: [],
+  citiesArray: [],
+}
+
 export default function HomeComponent() {
   const { data: session, status } = useSession();
-  const [attendances, setAttendances] = useState<Attendances[]>([]);
+  const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);
   const [enterprise, setEnterprise] = useState({
     subscriptionStatus: "",
     subscriptionType: "",
@@ -39,7 +48,7 @@ export default function HomeComponent() {
   const [loader, setLoader] = useState(true);
   const monthValue = new Date().getMonth();
 
-  const [data, setData] = useState({
+  const [data, setData] = useState<Data>({
     usersArray: [],
     enterprisesArray: [],
     totalAmount: [],
@@ -47,7 +56,7 @@ export default function HomeComponent() {
     citiesArray: [],
   });
 
-  function getTotalAttendanceDeductions(attendances: Attendances[]) {
+  function getTotalAttendanceDeductions(attendances: AttendanceListDto[]) {
     let totalLates: number = 0;
     let totalAbsences: number = 0;
 
@@ -88,29 +97,29 @@ export default function HomeComponent() {
     (async () => {
       try {
         setLoader(true);
-        const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-        let filteredUsers = users;
-
+        const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
+       
+        let filteredUsers: User[] = users.data;
+      
         if (adminRole !== "Super_Admin_Platform" && adminRole !== "Super_Admin_Enterprise") {
-          filteredUsers = users.filter(
+          filteredUsers = users.data.filter(
             (u: { EnterpriseId: number }) => u.EnterpriseId === userEnterpriseId
           );
         } else if (adminRole === "Super_Admin_Enterprise") {
-          filteredUsers = users.filter(
-            (u: { Enterprise: { MainEnterpriseId: number } }) => u.Enterprise.MainEnterpriseId === MainEnterpriseId
+          filteredUsers = users.data.filter(u => u.MainEnterpriseId === MainEnterpriseId
           );
         }
 
-        const enterprises = await providers.API.getAll(
-          "https://vps118934.serveur-vps.net:4001",
-          "getEnterprises",
+        const enterprises = await providers.API.getAll<EnterprisesResponseDto>(
+          providers.APIUrl,
+          "enterprises",
           null
         );
 
-        let filteredEnterprises = enterprises
+        let filteredEnterprises: Enterprise[] = enterprises.data
 
         if (adminRole === "Super_Admin_Enterprise") {
-          filteredEnterprises.filter((item: { MainEnterpriseId: number }) => item.MainEnterpriseId === MainEnterpriseId)
+          filteredEnterprises.filter(item => item.MainEnterpriseId === MainEnterpriseId)
         }
 
         setData((prevData) => ({
@@ -120,58 +129,57 @@ export default function HomeComponent() {
         }));
 
         const fcmToken = localStorage.getItem("adminFcmToken");
-        console.log("le token fcm", fcmToken)
+    
         if (fcmToken) {
-          const res = await providers.API.post(
-            "https://vps118934.serveur-vps.net:4001",
-            "sendFcmToken",
+          const res = await providers.API.update(
+            providers.APIUrl,
+            "fcm-tokens",
             null,
             {
               UserId: userId,
               UserEnterpriseId: userEnterpriseId,
               fcmToken,
-            }
+            },
+            null
           );
-          console.log(res)
         }
 
-        const allAttendances = await providers.API.getAll(
+        const allAttendances = await providers.API.getAll<AttendancesResponseDto>(
           providers.APIUrl,
-          "getAllAttendances",
+          "attendances",
           null
         );
 
         const currentYear = new Date().getFullYear();
-        let filteredAttendances = [];
+        let filteredAttendances: AttendanceListDto[] = allAttendances.data;
 
         if (adminRole === "Super_Admin_Platform") {
-          filteredAttendances = allAttendances.filter(
+          filteredAttendances = allAttendances.data.filter(
             (a: { EnterpriseId: number; mounth: number; createdAt: string }) =>
               a.EnterpriseId === userEnterpriseId &&
               a.mounth === monthValue &&
               new Date(a.createdAt).getFullYear() === currentYear
           );
         } else if (adminRole === "Super_Admin_Enterprise") {
-          filteredAttendances = allAttendances.filter(
-            (a: { Enterprise: { MainEnterpriseId: number }; mounth: number; createdAt: string }) =>
-              a.Enterprise.MainEnterpriseId === MainEnterpriseId &&
-              a.mounth === monthValue &&
-              new Date(a.createdAt).getFullYear() === currentYear
+          filteredAttendances = allAttendances.data.filter(a =>
+            a.Enterprise.MainEnterpriseId === MainEnterpriseId &&
+            a.mounth === monthValue &&
+            new Date(a.createdAt).getFullYear() === currentYear
           );
         }
 
         setAttendances(filteredAttendances);
 
         if (userEnterpriseId) {
-          const enterpriseRes = await providers.API.getOne(
-            "https://vps118934.serveur-vps.net:4001",
-            "getEnterprise",
+          const enterpriseRes = await providers.API.getOne<AttendanceSingleResponseDto>(
+            providers.APIUrl,
+            "enterprises",
             userEnterpriseId
           );
 
           setEnterprise({
-            subscriptionStatus: enterpriseRes?.subscriptionStatus,
-            subscriptionType: enterpriseRes?.subscriptionType,
+            subscriptionStatus: enterpriseRes?.data.subscriptionStatus,
+            subscriptionType: enterpriseRes?.data.subscriptionType,
           });
         }
       } catch (error) {

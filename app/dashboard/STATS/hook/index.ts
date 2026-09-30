@@ -1,5 +1,6 @@
 "use client";
 import { providers } from "@/index";
+import { AttendanceListDto, AttendancesResponseDto, User, UsersResponseDto } from "@/types/global";
 import { useEffect, useState } from "react";
 
 type Attendances = {
@@ -30,12 +31,12 @@ type Users = {
 
 export function AnnualGainHook() {
     const [totalDeductionByMonth, setTotalDeductionByMonth] = useState(0);
-    const [attendances, setAttendances] = useState<Attendances[]>([]);
+    const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);
     const [EnterpriseId, setEnterpriseId] = useState<string | null>(null);
     const [adminRole, setAdminRole] = useState<string | null>(null);
     const [MonthlyLimit, setMonthlyLimit] = useState(0);
 
-    function getDuductionByMonth(attendances: Attendances[], monthIndice: number) {
+    function getDuductionByMonth(attendances: AttendanceListDto[], monthIndice: number) {
         const fullYear = new Date().getFullYear();
 
         const filterAttendanceByMonth = attendances.filter(a => a.mounth === monthIndice && new Date(a.createdAt).getFullYear() === fullYear);
@@ -104,11 +105,10 @@ export function AnnualGainHook() {
         (async () => {
             const EnterpriseId = window?.localStorage.getItem("EnterpriseId");
             const adminRole = window?.localStorage.getItem("adminRole");
-
-            const attendances = await providers.API.getAll(providers.APIUrl, "getAllAttendances", null);
+            const attendances = await providers.API.getAll<AttendancesResponseDto>(providers.APIUrl, "attendances", null);
             const filtered = Number(EnterpriseId) !== 1
-                ? attendances.filter((a: { EnterpriseId: number }) => a.EnterpriseId === parseInt(EnterpriseId ?? ""))
-                : attendances.filter((a: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(a.EnterpriseId));
+                ? attendances.data.filter((a: { EnterpriseId: number }) => a.EnterpriseId === parseInt(EnterpriseId ?? ""))
+                : attendances.data.filter((a: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(a.EnterpriseId));
             setAttendances(filtered);
             setEnterpriseId(EnterpriseId);
             setAdminRole(adminRole);
@@ -119,11 +119,10 @@ export function AnnualGainHook() {
     useEffect(() => {
         (async () => {
             let total = 0;
-            const users: Users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-
-            const usersByEnterprisesId: Users = Number(EnterpriseId) !== 1 ?
-                users.filter(user => user.EnterpriseId === Number(EnterpriseId))
-                : users.filter(user => [1, 2, 3, 4, null].includes(Number(user.EnterpriseId)));
+            const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
+            const usersByEnterprisesId = Number(EnterpriseId) !== 1 ?
+                users.data.filter(user => user.EnterpriseId === Number(EnterpriseId))
+                : users.data.filter(user => [1, 2, 3, 4, null].includes(Number(user.EnterpriseId)));
 
             for (const user of usersByEnterprisesId) {
                 let dailySalary = Number(user?.Salary?.dailySalary || 0);
@@ -134,7 +133,7 @@ export function AnnualGainHook() {
         })()
     }, [attendances]);
 
-    console.log("la putain de limit par mois", MonthlyLimit);
+    // console.log("la putain de limit par mois", MonthlyLimit);
 
     useEffect(() => {
         (() => {

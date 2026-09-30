@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
 import { AppointmentDto } from "@/types/appointment";
+import { User, UsersResponseDto } from "@/types/global";
 export function useAppointment() {
     const { data: session, status: sessionStatus } = useSession();
     const toast = useToast();
@@ -33,7 +34,7 @@ export function useAppointment() {
     const adminId = (session?.user as any)?.id
 
     // Listes dynamiques depuis l'API
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [inputs, setInputs] = useState<AppointmentDto>({
         fullName: "",
         email: null,
@@ -55,9 +56,8 @@ export function useAppointment() {
                 setInputs(JSON.parse(getInputMemory));
             }
             try {
-                const users = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-                console.log(users)
-                setUsers(users);
+                const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
+                setUsers(users.data);
             } catch (error) {
                 console.error("Erreur lors de l'initialisation :", error);
             }
@@ -159,16 +159,15 @@ export function useAppointment() {
             });
             setIsLoading(true);
 
-            // await providers.API.post(
-            //     "https://vps118934.serveur-vps.net:4001",
-            //     "appointment",
-            //     null,
-            //     inputs
-            // )
-
-            // toast.success("Bravo", "Rendez-vous enregistré");
             await providers.API.post(
-                "https://vps118934.serveur-vps.net:4001",
+                providers.APIUrl,
+                "appointments",
+                null,
+                inputs
+            )
+            toast.success("Bravo", "Rendez-vous enregistré");
+            await providers.API.post(
+                providers.APIUrl,
                 "sendNotificationPush",
                 null,
                 {
@@ -179,9 +178,8 @@ export function useAppointment() {
                     content: `Vous avez une demande en cours de la part de ${inputs.fullName} à ${inputs.time}. Veuillez consulter la liste des rendez-vous au niveau de votre profil.`
                 }
             )
-            // localStorage.removeItem("inputMemoryOfAddAppointmentPage");
-            // window.location.reload();
-
+            localStorage.removeItem("inputMemoryOfAddAppointmentPage");
+            window.location.reload();
         } catch (error) {
             console.error("Erreur lors de la création :", error);
             const errText = error instanceof Error ? error.message : "Une erreur inattendue est survenue.";

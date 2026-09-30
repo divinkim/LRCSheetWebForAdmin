@@ -16,38 +16,10 @@ type UsersDatas = {
 
 }
 
-type WeekDaysPlannings = {
-    WeekDaysId: number,
-    PlanningTypeId: number,
-    PlanningId: number,
-    EnterpriseId: number,
-    Enterprise: {
-        name: string | null,
-        logo: string | null
-    }
-    WeekDays: {
-        name: string,
-    },
-    PlanningType: {
-        title: string,
-    },
-    Planning: {
-        startTime: string,
-        breakingStartTime: string,
-        resumeEndTime: string,
-        endTime: string
-    },
-    UserId: number,
-    User: {
-        firstname: string,
-        lastname: string,
-        photo: string | null,
-    }
-}
-
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
 import { useSession } from "next-auth/react"
+import { UsersPlanningsDto, UsersPlanningsResponseDto } from "@/types/global"
 export default function useGetUsersInPlanningOfWeek() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);             // page courante
@@ -55,8 +27,8 @@ export default function useGetUsersInPlanningOfWeek() {
 
     const [usersList, setUsersList] = useState<UsersDatas[]>([]);
     const [savedUsersList, setSavedUsersList] = useState<UsersDatas[]>([]);
-    const [weekDaysPlannings, setWeekDaysPlannings] = useState<WeekDaysPlannings[]>([])
-    const [weekDaysPlanningsSaved, setWeekDaysPlanningsSaved] = useState<WeekDaysPlannings[]>([])
+    const [weekDaysPlannings, setWeekDaysPlannings] = useState<UsersPlanningsDto[]>([])
+    const [weekDaysPlanningsSaved, setWeekDaysPlanningsSaved] = useState<UsersPlanningsDto[]>([])
 
     const [getAdminRole, setAdminRole] = useState<string | null>(null);
     const [loading, setIsLoading] = useState(false);
@@ -67,15 +39,15 @@ export default function useGetUsersInPlanningOfWeek() {
         (async () => {
             let EnterpriseId = (session?.user as any)?.EnterpriseId
 
-            const request = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getAllCollaboratorPlannings", null);
-            console.log("le requete", request)
+            const res = await providers.API.getAll<UsersPlanningsResponseDto>(providers.APIUrl, "users-plannings", null);
+        
             if (Number(EnterpriseId) === 1) {
-                const filterWeekDaysPlanningsByEnterpriseId = request.filter((item: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(item.EnterpriseId))
+                const filterWeekDaysPlanningsByEnterpriseId = res.data.filter((item: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(item.EnterpriseId))
                 setWeekDaysPlannings(filterWeekDaysPlanningsByEnterpriseId);
                 setWeekDaysPlanningsSaved(filterWeekDaysPlanningsByEnterpriseId);
                 return;
             }
-            const filterWeekDaysPlanningsByEnterpriseId = request.filter((item: { EnterpriseId: number }) => item.EnterpriseId === (Number(EnterpriseId)))
+            const filterWeekDaysPlanningsByEnterpriseId = res.data.filter((item: { EnterpriseId: number }) => item.EnterpriseId === (Number(EnterpriseId)))
             setWeekDaysPlannings(filterWeekDaysPlanningsByEnterpriseId);
             setWeekDaysPlanningsSaved(filterWeekDaysPlanningsByEnterpriseId);
         })();

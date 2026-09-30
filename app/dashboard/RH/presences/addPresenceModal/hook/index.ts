@@ -4,16 +4,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
 import { PresencesListHookModal } from "../../hook";
 import { useSession } from "next-auth/react";
-type User = {
-    lastname: string,
-    firstname: string,
-    id: number,
-    SalaryId: number,
-    EnterpriseId: number,
-    photo: string | null,
-    adminService: null,
-    PlanningId: any
-}
+import { User, UsersResponseDto } from "@/types/global";
 
 type Inputs = {
     arrivalTime: string,
@@ -37,21 +28,20 @@ export default function useAddPresenceModal() {
         salariesId: [],
         date: ""
     });
-    const { setPresencesListCloned, setPresencesList } = PresencesListHookModal()
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
     const { data: session } = useSession();
     useEffect(() => {
         (async () => {
             const EnterpriseId = (session?.user as any)?.EnterpriseId;
-            const getUsers = await providers.API.getAll("https://vps118934.serveur-vps.net:4001", "getUsers", null);
+            const getUsers = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
 
             if (Number(EnterpriseId) === 1) {
-                const getUsersByEnterprises = getUsers.filter((user: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(user.EnterpriseId));
+                const getUsersByEnterprises = getUsers.data.filter((user: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(user.EnterpriseId));
                 setUsersArray(getUsersByEnterprises);
                 setUsersArrayCloned(getUsersByEnterprises);
             } else {
-                const getUsersByEnterprises = getUsers.filter((user: { EnterpriseId: number }) => user.EnterpriseId === Number(EnterpriseId));
+                const getUsersByEnterprises = getUsers.data.filter((user: { EnterpriseId: number }) => user.EnterpriseId === Number(EnterpriseId));
                 setUsersArray(getUsersByEnterprises);
                 setUsersArrayCloned(getUsersByEnterprises);
             }
@@ -121,8 +111,8 @@ export default function useAddPresenceModal() {
             }
             setIsLoading(true);
             await providers.API.post(
-                "https://vps118934.serveur-vps.net:4001",
-                "postAttendancesFromAdmin", null,
+                providers.APIUrl,
+                "attendances/from-admin", null,
                 inputs
             );
             toast.success(

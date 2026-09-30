@@ -25,25 +25,7 @@ import Swal from "sweetalert2";
 import { providers } from "@/index";
 import { tablesModal } from "@/components/Tables/tablesModal";
 import { useToast } from "@/components/toast";
-
-type UserData = {
-  id: number;
-  firstname: string | null;
-  lastname: string | null;
-  phone: string | null;
-  address: string | null;
-  birthDate: string | null;
-  email: string | null;
-  status: boolean | null;
-  gender: string | null;
-  photo: string | null;
-  EnterpriseId?: number;
-  Enterprise?: {
-    name: string | null;
-    logo: string | null;
-    MainEnterpriseId: number | null
-  };
-};
+import { User, UsersResponseDto } from "@/types/global";
 
 const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"];
 
@@ -63,7 +45,7 @@ export default function UsersList() {
   const hasAdminAccess = REQUIRED_ADMIN_ROLES.includes(adminRole);
 
   // 2. États locaux
-  const [usersList, setUsersList] = useState<UserData[]>([]);
+  const [usersList, setUsersList] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [page, setPage] = useState(1);
@@ -83,10 +65,10 @@ export default function UsersList() {
 
       try {
         setLoading(true);
-        const data = await providers.API.getAll(providers.APIUrl, "getUsers", null);
-        const rawUsers: UserData[] = data || [];
+        const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
+        const rawUsers: User[] = users.data;
 
-        let filtered: UserData[] = [];
+        let filtered: User[] = [];
 
         if (adminRole === "Super_Admin_Platform") {
           filtered = rawUsers;
@@ -234,11 +216,8 @@ export default function UsersList() {
               id,
               {}
             );
-
-            if (response.status) {
-              toast.success("Bravo", "Collaborateur supprimé avec succès");
-              setUsersList((prev) => prev.filter((u) => u.id !== id));
-            }
+            toast.success("Bravo", "Collaborateur supprimé avec succès");
+            setUsersList((prev) => prev.filter((u) => u.id !== id));
           } catch (err) {
             toast.error(
               "Erreur",
@@ -466,14 +445,14 @@ export default function UsersList() {
                       {/* Photo */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                          <Image
+                          <img
                             src={
                               user.photo
-                                ? `${providers.APIUrl}/images/${user.photo}`
+                                ? `${providers.ImageUrl}/${user.photo}`
                                 : "/images/clientProfile.png"
                             }
                             alt={user.lastname || "Profil"}
-                            fill
+                           
                             sizes="40px"
                             className="object-cover"
                           />
@@ -499,10 +478,10 @@ export default function UsersList() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {user.Enterprise?.logo ? (
                           <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-                            <Image
-                              src={`${providers.APIUrl}/images/${user.Enterprise.logo}`}
+                            <img
+                              src={`${providers.ImageUrl}/${user.Enterprise.logo}`}
                               alt={user.Enterprise.name || "Entreprise"}
-                              fill
+                             
                               sizes="32px"
                               className="object-cover"
                             />

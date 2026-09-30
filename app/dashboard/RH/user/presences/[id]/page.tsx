@@ -8,6 +8,7 @@ import timeGridPlugin from "@fullcalendar/timegrid/index.js";
 import interactionPlugin from "@fullcalendar/interaction/index.js";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { providers } from "@/index";
+import { AttendanceListDto, AttendancesResponseDto, UserResponseDto } from "@/types/global";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -38,7 +39,7 @@ const CalendarPage = () => {
   const [presences, setPresences] = useState<number>(0);
   const [lates, setLates] = useState<number>(0);
   const [absences, setAbsences] = useState<number>(0);
-  const [attendances, setAttendances] = useState<any[]>([]);
+  const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);
   const [totalSalary, setTotalSalary] = useState<string>("0");
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
@@ -73,8 +74,8 @@ const CalendarPage = () => {
         const status = attendance.status || "";
         const arrivalTime = attendance.arrivalTime || "";
         const departureTime = attendance.departureTime || "";
-        const startTime = attendance?.Planning?.startTime || "00:00";
-        const endTime = attendance?.Planning?.endTime || "00:00";
+        const startTime = attendance?.Planning?.startTime?.split('T')[1]?.slice(0, 5) || "00:00";
+        const endTime = attendance?.Planning?.endTime?.split('T')[1]?.slice(0, 5) || "00:00";
 
         const result = getData(
           arrivalTime,
@@ -104,29 +105,29 @@ const CalendarPage = () => {
         const id = window.location.pathname.split("/").pop();
         const userId = Number(id);
 
-        const user = await providers.API.getOne(providers.APIUrl, "getUser", userId);
-        const response = await providers.API.getAll(providers.APIUrl, "getAttendances", userId);
+        const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", userId);
+        const response = await providers.API.getAll<AttendancesResponseDto>(providers.APIUrl, "attendances/me", userId);
 
-        const userDailySalary = user?.Salary?.dailySalary || "0";
+        const userDailySalary = user.data.Salary?.dailySalary || "0";
 
         setData({
-          firstname: user.firstname,
-          lastname: user.lastname,
+          firstname: user.data.firstname,
+          lastname: user.data.lastname,
           dailySalary: userDailySalary,
-          netSalary: user?.Salary?.netSalary || "0",
-          photo: user.photo,
-          poste: user?.Post?.title || "",
+          netSalary: user.data.Salary?.netSalary || "0",
+          photo: user.data.photo,
+          poste: user.data.Post?.title || "",
           Enterprise: {
-            name: user?.Enterprise?.name || "",
-            logo: user?.Enterprise?.logo || "",
-            id: user?.EnterpriseId || 0,
+            name: user.data.Enterprise?.name || "",
+            logo: user.data.Enterprise?.logo || "",
+            id: user.data.EnterpriseId || 0,
           },
         });
 
         const attendanceList = response || [];
-        setAttendances(attendanceList);
+        setAttendances(attendanceList.data);
 
-        const formatted: CalendarEvent[] = attendanceList
+        const formatted: CalendarEvent[] = attendanceList.data
           .filter((item: any) => new Date(item.createdAt).getDay() !== 0)
           .map((item: any) => {
             const { id, arrivalTime, departureTime, createdAt, status, User, Salary, Planning } = item;
@@ -139,7 +140,8 @@ const CalendarPage = () => {
             if (status === "A temps") calendarColor = "Success";
             else if (status === "En retard") calendarColor = "Warning";
             else if (status === "Absent") calendarColor = "Danger";
-
+            const startTime = Planning?.startTime?.split('T')[1]?.slice(0, 5)
+            const endTime = Planning?.endTime?.split('T')[1]?.slice(0, 5)
             return {
               id: id.toString(),
               start,
@@ -152,8 +154,8 @@ const CalendarPage = () => {
                 arrivalTime: arrivalTime || "",
                 departureTime: departureTime || "",
                 dailySalary: Salary?.dailySalary || userDailySalary,
-                startTime: Planning?.startTime || "00:00",
-                endTime: Planning?.endTime || "00:00",
+                startTime,
+                endTime
               },
             };
           });
@@ -162,7 +164,7 @@ const CalendarPage = () => {
 
         // Mettre à jour immédiatement les stats pour le mois en cours
         const now = new Date();
-        calculateMonthStats(attendanceList, now.getMonth(), now.getFullYear(), Number(userDailySalary));
+        calculateMonthStats(attendanceList.data, now.getMonth(), now.getFullYear(), Number(userDailySalary));
       } catch (error) {
         console.error("Erreur événements :", error);
       } finally {
@@ -233,7 +235,7 @@ const CalendarPage = () => {
               <img
                 src={
                   data.photo
-                    ? `${providers.APIUrl}/images/${data.photo}`
+                    ? `${providers.ImageUrl}/${data.photo}`
                     : "/images/clientProfile.png"
                 }
                 alt="Profil"
@@ -272,7 +274,7 @@ const CalendarPage = () => {
               </p>
               <div className="flex items-center gap-4">
                 <img
-                  src={`${providers.APIUrl}/images/${data.Enterprise.logo}`}
+                  src={`${providers.ImageUrl}/${data.Enterprise.logo}`}
                   alt="Logo Entreprise"
                   className="h-14 w-14 rounded-full border-2 border-white object-cover"
                 />
@@ -386,7 +388,6 @@ function getDeductionPercent(
   ) {
     return 10;
   }
-
   return 0;
 }
 

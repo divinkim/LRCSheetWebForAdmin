@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
+import { AttendancesResponseDto, UsersResponseDto, User, AttendanceDto, AttendanceListDto } from "@/types/global";
 
 type PresencesDatas = {
     arrivalTime: string | null;
@@ -36,28 +37,14 @@ type PresencesDatas = {
     };
 };
 
-type User = {
-    id: number;
-    lastname: string | null;
-    firstname: string | null;
-    PlanningId: number;
-    SalaryId: number;
-    EnterpriseId: number;
-    photo: string | null;
-    Enterprise?: {
-        MainEnterpriseId: number;
-    };
-};
-
-const API_BASE_URL = "https://vps118934.serveur-vps.net:4001";
 
 // --- HOOK ---
 export function PresencesListHookModal() {
     const { data: session, status } = useSession();
 
     // États de données
-    const [presencesList, setPresencesList] = useState<PresencesDatas[]>([]);
-    const [presencesListCloned, setPresencesListCloned] = useState<PresencesDatas[]>([]);
+    const [presencesList, setPresencesList] = useState<AttendanceListDto[]>([]);
+    const [presencesListCloned, setPresencesListCloned] = useState<AttendanceListDto[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
 
@@ -85,20 +72,20 @@ export function PresencesListHookModal() {
             try {
                 // Appels parallèles pour optimiser le temps de chargement
                 const [rawUsers, rawAttendances] = await Promise.all([
-                    providers.API.getAll(API_BASE_URL, "getUsers", null),
-                    providers.API.getAll(API_BASE_URL, "getAllAttendances", null),
+                    providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null),
+                    providers.API.getAll<AttendancesResponseDto>(providers.APIUrl, "attendances", null),
                 ]);
 
                 // Filtrage des Utilisateurs selon le Rôle
                 let filteredUsers: User[] = [];
                 if (adminRole === "Super_Admin_Platform") {
-                    filteredUsers = rawUsers;
+                    filteredUsers = rawUsers.data;
                 } else if (adminRole === "Super_Admin_Enterprise") {
-                    filteredUsers = rawUsers.filter(
+                    filteredUsers = rawUsers.data.filter(
                         (item: User) => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
                     );
                 } else if (adminRole === "Enterprise_Admin") {
-                    filteredUsers = rawUsers.filter(
+                    filteredUsers = rawUsers.data.filter(
                         (item: User) => item.EnterpriseId === enterpriseId
                     );
                 }
@@ -107,16 +94,16 @@ export function PresencesListHookModal() {
                 setUsersCloned(filteredUsers);
 
                 // Filtrage des Présences selon le Rôle
-                let filteredAttendances: PresencesDatas[] = [];
+                let filteredAttendances:AttendanceListDto[] = rawAttendances.data;
                 if (adminRole === "Super_Admin_Platform") {
-                    filteredAttendances = rawAttendances;
+                    filteredAttendances = rawAttendances.data;
                 } else if (adminRole === "Super_Admin_Enterprise") {
-                    filteredAttendances = rawAttendances.filter(
-                        (item: PresencesDatas) => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
+                    filteredAttendances = rawAttendances.data.filter(
+                        item => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
                     );
                 } else if (adminRole === "Enterprise_Admin") {
-                    filteredAttendances = rawAttendances.filter(
-                        (item: PresencesDatas) => item.EnterpriseId === enterpriseId
+                    filteredAttendances = rawAttendances.data.filter(
+                        item => item.EnterpriseId === enterpriseId
                     );
                 }
 

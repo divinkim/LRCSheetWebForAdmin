@@ -20,6 +20,7 @@ import {
   faHashtag,
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
+import { AppointmentListDto, AppointmentSingleResponseDto } from "@/types/global";
 
 export type Appointment = {
   id?: number;
@@ -116,21 +117,21 @@ function AppointmentSkeleton() {
 // Composant Principal
 // ==========================================
 export default function ViewAppointment() {
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [appointment, setAppointment] = useState<AppointmentListDto>();
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     (async () => {
       try {
         const id = window.location.href.split("/").pop();
-        const res = await providers.API.getOne(
-          "https://vps118934.serveur-vps.net:4001",
-          "appointment",
+        const res = await providers.API.getOne<AppointmentSingleResponseDto>(
+          providers.APIUrl,
+          "appointments",
           Number(id)
         );
-        console.log(res)
+       
         if (res) {
-          setAppointment(res);
+          setAppointment(res.data);
         }
 
       } catch (error) {

@@ -6,10 +6,12 @@ import { getToken } from "firebase/messaging";
 import Swal from "sweetalert2";
 import { signIn } from "next-auth/react";
 import { useToast } from "@/components/toast";
+import { useRouter } from "next/navigation";
 export default function useAuth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
-    const toast = useToast();
+  const toast = useToast();
+  const router = useRouter();
   const [inputs, setInputs] = useState({
     email: "",
     password: "",
@@ -93,7 +95,7 @@ export default function useAuth() {
         return;
       }
       if (request?.ok) {
-        window.location.href = "/home";
+        router.push("/home");
       }
     } catch (error) {
       console.error("Erreur d'authentification:", error);

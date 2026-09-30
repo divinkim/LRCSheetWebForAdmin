@@ -53,54 +53,66 @@ export default function AddPresenceModal() {
 
                     {/* Heure + Date */}
 
-                    <div className="grid md:grid-cols-3 gap-5 mb-8">
+                    <div className="grid gap-5 md:grid-cols-3 mb-5">
+
                         <div>
-                            <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
                                 Arrivée
-                                <span className="text-orange-500"> *</span>
                             </label>
+
                             <input
                                 type="time"
+                                value={inputs.arrivalTime ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
                                         arrivalTime: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             />
+
                         </div>
+
+
                         <div>
-                            <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
                                 Départ
-                                {/* <span className="text-orange-500"> *</span> */}
                             </label>
+
                             <input
                                 type="time"
+                                value={inputs.departureTime ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
                                         departureTime: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             />
+
                         </div>
-                        <div>
-                            <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+                        <div className="">
+
+                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
                                 Date
-                                <span className="text-orange-500"> *</span>
                             </label>
+
                             <input
                                 type="date"
+                                value={inputs.date ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
                                         date: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                             />
+
                         </div>
                     </div>
                     {/* Boutons */}
@@ -155,7 +167,7 @@ export default function AddPresenceModal() {
                                         <img
                                             src={
                                                 user.photo
-                                                    ? `${providers.APIUrl}/images/${user.photo}`
+                                                    ? `${providers.ImageUrl}/${user.photo}`
                                                     : "/images/clientProfile.png"
                                             }
                                             className="h-12 w-12 rounded-full object-cover border-2 border-slate-200"

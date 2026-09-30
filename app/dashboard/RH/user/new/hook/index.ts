@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
+import { CitiesResponseDto, ContractsResponseDto, ContractTypesResponseDto, CountryResponseDto, DepartmentsResponseDto, DistrictResponseDto, EnterprisesResponseDto, PlanningsResponseDto, PostsResponseDto, QuarterResponseDto, QuartersResponseDto, SalariesResponseDto, UserResponseDto } from "@/types/global";
 
 export type InputsValue = {
   firstname: string | null;
@@ -39,8 +40,10 @@ export default function AddUserHookModal() {
 
   // Informations issues de la session NextAuth
   const adminRole = (session?.user as any)?.role ?? null;
-  const sessionEnterpriseId = (session?.user as any)?.EnterpriseId 
-    ? Number((session?.user as any).EnterpriseId) 
+  const userId = (session?.user as any)?.id ?? null;
+
+  const adminEnterpriseId = (session?.user as any)?.EnterpriseId
+    ? Number((session?.user as any).EnterpriseId)
     : null;
 
   // Listes dynamiques depuis l'API
@@ -83,197 +86,328 @@ export default function AddUserHookModal() {
     status: "",
   });
 
-  // 1. Initialisation : Synchronisation session & Chargement des données de base
+
+  // 1. Initialisation : Chargement des entreprises & pays
   useEffect(() => {
     if (sessionStatus === "loading") return;
 
     (async () => {
-      // Restauration de la mémoire du formulaire si présente
-      const getInputMemory = localStorage.getItem("inputMemoryOfAddUserPage");
-      if (getInputMemory) {
-        setInputs(JSON.parse(getInputMemory));
-      } else if (sessionEnterpriseId && adminRole !== "Super-Admin") {
-        setInputs((prev) => ({ ...prev, EnterpriseId: sessionEnterpriseId }));
-      }
-
-      // Chargement des entreprises et pays
       try {
-        const [enterprisesData, countriesData] = await Promise.all([
-          providers.API.getAll(providers.APIUrl, "getEnterprises", null),
-          providers.API.getAll(providers.APIUrl, "getCountries", null),
+        const [enterprises, countries] = await Promise.all([
+          providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null),
+          providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null),
         ]);
-        setEnterprises(enterprisesData || []);
-        setCountry(countriesData || []);
+
+        setCountry(countries.data);
+
+        if (adminEnterpriseId && adminEnterpriseId !== 1) {
+          const filtered = enterprises.data.filter(
+            (e: { id: number }) => e.id === adminEnterpriseId
+          );
+          setEnterprises(filtered);
+        } else {
+          setEnterprises(enterprises.data);
+        }
       } catch (error) {
         console.error("Erreur lors de l'initialisation :", error);
       }
     })();
-  }, [sessionStatus, sessionEnterpriseId, adminRole]);
+  }, [sessionStatus, adminEnterpriseId]);
 
-  // 2. Plannings
+  // 2. Chargement des données de l'utilisateur à modifier
+  useEffect(() => {
+    if (!userId) return;
+
+    (async () => {
+      try {
+        const getUser = await providers.API.getOne<UserResponseDto>(
+          providers.APIUrl,
+          "users",
+          userId
+        );
+
+        setInputs({
+          firstname: getUser.data.firstname ?? null,
+          lastname: getUser.data.lastname ?? null,
+          birthDate: getUser.data.birthDate
+            ? new Date(getUser.data.birthDate).toISOString().split("T")[0]
+            : null,
+          gender: getUser.data.gender ?? null,
+          email: getUser.data.email ?? null,
+          password: getUser.data.password ?? null,
+          phone: getUser.data.phone ?? null,
+          EnterpriseId: getUser.data.EnterpriseId ?? null,
+          PostId: getUser.data.PostId ?? null,
+          SalaryId: getUser.data.SalaryId ?? null,
+          ContractTypeId: getUser.data.ContractTypeId ?? null,
+          ContractId: getUser.data.ContractId ?? null,
+          CountryId: getUser.data.CountryId ?? null,
+          PlanningId: getUser.data.PlanningId ?? null,
+          CityId: getUser.data.CityId ?? null,
+          DistrictId: getUser.data.DistrictId ?? null,
+          QuarterId: getUser.data.QuarterId ?? null,
+          photo: getUser.data.photo ?? null,
+          role: getUser.data.role ?? null,
+          DepartmentPostId: getUser.data.DepartmentPostId ?? null,
+          marialStatus: getUser.data.marialStatus ?? null,
+          adminService: getUser.data.adminService ?? null,
+          status: getUser.data.status ? "Actif" : "Inactif",
+        });
+      } catch (error) {
+        console.error("Erreur lors de la récupération de l'utilisateur :", error);
+      }
+    })();
+  }, [userId]);
+
+  // 3. Plannings
   useEffect(() => {
     if (!inputs.EnterpriseId) return;
     (async () => {
-      const plannings = await providers.API.getAll(providers.APIUrl, "getPlannings", null);
+      const plannings = await providers.API.getAll<PlanningsResponseDto>(
+        providers.APIUrl,
+        "plannings",
+        null
+      );
       if (adminRole !== "Super-Admin") {
-        setPlannings(plannings.filter((item: any) => item.EnterpriseId === inputs.EnterpriseId));
+        setPlannings(
+          plannings.data.filter(
+            (item: { EnterpriseId: number }) =>
+              item.EnterpriseId === inputs.EnterpriseId
+          )
+        );
       } else {
-        setPlannings(plannings);
+        setPlannings(plannings.data);
       }
     })();
   }, [inputs.EnterpriseId, adminRole]);
 
-  // 3. Départements
+  // 4. Départements
   useEffect(() => {
-    if (!inputs.EnterpriseId) {
-      setDepartmentPosts([]);
-      return;
-    }
     (async () => {
-      const departments = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
-      setDepartmentPosts(departments.filter((dept: any) => dept.EnterpriseId === inputs.EnterpriseId));
+      const departments = await providers.API.getAll<DepartmentsResponseDto>(
+        providers.APIUrl,
+        "departments",
+        null
+      );
+      if (adminRole !== "Super-Admin") {
+        setDepartmentPosts(
+          departments.data.filter(
+            dept => dept.EnterpriseId === inputs.EnterpriseId
+          )
+        );
+      } else {
+        setDepartmentPosts(departments.data);
+      }
     })();
-  }, [inputs.EnterpriseId]);
+  }, [inputs.EnterpriseId, adminRole]);
 
-  // 4. Postes
+  // 5. Postes
   useEffect(() => {
     if (!inputs.DepartmentPostId || !inputs.EnterpriseId) {
       setPosts([]);
       return;
     }
     (async () => {
-      const posts = await providers.API.getAll(providers.APIUrl, "getPosts", null);
+      const posts = await providers.API.getAll<PostsResponseDto>(
+        providers.APIUrl,
+        "posts",
+        null
+      );
       setPosts(
-        posts.filter(
-          (post: any) => post.DepartmentPostId === inputs.DepartmentPostId && post.EnterpriseId === inputs.EnterpriseId
+        posts.data.filter(
+          post =>
+            post.DepartmentPostId === inputs.DepartmentPostId &&
+            post.EnterpriseId === inputs.EnterpriseId
         )
       );
     })();
   }, [inputs.DepartmentPostId, inputs.EnterpriseId]);
 
-  // 5. Salaires
+  // 6. Salaires
   useEffect(() => {
     if (!inputs.PostId || !inputs.EnterpriseId) {
       setSalary([]);
       return;
     }
     (async () => {
-      const salaries = await providers.API.getAll(providers.APIUrl, "getSalaries", null);
+      const salaries = await providers.API.getAll<SalariesResponseDto>(
+        providers.APIUrl,
+        "salaries",
+        null
+      );
       setSalary(
-        salaries.filter((s: any) => s.PostId === inputs.PostId && s.EnterpriseId === inputs.EnterpriseId)
+        salaries.data.filter(
+          salary =>
+            salary.PostId === inputs.PostId &&
+            salary.EnterpriseId === inputs.EnterpriseId
+        )
       );
     })();
   }, [inputs.PostId, inputs.EnterpriseId]);
 
-  // 6. Types de contrat
+  // 7. Types de contrats
   useEffect(() => {
     if (!inputs.EnterpriseId) {
       setContractTypes([]);
       return;
     }
     (async () => {
-      const types = await providers.API.getAll(providers.APIUrl, "getContractTypes", null);
-      setContractTypes(types.filter((ct: any) => ct.EnterpriseId === inputs.EnterpriseId));
+      const types = await providers.API.getAll<ContractTypesResponseDto>(
+        providers.APIUrl,
+        "contract-types",
+        null
+      );
+      setContractTypes(
+        types.data.filter(
+          ct => ct.EnterpriseId === inputs.EnterpriseId
+        )
+      );
     })();
   }, [inputs.EnterpriseId]);
 
-  // 7. Contrats
+  // 8. Contrats
   useEffect(() => {
     if (!inputs.ContractTypeId || !inputs.EnterpriseId) {
       setContracts([]);
       return;
     }
     (async () => {
-      const contracts = await providers.API.getAll(providers.APIUrl, "getContracts", null);
+      const contracts = await providers.API.getAll<ContractsResponseDto>(
+        providers.APIUrl,
+        "contracts",
+        null
+      );
       setContracts(
-        contracts.filter(
-          (c: any) => c.ContractTypeId === inputs.ContractTypeId && c.EnterpriseId === inputs.EnterpriseId
+        contracts.data.filter(
+          c =>
+            c.ContractTypeId === inputs.ContractTypeId &&
+            c.EnterpriseId === inputs.EnterpriseId
         )
       );
     })();
   }, [inputs.ContractTypeId, inputs.EnterpriseId]);
 
-  // 8. Villes
+  // 9. Villes
   useEffect(() => {
     if (!inputs.CountryId) {
       setCity([]);
       return;
     }
     (async () => {
-      const cities = await providers.API.getAll(providers.APIUrl, "getCities", null);
-      setCity(cities.filter((c: any) => c.CountriesTypeId === inputs.CountryId));
+      const cities = await providers.API.getAll<CitiesResponseDto>(
+        providers.APIUrl,
+        "cities",
+        null
+      );
+      setCity(
+        cities.data.filter((city: any) => city.CountriesTypeId === inputs.CountryId)
+      );
     })();
   }, [inputs.CountryId]);
 
-  // 9. Arrondissements
+  // 10. Arrondissements
   useEffect(() => {
     if (!inputs.CityId) {
       setDistrict([]);
       return;
     }
     (async () => {
-      const districts = await providers.API.getAll(providers.APIUrl, "getDistricts", null);
-      setDistrict(districts.filter((d: any) => d.CityId === inputs.CityId));
+      const districts = await providers.API.getAll<DistrictResponseDto>(
+        providers.APIUrl,
+        "districts",
+        null
+      );
+      setDistrict(
+        (districts || []).data.filter((district: any) => district.CityId === inputs.CityId)
+      );
     })();
   }, [inputs.CityId]);
 
-  // 10. Quartiers
+  // 11. Quartiers
   useEffect(() => {
     if (!inputs.DistrictId) {
       setQuarter([]);
       return;
     }
     (async () => {
-      const quarters = await providers.API.getAll(providers.APIUrl, "getQuarters", null);
-      setQuarter(quarters.filter((q: any) => q.DistrictId === inputs.DistrictId));
+      const quarters = await providers.API.getAll<QuartersResponseDto>(
+        providers.APIUrl,
+        "quarters",
+        null
+      );
+      setQuarter(
+        (quarters || []).data.filter((q: any) => q.DistrictId === inputs.DistrictId)
+      );
     })();
   }, [inputs.DistrictId]);
 
-  // Listes dynamiques pour les sélecteurs
+  // Options dynamiques
   const dynamicArrayData = [
     {
       alias: "EnterpriseId",
-      arrayData: getEnterprises.filter((item) => item.id && item.name).map((item) => ({ value: item.id, title: item.name })),
+      arrayData: getEnterprises
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
     },
     {
       alias: "PlanningId",
-      arrayData: getPlannings.filter((item) => item.id && item.PlanningType).map((item) => ({ value: item.id, title: item.PlanningType.title })),
+      arrayData: getPlannings
+        .filter((item) => item.id && item.PlanningType)
+        .map((item) => ({ value: item.id, title: item.PlanningType.title })),
     },
     {
       alias: "DepartmentPostId",
-      arrayData: getDepartmentPosts.filter((item) => item.id && item.name).map((item) => ({ value: item.id, title: item.name })),
+      arrayData: getDepartmentPosts
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
     },
     {
       alias: "PostId",
-      arrayData: getPosts.filter((item) => item.id && item.title).map((item) => ({ value: item.id, title: item.title })),
+      arrayData: getPosts
+        .filter((item) => item.id && item.title)
+        .map((item) => ({ value: item.id, title: item.title })),
     },
     {
       alias: "SalaryId",
-      arrayData: getSalary.filter((item) => item.id && item.netSalary).map((item) => ({ value: item.id, title: item.netSalary })),
+      arrayData: getSalary
+        .filter((item) => item.id && item.netSalary)
+        .map((item) => ({ value: item.id, title: item.netSalary })),
     },
     {
       alias: "ContractTypeId",
-      arrayData: getContractTypes.filter((item) => item.id && item.title).map((item) => ({ value: item.id, title: item.title })),
+      arrayData: getContractTypes
+        .filter((item) => item.id && item.title)
+        .map((item) => ({ value: item.id, title: item.title })),
     },
     {
       alias: "ContractId",
-      arrayData: getContracts.filter((item) => item.id && item.delay).map((item) => ({ value: item.id, title: item.delay })),
+      arrayData: getContracts
+        .filter((item) => item.id && item.delay)
+        .map((item) => ({ value: item.id, title: item.delay })),
     },
     {
       alias: "CountryId",
-      arrayData: getCountry.filter((item) => item.id && item.name).map((item) => ({ value: item.id, title: item.name })),
+      arrayData: getCountry
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
     },
     {
       alias: "CityId",
-      arrayData: getCity.filter((item) => item.id && item.name).map((item) => ({ value: item.id, title: item.name })),
+      arrayData: getCity
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
     },
     {
       alias: "DistrictId",
-      arrayData: getDistrict.filter((item) => item.id && item.name).map((item) => ({ value: item.id, title: item.name })),
+      arrayData: getDistrict
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
     },
     {
       alias: "QuarterId",
-      arrayData: getQuarter.filter((item) => item.id && item.name).map((item) => ({ value: item.id, title: item.name })),
+      arrayData: getQuarter
+        .filter((item) => item.id && item.name)
+        .map((item) => ({ value: item.id, title: item.name })),
     },
   ];
 
@@ -353,17 +487,15 @@ export default function AddUserHookModal() {
         status: inputs.status === "Actif",
       };
 
-      const response = await providers.API.post(
+      const res = await providers.API.post<UserResponseDto>(
         providers.APIUrl,
-        "createUser",
+        "users",
         null,
         payload
       );
-
-      if (response?.status) {
-        localStorage.removeItem("inputMemoryOfAddUserPage");
-        toast.success("Succès", "Collaborateur enregistré avec succès.");
-      }
+      console.log(res)
+      localStorage.removeItem("inputMemoryOfAddUserPage");
+      toast.success("Succès", "Collaborateur enregistré avec succès.");
     } catch (error) {
       console.error("Erreur lors de la création :", error);
       const errText = error instanceof Error ? error.message : "Une erreur inattendue est survenue.";

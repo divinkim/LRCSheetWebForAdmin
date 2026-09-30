@@ -7,6 +7,7 @@ import { formElements } from "@/components/FormElements/forms";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import { UpdateUserHookModal } from "./hook";
+import { UploadFileResponseDto } from "@/types/global";
 
 export default function UpdateUser() {
   const {
@@ -84,7 +85,7 @@ export default function UpdateUser() {
             {inputs.photo && (
               <div className="mb-8 flex items-center gap-4 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-4 transition-all">
                 <img
-                  src={`${providers.APIUrl}/images/${inputs.photo}`}
+                  src={`${providers.ImageUrl}/${inputs.photo}`}
                   alt="Profil collaborateur"
                   className="h-16 w-16 rounded-full border-2 border-blue-500 object-cover shadow-sm"
                 />
@@ -134,20 +135,18 @@ export default function UpdateUser() {
                         placeholder={e.placeholder}
                         onChange={async (v) => {
                           if (e.type === "file") {
-                            const files = v.target.files?.[0];
-                            if (files) {
-                              const response = await providers.API.post(
+                            const file = v.target.files?.[0];
+                            if (file) {
+                              const response = await providers.API.post<UploadFileResponseDto>(
                                 providers.APIUrl,
-                                "sendFiles",
+                                "upload-single",
                                 null,
-                                { files }
+                                { file }
                               );
-                              if (response.status) {
-                                setInputs({
-                                  ...inputs,
-                                  [e.alias]: response.filename,
-                                });
-                              }
+                              setInputs({
+                                ...inputs,
+                                [e.alias]: response.filename,
+                              });
                             }
                             return;
                           }

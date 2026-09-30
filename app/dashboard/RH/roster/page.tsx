@@ -5,10 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { providers } from "@/index";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faSearch, 
-  faChevronLeft, 
-  faChevronRight, 
+import {
+  faSearch,
+  faChevronLeft,
+  faChevronRight,
   faTrashAlt,
   faCalendarAlt,
   faClock,
@@ -22,36 +22,9 @@ import {
 import { tablesModal } from "@/components/Tables/tablesModal";
 import Swal from "sweetalert2";
 import { useSession } from "next-auth/react";
+import { UsersPlanningsDto, UsersPlanningsResponseDto } from "@/types/global";
 
-type WeekDaysPlannings = {
-  id: number;
-  WeekDaysId: number;
-  PlanningTypeId: number;
-  PlanningId: number;
-  EnterpriseId: number;
-  Enterprise: {
-    name: string | null;
-    logo: string | null;
-  };
-  WeekDays: {
-    name: string;
-  };
-  PlanningType: {
-    title: string;
-  };
-  Planning: {
-    startTime: string;
-    breakingStartTime: string;
-    resumeEndTime: string;
-    endTime: string;
-  };
-  UserId: number;
-  User: {
-    firstname: string;
-    lastname: string;
-    photo: string | null;
-  };
-};
+
 
 const WEEKDAY_COLORS: Record<string, string> = {
   Lundi: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-400/10 dark:text-blue-400",
@@ -66,9 +39,9 @@ const WEEKDAY_COLORS: Record<string, string> = {
 export default function WeekDaysPlanningsList() {
   const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState<string>("ALL");
-  const [weekDaysPlannings, setWeekDaysPlannings] = useState<WeekDaysPlannings[]>([]);
+  const [weekDaysPlannings, setWeekDaysPlannings] = useState<UsersPlanningsDto[]>([]);
   const [loading, setIsLoading] = useState(true);
-  
+
   const requireAdminRoles = ["Super-Admin", "Supervisor-Admin"];
   const { data: session, status } = useSession();
 
@@ -82,19 +55,19 @@ export default function WeekDaysPlanningsList() {
       setIsLoading(true);
       try {
         const EnterpriseId = Number((session.user as any).EnterpriseId);
-        const request = await providers.API.getAll(
-          "https://vps118934.serveur-vps.net:4001",
-          "getAllCollaboratorPlannings",
+        const request = await providers.API.getAll<UsersPlanningsResponseDto>(
+          providers.APIUrl,
+          "users-plannings",
           null
         );
 
         let filteredData = [];
         if (Number(EnterpriseId) === 1) {
-          filteredData = request.filter((item: { EnterpriseId: number }) =>
+          filteredData = request.data.filter((item: { EnterpriseId: number }) =>
             [1, 2, 3, 4, null].includes(item.EnterpriseId)
           );
         } else {
-          filteredData = request.filter(
+          filteredData = request.data.filter(
             (item: { EnterpriseId: number }) => item.EnterpriseId === Number(EnterpriseId)
           );
         }
@@ -112,7 +85,7 @@ export default function WeekDaysPlanningsList() {
   const availableDays = useMemo(() => {
     const days = new Set<string>();
     weekDaysPlannings.forEach((item) => {
-      if (item.WeekDays?.name) days.add(item.WeekDays.name);
+      if (item.WeekDay.name) days.add(item.WeekDay.name);
     });
     return Array.from(days);
   }, [weekDaysPlannings]);
@@ -135,9 +108,9 @@ export default function WeekDaysPlanningsList() {
         !search.trim() ||
         item?.User?.lastname?.toLowerCase().includes(search.toLowerCase()) ||
         item?.User?.firstname?.toLowerCase().includes(search.toLowerCase()) ||
-        item?.WeekDays?.name?.toLowerCase().includes(search.toLowerCase());
+        item?.WeekDay.name?.toLowerCase().includes(search.toLowerCase());
 
-      const matchesDay = selectedDay === "ALL" || item?.WeekDays?.name === selectedDay;
+      const matchesDay = selectedDay === "ALL" || item?.WeekDay.name === selectedDay;
 
       return matchesSearch && matchesDay;
     });
@@ -165,7 +138,7 @@ export default function WeekDaysPlanningsList() {
     const headers = ["Collaborateur", "Jour", "Type", "Début", "Fin", "Entreprise"];
     const rows = filteredPlannings.map((item) => [
       `"${item.User?.firstname || ""} ${item.User?.lastname || ""}"`,
-      `"${item.WeekDays?.name || ""}"`,
+      `"${item.WeekDay.name || ""}"`,
       `"${item.PlanningType?.title || ""}"`,
       `"${item.Planning?.startTime?.split("T")[1]?.slice(0, 5) || ""}"`,
       `"${item.Planning?.endTime?.split("T")[1]?.slice(0, 5) || ""}"`,
@@ -211,19 +184,14 @@ export default function WeekDaysPlanningsList() {
     }).then(async (confirmed) => {
       if (confirmed.isConfirmed) {
         try {
-          const response = await providers.API.delete(
+          await providers.API.delete(
             providers.APIUrl,
-            "deleteUserInPlanningOfWeek",
+            "users-plannings",
             id,
             {}
           );
-          providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            "/dashboard/RH/getUsersInPlanningOfWeek"
-          );
           setWeekDaysPlannings((prev) => prev.filter((item) => item.id !== id));
+          window.location.reload()
         } catch (error) {
           console.error("Erreur suppression:", error);
         }
@@ -234,7 +202,7 @@ export default function WeekDaysPlanningsList() {
   return (
     <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50/50 dark:bg-slate-950 transition-colors">
       <main className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Header & Fil d'Ariane */}
         {tablesModal.map((e, index) => (
           <div
@@ -302,7 +270,7 @@ export default function WeekDaysPlanningsList() {
 
         {/* Toolbar (Filtres, Recherche, Actions) */}
         <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          
+
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
             {/* Champ de recherche */}
             <div className="relative flex-1 max-w-md">
@@ -415,7 +383,7 @@ export default function WeekDaysPlanningsList() {
                     const hasBreak = Boolean(breakStart && resume);
 
                     const dayBadgeColor =
-                      WEEKDAY_COLORS[u.WeekDays?.name] ||
+                      WEEKDAY_COLORS[u.WeekDay.name] ||
                       "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:bg-slate-400/10 dark:text-slate-400";
 
                     const userInitials =
@@ -458,7 +426,7 @@ export default function WeekDaysPlanningsList() {
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-semibold border ${dayBadgeColor}`}
                           >
-                            {u.WeekDays?.name || "Non spécifié"}
+                            {u.WeekDay.name || "Non spécifié"}
                           </span>
                         </td>
 

@@ -81,30 +81,25 @@ export default function UpdatePresenceModal() {
                 return;
             }
             setIsLoading(true)
-            const response = await providers.API.post("https://vps118934.serveur-vps.net:4001",
-                "postAttendancesFromAdmin",
+            await providers.API.post(providers.APIUrl,
+                "attendances/from-admin",
                 null,
                 inputs,
             );
-
-            const status = response.status;
             const title = "Bravo";
             const message = "Horaires modifiées avec succès";
-
-            if (status) {
-                toast.success(title, message);
-                setInputs({
-                    usersId: [],
-                    arrivalTime: "",
-                    breakStartTime: "",
-                    resumeTime: "",
-                    departureTime: "",
-                    salariesId: [],
-                    enterprisesId: [],
-                    planningsId: [],
-                    date: "",
-                });
-            }
+            toast.success(title, message);
+            setInputs({
+                usersId: [],
+                arrivalTime: "",
+                breakStartTime: "",
+                resumeTime: "",
+                departureTime: "",
+                salariesId: [],
+                enterprisesId: [],
+                planningsId: [],
+                date: "",
+            });
         } catch (error) {
             console.log(error)
             toast.error("Erreur",
@@ -161,6 +156,7 @@ export default function UpdatePresenceModal() {
 
                             <input
                                 type="time"
+                                value={inputs.arrivalTime ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
@@ -180,6 +176,7 @@ export default function UpdatePresenceModal() {
 
                             <input
                                 type="time"
+                                value={inputs.breakStartTime ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
@@ -199,6 +196,7 @@ export default function UpdatePresenceModal() {
 
                             <input
                                 type="time"
+                                value={inputs.resumeTime ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
@@ -218,6 +216,7 @@ export default function UpdatePresenceModal() {
 
                             <input
                                 type="time"
+                                value={inputs.departureTime ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
@@ -236,6 +235,7 @@ export default function UpdatePresenceModal() {
 
                             <input
                                 type="date"
+                                value={inputs.date ?? ""}
                                 onChange={(e) =>
                                     setInputs({
                                         ...inputs,
@@ -286,7 +286,7 @@ export default function UpdatePresenceModal() {
                                         <img
                                             src={
                                                 user.photo
-                                                    ? `${providers.APIUrl}/images/${user.photo}`
+                                                    ? `${providers.ImageUrl}/${user.photo}`
                                                     : "/images/clientProfile.png"
                                             }
                                             className="h-12 w-12 rounded-full border-2 border-slate-200 object-cover"

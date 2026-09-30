@@ -27,6 +27,7 @@ import Swal from "sweetalert2";
 import { providers } from "@/index";
 import { tablesModal } from "@/components/Tables/tablesModal";
 import { useToast } from "@/components/toast";
+import { AppointmentListDto, AppointmentsResponseDto } from "@/types/global";
 
 export type AppointmentData = {
   id?: number;
@@ -54,7 +55,7 @@ export default function AppointmentsList() {
 
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
-  const [appointmentsList, setAppointmentsList] = useState<AppointmentData[]>([]);
+  const [appointmentsList, setAppointmentsList] = useState<AppointmentListDto[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Pagination
@@ -72,12 +73,12 @@ export default function AppointmentsList() {
 
       try {
         setLoading(true);
-        const data = await providers.API.getAll(
-          "https://vps118934.serveur-vps.net:4001",
+        const res = await providers.API.getAll<AppointmentsResponseDto>(
+          providers.APIUrl,
           "appointments",
           null
         );
-        setAppointmentsList(data || []);
+        setAppointmentsList(res.data);
       } catch (error) {
         toast.error("Erreur", "Erreur lors de la récupération des rendez-vous");
         console.error("Erreur fetchAppointments:", error);
@@ -275,17 +276,15 @@ export default function AppointmentsList() {
       }).then(async (confirmed) => {
         if (confirmed.isConfirmed) {
           try {
-            const response = await providers.API.delete(
-              "https://vps118934.serveur-vps.net:4001",
-              "appointment",
+            await providers.API.delete(
+              providers.APIUrl,
+              "appointments",
               id,
               {}
             );
+            toast.success("Succès", "Rendez-vous supprimé avec succès");
+            setAppointmentsList((prev) => prev.filter((a) => a.id !== id));
 
-            if (response.status) {
-              toast.success("Succès", "Rendez-vous supprimé avec succès");
-              setAppointmentsList((prev) => prev.filter((a) => a.id !== id));
-            }
           } catch (err) {
             toast.error(
               "Erreur",

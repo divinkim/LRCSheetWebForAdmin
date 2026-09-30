@@ -20,7 +20,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import useUserProfile from "../../presences/[id]/hook";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { providers } from "@/index";
+import { dateFormat, providers } from "@/index";
 import Link from "next/link";
 
 export default function GetUserProfile() {
@@ -45,7 +45,7 @@ export default function GetUserProfile() {
             {/* Photo de profil */}
             <div className="relative w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
               <img
-                src={user?.photo ? `${providers.APIUrl}/images/${user.photo}` : "/images/clientProfile.png"}
+                src={user?.photo ? `${providers.ImageUrl}/${user.photo}` : "/images/clientProfile.png"}
                 alt={`${user?.firstname} ${user?.lastname}`}
                 className="w-full h-full object-cover"
               />
@@ -68,7 +68,7 @@ export default function GetUserProfile() {
           {/* Boutons d'action */}
           <div className="flex items-center gap-3">
             <Link
-              href={`/dashboard/RH/editUser/${user?.id}`}
+              href={`/dashboard/RH/user/edit/${user.id}`}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm transition-all shadow-md shadow-amber-500/10 active:scale-95"
             >
               <FontAwesomeIcon icon={faPen} />
@@ -161,7 +161,7 @@ export default function GetUserProfile() {
                     {(user?.Contract?.startDate || user?.Contract?.endDate) && (
                       <span className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800">
                         <FontAwesomeIcon icon={faCalendarAlt} className="text-slate-400 dark:text-slate-500" />
-                        {user?.Contract?.startDate} à {user?.Contract?.endDate}
+                        {dateFormat(user?.Contract?.startDate)} au {dateFormat(user?.Contract?.endDate)}
                       </span>
                     )}
                   </div>

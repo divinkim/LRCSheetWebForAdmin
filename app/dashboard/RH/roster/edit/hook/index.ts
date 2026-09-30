@@ -136,18 +136,15 @@ export default function useAddUserInPlanningOfWeek() {
 
             setIsLoading(true);
 
-            const response = await providers.API.update(
+            await providers.API.update(
                 "https://vps118934.serveur-vps.net:4001",
-                "updateCollaboratorPlanning",
+                "users-plannings",
                 null,
                 datas,
                 null
             );
-
-            if (response.status) {
-                setDatas([]);
-                toast.success(response.title, response.message);
-            }
+            setDatas([]);
+            toast.success("Félicitations", "Planning mis à jour avec succès");
         } catch (error) {
             toast.error("Erreur", error instanceof Error ? error.message : "Erreur inconnue");
         } finally {

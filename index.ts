@@ -1,4 +1,5 @@
-const APIUrl = "https://vps118934.serveur-vps.net:8500";
+const APIUrl = "https://vps118934.serveur-vps.net:8102";
+const ImageUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/images";
 
 interface MonthData {
     monthIndice: number;
@@ -97,8 +98,12 @@ function reduceLengthOfText(text: string, maxLength: number) {
     }
 }
 
+export function dateFormat(date: string) {
+    if (!date) return;
+    return new Date(date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })
+}
 export class Api {
-    async getOne(url: string, methodName: string, id: string | number) {
+    async getOne<T>(url: string, methodName: string, id: string | number): Promise<T> {
         try {
             const req = await fetch(`${url}/api/${methodName}/${id}`, {
                 method: 'GET',
@@ -113,14 +118,14 @@ export class Api {
                 throw new Error(res.message);
             }
 
-            return res.datas;
+            return res;
 
         } catch (error) {
             throw error;
         }
     }
 
-    async getAll(url: string, methodName: string, id: string | number | null) {
+    async getAll<T>(url: string, methodName: string, id: string | number | null): Promise<T> {
         try {
             const endPoint = id !== null ? `${url}/api/${methodName}/${id}` : `${url}/api/${methodName}`;
 
@@ -137,22 +142,20 @@ export class Api {
                 throw new Error(res.message);
             }
 
-            return res.datas;
+            return res;
 
         } catch (error) {
             throw error;
         }
     }
 
-    async update(url: string, methodName: string, token = null, data = {}, id: string | null | number) {
+    async update<T>(url: string, methodName: string, token = null, data = {}, id: string | null | number): Promise<T> {
         try {
             const headers: Record<string, string> = {};
             let body: BodyInit;
             const formData = new FormData();
 
             url = id ? `${url}/api/${methodName}/${id}` : `${url}/api/${methodName}`
-
-            console.log(url)
 
             const isPresentFile = Object.values(data).some(
                 (value) => value instanceof File || value instanceof Blob
@@ -190,7 +193,7 @@ export class Api {
         }
     }
 
-    async post(url: string, methodName: string, token = null, data = {}) {
+    async post<T>(url: string, methodName: string, token = null, data = {}): Promise<T> {
         try {
             const isPresentFile = Object.entries(data).some(([_, value]) => typeof value === "object" && (value instanceof File || value instanceof Blob));
 
@@ -239,7 +242,7 @@ export class Api {
         }
     }
 
-    async delete(APIUrl: string, methodName: string, UserId: number, data: Record<string, any> = {}) {
+    async delete<T>(APIUrl: string, methodName: string, UserId: number, data: Record<string, any> = {}): Promise<T> {
         try {
             const endPoint = `${APIUrl}/api/${methodName}/${UserId}`;
 
@@ -266,7 +269,7 @@ export class Api {
         }
     }
 
-    async deleteMany(APIUrl: string, methodName: string) {
+    async deleteMany<T>(APIUrl: string, methodName: string): Promise<T> {
         try {
             const endPoint = `${APIUrl}/api/${methodName}`;
 
@@ -303,6 +306,7 @@ export const providers = {
     filterDataOfAdministrationSection,
     verifyRequireField,
     APIUrl,
+    ImageUrl,
     reduceLengthOfText
 }
 

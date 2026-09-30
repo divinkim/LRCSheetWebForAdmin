@@ -47,23 +47,7 @@ export function Sidebar() {
     socket.emit("register", userIdNumber);
 
     // Envoi du FCM Token (si disponible dans le localStorage ou la session)
-    const adminFcmToken = typeof window !== "undefined" ? localStorage.getItem("adminFcmToken") : null;
-
-    if (adminFcmToken) {
-      const datas = {
-        fcmToken: adminFcmToken,
-        UserId: userIdNumber,
-        adminRole: (user as any)?.role,
-        UserEnterpriseId: Number((user as any)?.EnterpriseId),
-      };
-
-      providers.API.post(
-        "https://vps118934.serveur-vps.net:4001",
-        "sendFcmToken",
-        null,
-        datas
-      ).catch((err) => console.error("Erreur envoi FCM Token:", err));
-    }
+  
   }, [session, status]);
 
   // -------------------------------------------------------------

@@ -127,19 +127,14 @@ export default function PresencesList() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const response = await providers.API.delete(
+          await providers.API.delete(
             providers.APIUrl,
-            "deleteUserAttendance",
+            "attendances",
             userId,
             { createdAt }
           );
-
-          if (response.status) {
-            toast.success("Succès", response.message || "Présence supprimée avec succès.");
-            window.location.reload();
-          } else {
-            toast.error("Erreur", response.message || "Échec de la suppression.");
-          }
+          toast.success("Bravo", "Présence supprimée avec succès.");
+          window.location.reload();
         } catch (err) {
           toast.error("Erreur", "Une erreur est survenue lors de la suppression.");
         }
@@ -376,14 +371,13 @@ export default function PresencesList() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                            <Image
+                            <img
                               src={
                                 u.User?.photo
-                                  ? `${providers.APIUrl}/images/${u.User.photo}`
+                                  ? `${providers.ImageUrl}/${u.User.photo}`
                                   : "/images/clientProfile.png"
                               }
                               alt={u.User?.lastname || "Avatar"}
-                              fill
                               sizes="40px"
                               className="object-cover"
                             />
@@ -437,10 +431,9 @@ export default function PresencesList() {
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         {u.Enterprise?.logo ? (
                           <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 mx-auto">
-                            <Image
-                              src={`${providers.APIUrl}/images/${u.Enterprise.logo}`}
+                            <img
+                              src={`${providers.ImageUrl}/${u.Enterprise.logo}`}
                               alt={u.Enterprise.name || "Logo"}
-                              fill
                               sizes="32px"
                               className="object-cover"
                             />

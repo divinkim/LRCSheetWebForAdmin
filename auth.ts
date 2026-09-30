@@ -1,10 +1,11 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { providers } from "@/index";
+import { LoginAdminResponseDto, RefreshTokenResponseDto } from "./types/global";
 
 async function refreshAccessToken(token: any) {
     try {
-        const refreshedTokens = await providers.API.post(
+        const refreshedTokens = await providers.API.post<RefreshTokenResponseDto>(
             providers.APIUrl,
             "refresh-token",
             null,
@@ -13,8 +14,8 @@ async function refreshAccessToken(token: any) {
 
         return {
             ...token,
-            authToken: refreshedTokens.authToken,
-            refreshToken: refreshedTokens.refreshToken ?? token.refreshToken,
+            authToken: refreshedTokens.data.accessToken,
+            refreshToken: refreshedTokens.data.refreshToken ?? token.refreshToken,
             //expiration dans 10 minutes (en ms)
             authTokenExpiresIn: Date.now() + 60 * 60 * 1000,
             error: null, // Reset en cas de succès
@@ -40,7 +41,7 @@ export const authOptions = {
                 if (!credentials?.email || !credentials?.password) return null;
 
                 try {
-                    const data = await providers.API.post(
+                    const res = await providers.API.post<LoginAdminResponseDto>(
                         "https://vps118934.serveur-vps.net:4001",
                         "loginFromAdmin",
                         null,
@@ -49,19 +50,19 @@ export const authOptions = {
                             password: credentials.password,
                         }
                     );
-                    console.log(data)
+                   
                     return {
-                        id: data.user.id.toString(),
-                        firstname: data.user.firstname,
-                        lastname: data.user.lastname,
-                        email: data.user.email,
-                        image: data.user.image,
-                        authToken: data.user.authToken,
-                        refreshToken: data.user.refreshToken,
-                        adminRole: data.user.adminRole,
-                        EnterpriseId: data.user.EnterpriseId,
-                        adminService: data.user.adminService,
-                        MainEnterpriseId: data.user.MainEnterpriseId
+                        id: res.user.id.toString(),
+                        firstname: res.user.firstname,
+                        lastname: res.user.lastname,
+                        email: res.user.email,
+                        image: res.user.image,
+                        authToken: res.user.authToken,
+                        refreshToken: res.user.refreshToken,
+                        adminRole: res.user.adminRole,
+                        EnterpriseId: res.user.EnterpriseId,
+                        adminService: res.user.adminService,
+                        MainEnterpriseId: res.user.MainEnterpriseId
                     };
                 } catch (error) {
                     throw new Error(

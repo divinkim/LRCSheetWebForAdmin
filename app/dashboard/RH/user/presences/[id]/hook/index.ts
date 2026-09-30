@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
+import { UserResponseDto } from "@/types/global";
 
 type User = {
+    id: number,
     firstname: string | null,
     lastname: string | null,
     birthDate: string | null,
@@ -64,6 +66,7 @@ type User = {
 
 export default function useUserProfile() {
     const [user, setUser] = useState<User>({
+        id: 0,
         firstname: null,
         lastname: null,
         birthDate: null,
@@ -124,65 +127,65 @@ export default function useUserProfile() {
 
     useEffect(() => {
         (async () => {
-            const getUserId = window.location.href.split('/').pop();
-            const getUser = await providers.API.getOne(providers.APIUrl, "getUser", parseInt(getUserId ?? ""));
-            console.log("l'utilisateur", getUser);
+            const userId = window.location.href.split('/').pop();
+            const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", parseInt(userId ?? ""));
             setUser({
-                firstname: getUser.firstname ?? null,
-                lastname: getUser.lastname ?? null,
-                birthDate: new Date(getUser.birthDate)?.toISOString()?.split("T")[0] ?? null,
-                gender: getUser.gender ?? null,
-                email: getUser.email ?? null,
-                password: getUser.password ?? null,
-                phone: getUser.phone ?? null,
-                EnterpriseId: getUser.EnterpriseId ?? null,
-                PostId: getUser.PostId ?? null,
-                SalaryId: getUser.SalaryId ?? null,
-                ContractTypeId: getUser.ContractTypeId ?? null,
-                ContractId: getUser.ContractId ?? null,
-                CountryId: getUser.CountryId ?? null,
-                PlanningId: getUser.PlanningId ?? null,
-                CityId: getUser.CityId ?? null,
-                DistrictId: getUser.DistrictId ?? null,
-                QuarterId: getUser.QuarterId ?? null,
-                photo: getUser.photo ?? null,
-                role: getUser.role ?? null,
-                DepartmentPostId: getUser.DepartmentPostId ?? null,
-                marialStatus: getUser.marialStatus ?? null,
-                adminService: getUser.adminService ?? null,
-                status: getUser.status,
+                id: Number(userId),
+                firstname: user.data.firstname ?? null,
+                lastname: user.data.lastname ?? null,
+                birthDate: new Date(user.data.birthDate)?.toISOString()?.split("T")[0] ?? null,
+                gender: user.data.gender ?? null,
+                email: user.data.email ?? null,
+                password: user.data.password ?? null,
+                phone: user.data.phone ?? null,
+                EnterpriseId: user.data.EnterpriseId ?? null,
+                PostId: user.data.PostId ?? null,
+                SalaryId: user.data.SalaryId ?? null,
+                ContractTypeId: user.data.ContractTypeId ?? null,
+                ContractId: user.data.ContractId ?? null,
+                CountryId: user.data.CountryId ?? null,
+                PlanningId: user.data.PlanningId ?? null,
+                CityId: user.data.CityId ?? null,
+                DistrictId: user.data.DistrictId ?? null,
+                QuarterId: user.data.QuarterId ?? null,
+                photo: user.data.photo ?? null,
+                role: user.data.role ?? null,
+                DepartmentPostId: user.data.DepartmentPostId ?? null,
+                marialStatus: user.data.marialStatus ?? null,
+                adminService: user.data.adminService ?? null,
+                status: user.data.status,
                 ContractType: {
-                    title: getUser.ContractType?.title ?? "",
-                    description: getUser.ContractType?.description ?? ""
+                    title: user.data.ContractType?.title ?? "",
+                    description: user.data.ContractType?.description ?? ""
                 },
                 Salary: {
-                    netSalary: getUser.Salary?.netSalary ?? "",
-                    dailySalary: getUser.Salary?.dailySalary ?? ""
+                    netSalary: user.data.Salary?.netSalary ?? "",
+                    dailySalary: user.data.Salary?.dailySalary ?? ""
                 },
                 Enterprise: {
-                    name: getUser.Enterprise?.name ?? "",
-                    description: getUser.Enterprise?.description ?? "",
+                    name: user.data.Enterprise?.name ?? "",
+                    description: user.data.Enterprise?.description ?? "",
                 },
                 Contract: {
-                    endDate: getUser.Contract?.endDate ?? "",
-                    startDate: getUser.Contract?.startDate ?? ""
+                    endDate: user.data.Contract?.endDate ?? "",
+                    startDate: user.data.Contract?.startDate ?? ""
                 },
 
                 Country: {
-                    name: getUser.Country?.name ?? ""
+                    name: user.data.Country?.name ?? ""
                 },
                 City: {
-                    name: getUser.City?.name ?? ""
+                    name: user.data.City?.name ?? ""
                 },
                 District: {
-                    name: getUser.District?.name ?? ""
+                    name: user.data.District?.name ?? ""
                 },
                 Quarter: {
-                    name: getUser.Quarter?.name ?? ""
+                    name: user.data.Quarter?.name ?? ""
                 },
                 Post: {
-                    title: getUser.Post?.title ?? "",
-                    description: getUser.Post?.description ?? ""
+                    title: user.data.Post?.title ?? "",
+                    description: user.data.Post?.description ?? ""
                 },
             })
         })()
