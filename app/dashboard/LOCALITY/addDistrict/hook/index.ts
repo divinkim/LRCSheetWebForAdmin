@@ -1,7 +1,8 @@
 "use client";
 import { providers } from "@/index";
+import { CitiesResponseDto, CountryResponseDto } from "@/types/global";
 import { FormEvent, useEffect, useState } from "react";
-
+import { useToast } from "@/components/toast";
 type InputsValue = {
     name: string,
     CountryId: number | null,
@@ -25,7 +26,7 @@ export default function useAddDistrict() {
     const [getDistrict, setDistrict] = useState<any[]>([]);
     const [getQuarter, setQuarter] = useState<any[]>([]);
     const [getPlannings, setPlannings] = useState<any[]>([])
-
+    const toast = useToast();
     const [enterpriseIdOfadmin, setEnterpriseIdOfAdmin] = useState<string | null>(null)
     const [adminRole, setAdminRole] = useState<string | null>(null)
     const [inputs, setInputs] = useState<InputsValue>({
@@ -69,17 +70,16 @@ export default function useAddDistrict() {
     // // Récupération des type des pays
     useEffect(() => {
         (async () => {
-            const getCountries = await providers.API.getAll(providers.APIUrl, "getCountries", null);
-            setCountry(getCountries);
-            console.log(getCountries)
+            const getCountries = await providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null);
+            setCountry(getCountries.data);
         })();
     }, []);
 
     // // Récupération des type des villes en fonction du pays
     useEffect(() => {
         (async () => {
-            const getCities = await providers.API.getAll(providers.APIUrl, "getCities", null);
-            const filteredCities = getCities.filter((city: any) => city.CountriesTypeId === inputs.CountryId)
+            const getCities = await providers.API.getAll<CitiesResponseDto>(providers.APIUrl, "cities", null);
+            const filteredCities = getCities.data.filter(city => city.CountriesTypeId === inputs.CountryId)
             setCity(filteredCities)
         })()
     }, [inputs.CountryId]);
@@ -108,37 +108,47 @@ export default function useAddDistrict() {
         }
     ]
 
-    console.log("le tableau des données statiques", dynamicArrayData)
-
     const handleSubmit = async () => {
         const data = {
             name: inputs.name,
             CityId: inputs.CityId,
-            CountryId: inputs.CountryId
-        }
+            CountryId: inputs.CountryId,
+        };
+
+        // Validation des champs
         for (const [key, value] of Object.entries(data)) {
             if (!value) {
-                return providers.alertMessage(false, "Champs invalides", `Veuillez remplir tous les champs obligatoires`, null);
+                toast.info("Champs invalides", "Veuillez remplir tous les champs obligatoires");
+                return;
             }
         }
 
         setIsLoading(true);
 
-        const response = await providers.API.post(providers.APIUrl, "createDistrict", null, data);
+        try {
+            const response = await providers.API.post(
+                providers.APIUrl,
+                "districts",
+                null,
+                data
+            );
 
-        if (response.status) localStorage.removeItem("inputMemoryOfAddDistrictPage");
 
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/OTHERS/addDistrict" : null
-        );
-
-        setIsLoading(false);
+            localStorage.removeItem("inputMemoryOfAddDistrictPage");
+            toast.success("Succès", "Quartier enregistré avec succès");
+            window.location.reload();
+            // Si une redirection ou rechargement est nécessaire :
+            // navigate("/dashboard/OTHERS/addDistrict");
+        } catch (error) {
+            console.error("Erreur lors de l'enregistrement du quartier:", error);
+            toast.error(
+                "Erreur",
+                error instanceof Error ? error.message : "Erreur au niveau du serveur"
+            );
+        } finally {
+            setIsLoading(false);
+        }
     };
-
-    console.log("les datas", inputs);
 
     return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading, adminRole }
 }

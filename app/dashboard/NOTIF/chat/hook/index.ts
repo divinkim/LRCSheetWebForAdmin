@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { providers } from '@/index';
 import { useSession } from 'next-auth/react';
+import { ChatsResponseDto, UsersResponseDto } from '@/types/global';
 
 export interface Collaborator {
   id: number;
@@ -53,7 +54,7 @@ export interface SelectedFile {
 }
 
 export const useCollaboratorsChat = () => {
-  const serverUrl = "https://vps118934.serveur-vps.net:4001";
+  const serverUrl = "https://vps118934.serveur-vps.net:8102";
   const { data: session } = useSession();
 
   const currentUserId = Number((session?.user as any)?.id);
@@ -78,8 +79,8 @@ export const useCollaboratorsChat = () => {
   useEffect(() => {
     (async () => {
       try {
-        const collaboratorsList = await providers.API.getAll(serverUrl, "getUsers", null);
-        setInitialCollaborators(collaboratorsList || []);
+        const collaboratorsList = await providers.API.getAll<UsersResponseDto>(serverUrl, "users", null);
+        setInitialCollaborators(collaboratorsList.data);
       } catch (err) {
         console.error("Erreur récupération collaborateurs :", err);
       }
@@ -98,8 +99,8 @@ export const useCollaboratorsChat = () => {
       if (!serverUrl || !currentUserId) return;
 
       try {
-        const response = await providers.API.getAll(serverUrl, "getChatMessage", null);
-        const chatData: UserChatModel[] = response?.datas || response || [];
+        const response = await providers.API.getAll<ChatsResponseDto>(serverUrl, "chats", null);
+        const chatData = response?.data;
 
         const groupedMessages: Record<number, ChatMessage[]> = {};
         const convsState: Record<number, ConversationState> = {};
@@ -303,7 +304,7 @@ export const useCollaboratorsChat = () => {
     ]);
 
     try {
-      const res = await providers.API.post(serverUrl, "createChatMessage", null, {
+      const res = await providers.API.post(serverUrl, "chats", null, {
         title: "",
         senderId: newMsg.senderId,
         receiverId: newMsg.receiverId,
@@ -313,14 +314,13 @@ export const useCollaboratorsChat = () => {
         callDuration: null,
         callStatus: null,
       });
-      if (res.status) {
-        const notification = await providers.API.post(serverUrl, "sendNotificationPush", null, {
-          senderId: String(currentUserId),
-          receiverId: String(newMsg.receiverId),
-          messagingType: "chat"
-        });
-        console.log("notification", notification)
-      }
+
+      const notification = await providers.API.post(serverUrl, "notification-push", null, {
+        senderId: String(currentUserId),
+        receiverId: String(newMsg.receiverId),
+        messagingType: "chat"
+      });
+      console.log("notification", notification)
     } catch (error) {
       console.error("Erreur lors de l'envoi du message API :", error);
     }

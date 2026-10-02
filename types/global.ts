@@ -76,11 +76,18 @@ export type Enterprise = {
     maxToleranceTime: string;
     maxPourcentageOfHourlyDeduction: string;
     MainEnterpriseId: number | null;
+    City: City;
+    Country: Country
 };
 
 export type EnterprisesResponseDto = {
     message: string,
     data: Enterprise[]
+}
+
+export type EnterpriseResponseDto = {
+    message: string,
+    data: Enterprise
 }
 
 // Type d'un élément individuel de votre réponse
@@ -161,6 +168,16 @@ export type DepartmentPost = {
     createdAt: string;
     updatedAt: string;
     EnterpriseId: number;
+};
+
+export type DepartmentsPostResponseDto = {
+    message: string,
+    data: DepartmentPost[]
+};
+
+export type DepartmentPostResponseDto = {
+    message: string,
+    data: DepartmentPost
 };
 
 // export type Post = {
@@ -462,6 +479,11 @@ export type SalariesResponseDto = {
     data: Salary[],
 }
 
+export type SalaryResponseDto = {
+    message: "success",
+    data: Salary,
+}
+
 export interface ContractType {
     id: number;
     title: string;
@@ -556,17 +578,17 @@ export type QuarterResponseDto = {
 }
 
 export interface Post {
-  id: number;
-  title: string;
-  description: string;
-  EnterpriseId: number;
-  DepartmentPostId: number;
-  createdAt: string;
-  updatedAt: string;
-  Enterprise: Enterprise;
-  DepartmentPost: DepartmentPost;
-  User: User[];
-  Salary: Salary[];
+    id: number;
+    title: string;
+    description: string;
+    EnterpriseId: number;
+    DepartmentPostId: number;
+    createdAt: string;
+    updatedAt: string;
+    Enterprise: Enterprise;
+    DepartmentPost: DepartmentPost;
+    User: User[];
+    Salary: Salary[];
 }
 
 export type PostResponseDto = {
@@ -578,4 +600,42 @@ export type PostResponseDto = {
 export type PotsResponseDto = {
     message: string,
     data: Post
+}
+
+export interface ChatDto {
+    id: number;
+    senderId: number;
+    receiverId: number;
+    EnterpriseId: number;
+    content: string;
+    file: string | null;
+    role: 'CLIENT' | 'ADMIN' | string;
+    title: string;
+    callStatus: boolean;
+    callDuration: number;
+    Enterprise: Enterprise[];
+    createdAt: string
+}
+
+export type ChatsResponseDto = {
+    message: string,
+    data: ChatDto[]
+}
+
+export interface NotificationDto {
+    id: number;
+    title: string;
+    description: string;
+    EnterpriseId: number;
+    UserId: number;
+    createdAt: string;
+    updatedAt: string;
+    User: User;
+    Enterprise: Enterprise;
+    file: string
+}
+
+export type NotificationsResponseDto = {
+    message: string,
+    data: NotificationDto[]
 }

@@ -20,6 +20,7 @@ import {
   faCompass,
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
+import { EnterpriseResponseDto } from "@/types/global";
 
 type EnterpriseType = {
   id?: number;
@@ -60,7 +61,7 @@ function EnterpriseSkeleton() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 font-sans animate-pulse">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Titre Skeleton */}
         <div className="h-7 w-64 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
 
@@ -174,13 +175,13 @@ export default function ViewEnterprise() {
       try {
         const id = window.location.href.split("/").pop();
         if (id && !isNaN(Number(id))) {
-          const res = await providers.API.getOne(
+          const res = await providers.API.getOne<EnterpriseResponseDto>(
             providers.APIUrl,
-            "getEnterprise",
+            "enterprises",
             Number(id)
           );
           if (res) {
-            setEnterprise(res);
+            setEnterprise(res.data);
           }
         }
       } catch (error) {

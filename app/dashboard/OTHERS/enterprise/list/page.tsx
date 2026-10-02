@@ -21,6 +21,7 @@ import {
   faFilter,
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
+import { EnterprisesResponseDto } from "@/types/global";
 
 // --- TYPES ---
 export type EnterpriseType = {
@@ -87,7 +88,7 @@ export default function ListEnterprise() {
 
     setIsLoading(true);
     try {
-      const res = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
+      const res = await providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null);
       const rawEnterprises: EnterpriseType[] = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)

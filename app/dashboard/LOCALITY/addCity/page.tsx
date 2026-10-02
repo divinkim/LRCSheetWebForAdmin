@@ -6,6 +6,7 @@ import Link from "next/link";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import useAddCity from "./hook";
+import { UploadFileResponseDto } from "@/types/global";
 
 export default function AddCity() {
     const { dynamicArrayData, staticArrayData, inputs, setInputs, isLoading, handleSubmit, adminRole } = useAddCity();
@@ -59,14 +60,13 @@ export default function AddCity() {
                                                 <input value={inputs[e.alias] ?? ""} onChange={async (v) => {
                                                     let field = e.alias;
                                                     if (e.type === "file") {
-                                                        const files = v.target.files?.[0];
-                                                        const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                                                        if (response.status) {
-                                                            setInputs({
-                                                                ...inputs,
-                                                                [field]: response.filename
-                                                            })
-                                                        }
+                                                        const file = v.target.files?.[0];
+                                                        const response = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
+
+                                                        setInputs({
+                                                            ...inputs,
+                                                            [field]: response.filename
+                                                        })
                                                     }
                                                     setInputs({
                                                         ...inputs,
@@ -106,7 +106,7 @@ export default function AddCity() {
                                                         }
                                                     </select>
                                                     :
-                                                    !e.selectedInput  ?
+                                                    !e.selectedInput ?
                                                         <textarea className="outline-none bg-white dark:bg-transparent border border-gray-400 rounded-md p-3 text-gray-600  dark:text-gray-300 w-full font-semibold" value={inputs[e.alias]} onChange={(v) => {
                                                             let field = e.alias;
                                                             const fieldValue = {

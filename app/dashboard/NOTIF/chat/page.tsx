@@ -20,6 +20,7 @@ import {
 import { useCollaboratorsChat } from './hook';
 import { providers } from '@/index';
 import { SidebarHook } from '@/components/Layouts/sidebar/hook';
+import { UploadFileResponseDto } from '@/types/global';
 
 interface CallState {
   isActive: boolean;
@@ -756,10 +757,9 @@ export default function ChatPage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (file) {
-                        const res = await providers.API.post(providers.APIUrl, "sendFiles", null, {
-                          files: file
+                        const res = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "sendFiles", null, {
+                          file
                         });
-                        console.log(res)
                         setSelectedFile(file)
                         setFileName(res.filename)
                       }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
+import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, EnterpriseResponseDto, EnterprisesResponseDto } from "@/types/global";
 export type InputsValue = {
   name: string;
   description: string;
@@ -89,12 +90,12 @@ export default function useAddEnterprise() {
     const fetchInitialData = async () => {
       try {
         const [enterprisesData, countriesData] = await Promise.all([
-          providers.API.getAll(providers.APIUrl, "getEnterprises", null),
-          providers.API.getAll(providers.APIUrl, "getCountries", null),
+          providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null),
+          providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null),
         ]);
 
-        setEnterprises(enterprisesData || []);
-        setCountry(countriesData || []);
+        setEnterprises(enterprisesData.data || []);
+        setCountry(countriesData.data || []);
       } catch (error) {
         console.error("Erreur lors de la récupération des données initiales:", error);
       }
@@ -112,8 +113,8 @@ export default function useAddEnterprise() {
 
     const fetchDepartmentPosts = async () => {
       try {
-        const allDepartments = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
-        const filteredDepartments = (allDepartments || []).filter(
+        const allDepartments = await providers.API.getAll<DepartmentsPostResponseDto>(providers.APIUrl, "departments", null);
+        const filteredDepartments = (allDepartments.data || []).filter(
           (department: { EnterpriseId: number }) => department.EnterpriseId === inputs.EnterpriseId
         );
         setDepartmentPosts(filteredDepartments);
@@ -134,8 +135,8 @@ export default function useAddEnterprise() {
 
     const fetchCities = async () => {
       try {
-        const allCities = await providers.API.getAll(providers.APIUrl, "getCities", null);
-        const filteredCities = (allCities || []).filter(
+        const allCities = await providers.API.getAll<CitiesResponseDto>(providers.APIUrl, "cities", null);
+        const filteredCities = (allCities.data || []).filter(
           (city: any) => city.CountriesTypeId === inputs.CountryId
         );
         setCity(filteredCities);
@@ -227,21 +228,18 @@ export default function useAddEnterprise() {
     setIsLoading(true);
 
     try {
-      const response = await providers.API.post(
+      providers.API.post<EnterpriseResponseDto>(
         providers.APIUrl,
-        "createEnterprise",
+        "enterprises",
         null,
         inputs
       );
 
-      if (response.status) {
-        localStorage.removeItem("inputMemoryOfAddEnterprisePage");
-        toast.success(
-          "Bravo",
-          "Entreprise enregistrée avec succès."
-        )
-      }
-
+      localStorage.removeItem("inputMemoryOfAddEnterprisePage");
+      toast.success(
+        "Bravo",
+        "Entreprise enregistrée avec succès."
+      )
     } catch (error) {
       console.log(error);
       toast.error('Erreur',

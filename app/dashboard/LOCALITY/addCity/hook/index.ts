@@ -1,7 +1,8 @@
 "use client";
 import { providers } from "@/index";
+import { CitiyResponseDto, CountryResponseDto } from "@/types/global";
 import { FormEvent, useEffect, useState } from "react";
-
+import { useToast } from "@/components/toast";
 type InputsValue = {
     name: string,
     CountryId: number | null,
@@ -21,7 +22,7 @@ export default function useAddCity() {
     const [getDistrict, setDistrict] = useState<any[]>([]);
     const [getQuarter, setQuarter] = useState<any[]>([]);
     const [getPlannings, setPlannings] = useState<any[]>([])
-
+    const toast = useToast()
     const [enterpriseIdOfadmin, setEnterpriseIdOfAdmin] = useState<string | null>(null)
     const [adminRole, setAdminRole] = useState<string | null>(null)
     const [inputs, setInputs] = useState<InputsValue>({
@@ -61,9 +62,8 @@ export default function useAddCity() {
     // // Récupération des type des pays
     useEffect(() => {
         (async () => {
-            const getCountries = await providers.API.getAll(providers.APIUrl, "getCountries", null);
-            setCountry(getCountries);
-            console.log(getCountries)
+            const getCountries = await providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null);
+            setCountry(getCountries.data);
         })();
     }, []);
 
@@ -100,37 +100,44 @@ export default function useAddCity() {
         }
     ]
 
-    console.log("le tableau des données statiques", dynamicArrayData)
-
     const handleSubmit = async () => {
         const data = {
             name: inputs.name,
             CityId: inputs.CityId,
-            CountryId: inputs.CountryId
-        }
+            CountryId: inputs.CountryId,
+        };
+
+        // Validation des champs requis
         for (const [key, value] of Object.entries(data)) {
             if (!value) {
-                return providers.alertMessage(false, "Champs invalides", `Veuillez remplir tous les champs obligatoires`, null);
+                toast.info("Champs invalides", "Veuillez remplir tous les champs obligatoires");
+                return;
             }
         }
 
         setIsLoading(true);
 
-        const response = await providers.API.post(providers.APIUrl, "createDistrict", null, data);
+        try {
+            await providers.API.post<CitiyResponseDto>(
+                providers.APIUrl,
+                "cities",
+                null,
+                data
+            );
 
-        if (response.status) localStorage.removeItem("inputMemoryOfAddCityPage");
-
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/OTHERS/addCity" : null
-        );
-
-        setIsLoading(false);
+            localStorage.removeItem("inputMemoryOfAddCityPage");
+            toast.success("Succès", "La ville a été ajoutée avec succès");
+        } catch (error) {
+            console.error("Erreur lors de l'ajout de la ville:", error);
+            toast.error(
+                "Erreur",
+                error instanceof Error ? error.message : "Une erreur est survenue sur le serveur"
+            );
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    console.log("les datas", inputs);
 
     return { dynamicArrayData, staticArrayData, handleSubmit, inputs, setInputs, isLoading, adminRole }
 }

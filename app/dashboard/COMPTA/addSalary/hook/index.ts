@@ -3,6 +3,8 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useMemo } from "react";
 import { providers } from "@/index";
+import { EnterprisesResponseDto, PostsResponseDto, Salary, SalaryResponseDto } from "@/types/global";
+import { useToast } from "@/components/toast";
 
 type InputsValue = {
   grossSalary: string | number | null;
@@ -31,7 +33,7 @@ const initialInputState: InputsValue = {
 
 export default function useAddSalary() {
   const { data: session } = useSession();
-
+  const toast = useToast()
   // On extrait le rôle et l'EnterpriseId de la session de façon sécurisée
   const adminRole = (session?.user as any)?.role ?? null;
   const enterpriseIdOfAdmin = (session?.user as any)?.EnterpriseId ?? null;
@@ -60,19 +62,19 @@ export default function useAddSalary() {
   useEffect(() => {
     const fetchEnterprises = async () => {
       try {
-        const enterprisesData = await providers.API.getAll(
+        const enterprisesData = await providers.API.getAll<EnterprisesResponseDto>(
           providers.APIUrl,
-          "getEnterprises",
+          "enterprises",
           null
         );
 
         if (adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
-          const filtered = enterprisesData.filter(
+          const filtered = enterprisesData.data.filter(
             (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
           );
           setEnterprises(filtered);
         } else {
-          setEnterprises(enterprisesData || []);
+          setEnterprises(enterprisesData.data);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des entreprises:", error);
@@ -91,13 +93,13 @@ export default function useAddSalary() {
 
     const fetchPosts = async () => {
       try {
-        const postsData = await providers.API.getAll(
+        const postsData = await providers.API.getAll<PostsResponseDto>(
           providers.APIUrl,
-          "getPosts",
+          "posts",
           null
         );
-        const filteredPosts = postsData.filter(
-          (post: { EnterpriseId: number }) => post.EnterpriseId === Number(inputs.EnterpriseId)
+        const filteredPosts = postsData.data.filter(
+          post => post.EnterpriseId === Number(inputs.EnterpriseId)
         );
         setPosts(filteredPosts);
       } catch (error) {
@@ -146,46 +148,31 @@ export default function useAddSalary() {
     // Validation des champs requis
     for (const [key, value] of Object.entries(requireFields)) {
       if (!value) {
-        return providers.alertMessage(
-          false,
-          "Champs invalides",
-          "Veuillez remplir tous les champs obligatoires",
-          null
-        );
+        return toast.info("Champs invalides", "Veuillez remplir tous les champs obligatoires");
       }
     }
 
     setIsLoading(true);
 
     try {
-      const response = await providers.API.post(
+      await providers.API.post<SalaryResponseDto>(
         providers.APIUrl,
-        "addSalary",
+        "salaries",
         null,
         {
           ...inputs,
           netSalary: inputs.grossSalary,
         }
       );
-
-      if (response.status) {
-        localStorage.removeItem("inputMemoryOfAddSalaryPage");
-      }
-
-      providers.alertMessage(
-        response.status,
-        response.title,
-        response.message,
-        response.status ? "/dashboard/COMPTA/addSalary" : null
-      );
+      localStorage.removeItem("inputMemoryOfAddSalaryPage");
+      toast.success("Félicitations", "Nouveau salaire enregistré avec succès");
+      window.location.reload();
     } catch (error) {
       console.error("Erreur lors de la soumission du salaire:", error);
-      providers.alertMessage(
-        false,
+      toast.error(
         "Erreur",
-        "Une erreur est survenue lors de l'enregistrement",
-        null
-      );
+        error instanceof Error ? error.message : "Erreur au serveur lors de la connexion"
+      )
     } finally {
       setIsLoading(false);
     }

@@ -3,32 +3,6 @@ import { providers } from "@/index";
 import { AttendanceListDto, AttendancesResponseDto, User, UsersResponseDto } from "@/types/global";
 import { useEffect, useState } from "react";
 
-type Attendances = {
-    status: string,
-    arrivalTime: string;
-    Salary: { dailySalary: string, netSalary: string },
-    EnterpriseId: number | null,
-    mounth: number,
-    UserId: number,
-    createdAt: string,
-    Planning: {
-        startTime: string,
-    },
-    Enterprise: {
-        toleranceTime: null,
-        maxToleranceTime: null,
-        pourcentageOfHourlyDeduction: null,
-        maxPourcentageOfHourlyDeduction: null
-    }
-};
-
-type Users = {
-    EnterpriseId: number,
-    Salary: {
-        dailySalary: string | null
-    }
-}[];
-
 export function AnnualGainHook() {
     const [totalDeductionByMonth, setTotalDeductionByMonth] = useState(0);
     const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);

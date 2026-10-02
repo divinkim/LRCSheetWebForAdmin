@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, JSX } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faEye,
   faEyeSlash,
@@ -18,13 +19,68 @@ import {
 import Cell from "../Cell";
 import { OTP_LENGTH, MIN_PASSWORD } from "./useResetPassword";
 
-const STEPS = ["email", "otp", "password"];
+/* ---------------------------------------------------------------
+   TYPES ET INTERFACES
+--------------------------------------------------------------- */
+export type ResetStep = "email" | "otp" | "password" | "done";
+
+export interface UseResetPasswordReturn {
+  step: ResetStep;
+  email: string;
+  setEmail: (email: string) => void;
+  otp: string[];
+  setOtp: (otp: string[]) => void;
+  password: string;
+  setPassword: (password: string) => void;
+  confirm: string;
+  setConfirm: (confirm: string) => void;
+  loading: boolean;
+  error: string | null;
+  info: string | null;
+  cooldown: number;
+  sendEmail: (e: React.FormEvent<HTMLFormElement>) => void;
+  verifyOtp: (e: React.FormEvent<HTMLFormElement>) => void;
+  submitPassword: (e: React.FormEvent<HTMLFormElement>) => void;
+  changeEmail: () => void;
+  resend: () => void;
+}
+
+interface AlertProps {
+  tone?: "error" | "info";
+  children?: React.ReactNode;
+}
+
+interface SubmitButtonProps {
+  loading: boolean;
+  loadingText: string;
+  label: string;
+  icon: IconDefinition;
+  disabled?: boolean;
+}
+
+interface BackLinkProps {
+  onClick: () => void;
+}
+
+interface OtpInputProps {
+  value: string[];
+  onChange: (value: string[]) => void;
+  disabled?: boolean;
+  invalid?: boolean;
+}
+
+interface ResetPasswordProps {
+  r: UseResetPasswordReturn;
+  onBack: () => void;
+}
+
+const STEPS: Exclude<ResetStep, "done">[] = ["email", "otp", "password"];
 const STEP_LABELS = ["Adresse e-mail", "Code de vérification", "Nouveau mot de passe"];
 
 /* ---------------------------------------------------------------
-   PETITS COMPOSANTS
+   PETITS COMPOSANTS TYPÉS
 --------------------------------------------------------------- */
-function Alert({ tone = "error", children }) {
+function Alert({ tone = "error", children }: AlertProps): JSX.Element | null {
   if (!children) return null;
   const styles =
     tone === "error"
@@ -40,7 +96,7 @@ function Alert({ tone = "error", children }) {
   );
 }
 
-function SubmitButton({ loading, loadingText, label, icon, disabled }) {
+function SubmitButton({ loading, loadingText, label, icon, disabled }: SubmitButtonProps): JSX.Element {
   return (
     <button
       type="submit"
@@ -75,7 +131,7 @@ function SubmitButton({ loading, loadingText, label, icon, disabled }) {
   );
 }
 
-function BackLink({ onClick }) {
+function BackLink({ onClick }: BackLinkProps): JSX.Element {
   return (
     <button
       type="button"
@@ -89,21 +145,21 @@ function BackLink({ onClick }) {
 }
 
 /* ---------------------------------------------------------------
-   SAISIE DU CODE OTP : une cellule par chiffre
-   (collage du code complet, backspace et flèches gérés)
+   SAISIE DU CODE OTP
 --------------------------------------------------------------- */
-function OtpInput({ value, onChange, disabled, invalid }) {
-  const refs = useRef([]);
+function OtpInput({ value, onChange, disabled, invalid }: OtpInputProps): JSX.Element {
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     refs.current[0]?.focus();
   }, []);
 
-  const focusAt = (i) =>
+  const focusAt = (i: number): void => {
     refs.current[Math.max(0, Math.min(OTP_LENGTH - 1, i))]?.focus();
+  };
 
-  const fill = (start, chars) => {
-    const next = value.slice();
+  const fill = (start: number, chars: string): void => {
+    const next = [...value];
     chars
       .split("")
       .slice(0, OTP_LENGTH - start)
@@ -114,10 +170,10 @@ function OtpInput({ value, onChange, disabled, invalid }) {
     focusAt(start + chars.length);
   };
 
-  const handleChange = (i, raw) => {
+  const handleChange = (i: number, raw: string): void => {
     let chars = raw.replace(/\D/g, "");
     if (!chars) {
-      const next = value.slice();
+      const next = [...value];
       next[i] = "";
       onChange(next);
       return;
@@ -126,10 +182,10 @@ function OtpInput({ value, onChange, disabled, invalid }) {
     fill(i, chars);
   };
 
-  const handleKeyDown = (i, e) => {
+  const handleKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Backspace" && !value[i] && i > 0) {
       e.preventDefault();
-      const next = value.slice();
+      const next = [...value];
       next[i - 1] = "";
       onChange(next);
       focusAt(i - 1);
@@ -142,7 +198,7 @@ function OtpInput({ value, onChange, disabled, invalid }) {
     }
   };
 
-  const handlePaste = (i, e) => {
+  const handlePaste = (i: number, e: React.ClipboardEvent<HTMLInputElement>): void => {
     e.preventDefault();
     const chars = e.clipboardData
       .getData("text")
@@ -157,7 +213,9 @@ function OtpInput({ value, onChange, disabled, invalid }) {
       {value.map((digit, i) => (
         <input
           key={i}
-          ref={(el) => (refs.current[i] = el)}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
           type="text"
           inputMode="numeric"
           autoComplete={i === 0 ? "one-time-code" : "off"}
@@ -184,12 +242,9 @@ function OtpInput({ value, onChange, disabled, invalid }) {
 
 /* ---------------------------------------------------------------
    PANNEAU PRINCIPAL
-   r      : état et actions retournés par useResetPassword()
-   onBack : retour à la connexion
 --------------------------------------------------------------- */
-export default function ResetPassword({ r, onBack }) {
-  const [showNew, setShowNew] = useState(false);
-  const stepIndex = STEPS.indexOf(r.step);
+export default function ResetPassword({ r, onBack }: ResetPasswordProps): JSX.Element {
+  const [showNew, setShowNew] = useState<boolean>(false);
   const code = r.otp.join("");
 
   // Succès : retour automatique à la connexion
@@ -197,8 +252,7 @@ export default function ResetPassword({ r, onBack }) {
     if (r.step !== "done") return;
     const id = setTimeout(onBack, 3500);
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [r.step]);
+  }, [r.step, onBack]);
 
   /* ---------------- SUCCÈS ---------------- */
   if (r.step === "done") {
@@ -213,8 +267,7 @@ export default function ResetPassword({ r, onBack }) {
         </h2>
 
         <p className="mt-3 text-sm leading-6 text-slate-500">
-          Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter
-          avec le nouveau.
+          Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter avec le nouveau.
         </p>
 
         <button
@@ -233,9 +286,10 @@ export default function ResetPassword({ r, onBack }) {
   }
 
   /* ---------------- ÉTAPES 1 À 3 ---------------- */
-  const description = {
-    email:
-      "Renseignez l’adresse e-mail de votre compte administrateur. Un code de vérification vous sera envoyé.",
+  const stepIndex = STEPS.indexOf(r.step);
+
+  const descriptionMap: Record<ResetStep, React.ReactNode> = {
+    email: "Renseignez l’adresse e-mail de votre compte administrateur. Un code de vérification vous sera envoyé.",
     otp: (
       <>
         Saisissez le code à {OTP_LENGTH} chiffres envoyé à{" "}
@@ -243,7 +297,8 @@ export default function ResetPassword({ r, onBack }) {
       </>
     ),
     password: "Choisissez un nouveau mot de passe pour votre espace d’administration.",
-  }[r.step];
+    done: null,
+  };
 
   return (
     <div>
@@ -258,7 +313,9 @@ export default function ResetPassword({ r, onBack }) {
           Réinitialiser le mot de passe
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-slate-500">{description}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-500">
+          {descriptionMap[r.step]}
+        </p>
       </div>
 
       {/* Progression */}
@@ -267,8 +324,9 @@ export default function ResetPassword({ r, onBack }) {
           {STEPS.map((s, i) => (
             <div
               key={s}
-              className={`h-1 flex-1 rounded-full transition-colors duration-500 ${i <= stepIndex ? "bg-blue-600" : "bg-slate-200"
-                }`}
+              className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
+                i <= stepIndex ? "bg-blue-600" : "bg-slate-200"
+              }`}
             />
           ))}
         </div>
@@ -291,7 +349,7 @@ export default function ResetPassword({ r, onBack }) {
               required
               autoComplete="email"
               value={r.email}
-              onChange={(e) => r.setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => r.setEmail(e.target.value)}
               placeholder="admin@lrcsheet.com"
               className="block w-full rounded-b-lg bg-transparent py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
             />
@@ -310,6 +368,7 @@ export default function ResetPassword({ r, onBack }) {
       {r.step === "otp" && (
         <form onSubmit={r.verifyOtp} className="space-y-4">
           <Alert>{r.error}</Alert>
+
           <Alert tone="info">{r.info}</Alert>
 
           <div role="group" aria-labelledby="otp-label">
@@ -369,7 +428,7 @@ export default function ResetPassword({ r, onBack }) {
               required
               autoComplete="new-password"
               value={r.password}
-              onChange={(e) => r.setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => r.setPassword(e.target.value)}
               placeholder="Votre nouveau mot de passe"
               className="block w-full rounded-b-lg bg-transparent py-3 pl-10 pr-12 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
             />
@@ -399,15 +458,16 @@ export default function ResetPassword({ r, onBack }) {
               required
               autoComplete="new-password"
               value={r.confirm}
-              onChange={(e) => r.setConfirm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => r.setConfirm(e.target.value)}
               placeholder="Répétez le mot de passe"
               className="block w-full rounded-b-lg bg-transparent py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
             />
           </Cell>
 
           <p
-            className={`flex items-center gap-2 text-xs font-medium transition-colors ${r.password.length >= MIN_PASSWORD ? "text-emerald-600" : "text-slate-500"
-              }`}
+            className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+              r.password.length >= MIN_PASSWORD ? "text-emerald-600" : "text-slate-500"
+            }`}
           >
             <FontAwesomeIcon icon={faCircleCheck} className="text-[11px]" />
             {MIN_PASSWORD} caractères minimum

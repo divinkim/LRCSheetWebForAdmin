@@ -140,7 +140,7 @@ export default function NotificationPage() {
                                         {notification.file && (
                                             <div className="pt-2">
                                                 <a
-                                                    href={`${providers.APIUrl}/images/${notification.file}`}
+                                                    href={`${providers.ImageUrl}/${notification.file}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-3 rounded-xl border border-amber-200/80 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-950/20 p-2.5 transition-all hover:bg-amber-100/80 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-500/40 shadow-xs group/file"

@@ -65,14 +65,14 @@ export default function useAddContract() {
         null
       );
 
-      if (adminRole && adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
-        const filteredEnterprises = enterprises.filter(
-          (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
-        );
-        setEnterprises(filteredEnterprises);
-      } else {
-        setEnterprises(enterprises);
-      }
+      // if (adminRole && adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
+      //   const filteredEnterprises = enterprises.filter(
+      //     (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
+      //   );
+      //   setEnterprises(filteredEnterprises);
+      // } else {
+      //   setEnterprises(enterprises);
+      // }
     })();
   }, [adminRole, enterpriseIdOfAdmin]);
 
@@ -84,16 +84,16 @@ export default function useAddContract() {
     }
 
     (async () => {
-      const allContractTypes = await providers.API.getAll(
-        providers.APIUrl,
-        "getContractTypes",
-        null
-      );
-      const filteredTypes = allContractTypes.filter(
-        (contractType: { EnterpriseId: number }) =>
-          contractType.EnterpriseId === inputs.EnterpriseId
-      );
-      setContractTypes(filteredTypes);
+      // const allContractTypes = await providers.API.getAll(
+      //   providers.APIUrl,
+      //   "getContractTypes",
+      //   null
+      // );
+      // const filteredTypes = allContractTypes.filter(
+      //   (contractType: { EnterpriseId: number }) =>
+      //     contractType.EnterpriseId === inputs.EnterpriseId
+      // );
+      // setContractTypes(filteredTypes);
     })();
   }, [inputs.EnterpriseId]);
 
@@ -151,16 +151,16 @@ export default function useAddContract() {
 
     setIsLoading(false);
 
-    if (response.status) {
-      sessionStorage.removeItem("inputMemoryOfAddContractPage");
-    }
+    // if (response.status) {
+    //   sessionStorage.removeItem("inputMemoryOfAddContractPage");
+    // }
 
-    providers.alertMessage(
-      response.status,
-      response.title,
-      response.message,
-      response.status ? "/dashboard/ADMIN/addContract" : null
-    );
+    // providers.alertMessage(
+    //   response.status,
+    //   response.title,
+    //   response.message,
+    //   response.status ? "/dashboard/ADMIN/addContract" : null
+    // );
   };
 
   return {

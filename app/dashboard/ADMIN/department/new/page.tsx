@@ -137,9 +137,9 @@ export default function AddDepartment() {
                                   null,
                                   { files }
                                 );
-                                if (response.status) {
-                                  valueToSave = response.filename;
-                                }
+                                // if (response.status) {
+                                //   valueToSave = response.filename;
+                                // }
                               }
                             }
 

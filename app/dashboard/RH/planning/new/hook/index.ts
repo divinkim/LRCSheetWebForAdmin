@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
+import { EnterprisesResponseDto } from "@/types/global";
 
 type InputsValue = {
     startTime: string | null;
@@ -59,8 +60,8 @@ export default function useAddPlanning() {
                 }
 
                 // 2. Récupération des entreprises depuis l'API
-                const data = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
-                const enterpriseList = data || [];
+                const res = await providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null);
+                const enterpriseList = res.data || [];
                 setEnterprises(enterpriseList);
 
                 // 3. Pré-remplissage de l'entreprise si l'utilisateur n'est pas Super-Admin (EnterpriseId !== 1)

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
+import { CitiesResponseDto, CountryResponseDto, DepartmentPost, DepartmentsPostResponseDto, DepartmentsResponseDto, EnterpriseResponseDto, EnterprisesResponseDto } from "@/types/global";
 
 export type InputsValue = {
   name: string;
@@ -100,10 +101,10 @@ export default function useUpdateEnterprise() {
 
       //Chargement depuis l'API si pas de mémoire locale
       if (currentEnterpriseId) {
-        const enterprisesList = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
-        setEnterprises(enterprisesList);
+        const enterprisesList = await providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null);
+        setEnterprises(enterprisesList.data);
 
-        const currentEnterprise = enterprisesList.find(
+        const currentEnterprise = enterprisesList.data.find(
           (item: { id: number }) => item.id === Number(enterpriseIdFromUrl)
         );
 
@@ -134,7 +135,7 @@ export default function useUpdateEnterprise() {
             },
             legalForm: currentEnterprise.legalForm || "",
             rccm: currentEnterprise.rccm,
-            nui: currentEnterprise.niu || currentEnterprise.nui,
+            nui: currentEnterprise.nui || currentEnterprise.nui,
             subscriptionType: currentEnterprise.subscriptionType || "",
             subscriptionStatus: currentEnterprise.subscriptionStatus || "",
           });
@@ -146,8 +147,8 @@ export default function useUpdateEnterprise() {
   // 2. Chargement des pays
   useEffect(() => {
     (async () => {
-      const countriesList = await providers.API.getAll(providers.APIUrl, "getCountries", null);
-      setCountry(countriesList || []);
+      const countriesList = await providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null);
+      setCountry(countriesList.data);
     })();
   }, []);
 
@@ -156,8 +157,8 @@ export default function useUpdateEnterprise() {
     if (!inputs.EnterpriseId && !enterpriseId) return;
     (async () => {
       const targetEnterpriseId = inputs.EnterpriseId || Number(enterpriseId);
-      const departmentPostsList = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
-      const filteredDepartments = departmentPostsList.filter(
+      const departmentPostsList = await providers.API.getAll<DepartmentsPostResponseDto>(providers.APIUrl, "departments", null);
+      const filteredDepartments = departmentPostsList.data.filter(
         (department: { EnterpriseId: number }) => department.EnterpriseId === targetEnterpriseId
       );
       setDepartmentPosts(filteredDepartments);
@@ -168,8 +169,8 @@ export default function useUpdateEnterprise() {
   useEffect(() => {
     if (!inputs.CountryId) return;
     (async () => {
-      const citiesList = await providers.API.getAll(providers.APIUrl, "getCities", null);
-      const filteredCities = citiesList.filter(
+      const citiesList = await providers.API.getAll<CitiesResponseDto>(providers.APIUrl, "cities", null);
+      const filteredCities = citiesList.data.filter(
         (city: any) => city.CountriesTypeId === inputs.CountryId || city.CountryId === inputs.CountryId
       );
       setCity(filteredCities);
@@ -246,24 +247,22 @@ export default function useUpdateEnterprise() {
 
       for (const [key, value] of Object.entries(requiredFields)) {
         if (!value) {
-         return toast.error("Champs invalides", "Veuillez renseigner tous les champs obligatoires.")
+          return toast.error("Champs invalides", "Veuillez renseigner tous les champs obligatoires.")
         }
       }
 
       setIsLoading(true);
 
-      const response = await providers.API.update(
-        "https://vps118934.serveur-vps.net:4001",
-        "updateEnterprise",
+      await providers.API.update<EnterpriseResponseDto>(
+        providers.APIUrl,
+        "enterprises",
         null,
         inputs,
         Number(enterpriseId)
       );
-      
-      if (response.status) {
-        localStorage.removeItem("inputMemoryOfAddEnterprisePage");
-        toast.success("Bravo", "Mise à jour effectuée avec succès.")
-      }
+
+      localStorage.removeItem("inputMemoryOfAddEnterprisePage");
+      toast.success("Bravo", "Mise à jour effectuée avec succès.")
 
     } catch (error) {
       console.log(error);

@@ -78,27 +78,27 @@ export default function useAddContractType() {
 
     // Récupération des entreprises et filtrage en fonction de l'id de l'administrateur courant
     useEffect(() => {
-        (async () => {
-            const getInputMemory = localStorage.getItem("inputMemoryOfAddContratTypePage");
-            getInputMemory ? setInputs(JSON.parse(getInputMemory ?? "")) : setInputs({ ...inputs });
+        // (async () => {
+        //     const getInputMemory = localStorage.getItem("inputMemoryOfAddContratTypePage");
+        //     getInputMemory ? setInputs(JSON.parse(getInputMemory ?? "")) : setInputs({ ...inputs });
 
-            const role = localStorage.getItem("adminRole");
-            const enterpriseIdOfAdmin = localStorage.getItem("EnterpriseId");
+        //     const role = localStorage.getItem("adminRole");
+        //     const enterpriseIdOfAdmin = localStorage.getItem("EnterpriseId");
 
-            const enterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
+        //     const enterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
 
-            if (role !== "Super-Admin") {
-                const getEnterpriseByAdminRole = enterprises.filter((item: { id: number }) => item.id === Number(enterpriseIdOfAdmin));
-                setEnterprises(getEnterpriseByAdminRole);
-                setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
-                setAdminRole(role);
-                return;
-            }
+        //     if (role !== "Super-Admin") {
+        //         const getEnterpriseByAdminRole = enterprises.filter((item: { id: number }) => item.id === Number(enterpriseIdOfAdmin));
+        //         setEnterprises(getEnterpriseByAdminRole);
+        //         setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
+        //         setAdminRole(role);
+        //         return;
+        //     }
 
-            setEnterprises(enterprises);
-            setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
-            setAdminRole(role);
-        })();
+        //     setEnterprises(enterprises);
+        //     setEnterpriseIdOfAdmin(enterpriseIdOfAdmin);
+        //     setAdminRole(role);
+        // })();
     }, []);
 
     //Récupération des plannings
@@ -352,14 +352,14 @@ export default function useAddContractType() {
 
         setIsLoading(false);
 
-        if (response.status) localStorage.removeItem("inputMemoryOfAddContratTypePage");
+        // if (response.status) localStorage.removeItem("inputMemoryOfAddContratTypePage");
 
-        providers.alertMessage(
-            response.status,
-            response.title,
-            response.message,
-            response.status ? "/dashboard/ADMIN/addContractType" : null
-        );
+        // providers.alertMessage(
+        //     response.status,
+        //     response.title,
+        //     response.message,
+        //     response.status ? "/dashboard/ADMIN/addContractType" : null
+        // );
 
     };
 

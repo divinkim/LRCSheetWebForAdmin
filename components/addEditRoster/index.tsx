@@ -3,47 +3,28 @@ import { useEffect, useState } from "react";
 import { providers } from "@/index";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsersGear, faUserPen, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { Planning, PlanningsResponseDto, User, UsersResponseDto } from "@/types/global";
 
-type Users = {
-    lastname: string | null,
-    firstname: string | null
-    id: number,
-    PlanningId: number,
-    EnterpriseId: number,
-    photo: string | null
-}
-
-type Plannings = {
-    startTime: string,
-    breakingStartTime: string,
-    resumeEndTime: string,
-    endTime: string,
-    id: number,
-    PlanningType: {
-        title: string,
-        description: string
-    }
-}
 
 export default function AddOrEditUserPlanningOfWeek() {
-    const [users, setUsers] = useState<Users[]>([]);
-    const [plannings, setPlannings] = useState<Plannings[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [plannings, setPlannings] = useState<Planning[]>([]);
     const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
     useEffect(() => {
         (async () => {
             let EnterpriseId = localStorage.getItem("EnterpriseId");
             setEnterpriseId(EnterpriseId);
 
-            const users:any[] = await providers.API.getAll(providers.APIUrl, "getUsers", null);
+            const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
 
             if (Number(EnterpriseId) === 1) {
-                const filterUserByEnterpriseId = users.filter(user =>
+                const filterUserByEnterpriseId = users.data.filter(user =>
                     [1, 2, 3, 4, null].includes(user.EnterpriseId)
                 );
                 setUsers(filterUserByEnterpriseId);
                 return;
             }
-            const filterUserByEnterpriseId = users.filter(user =>
+            const filterUserByEnterpriseId = users.data.filter(user =>
                 user.EnterpriseId === Number(EnterpriseId) &&
                 user.adminService === null
             );
@@ -53,12 +34,12 @@ export default function AddOrEditUserPlanningOfWeek() {
 
     useEffect(() => {
         (async () => {
-            const plannings = await providers.API.getAll(
-                "https://vps118934.serveur-vps.net:4001",
-                "getPlannings",
+            const plannings = await providers.API.getAll<PlanningsResponseDto>(
+                providers.APIUrl,
+                "plannings",
                 null
             );
-            const filterPlanningsByEnterpriseId = plannings.filter((planning: { EnterpriseId: number }) => planning.EnterpriseId === parseInt(enterpriseId ?? ""))
+            const filterPlanningsByEnterpriseId = plannings.data.filter((planning: { EnterpriseId: number }) => planning.EnterpriseId === parseInt(enterpriseId ?? ""))
             setPlannings(filterPlanningsByEnterpriseId);
         })()
     }, [users])

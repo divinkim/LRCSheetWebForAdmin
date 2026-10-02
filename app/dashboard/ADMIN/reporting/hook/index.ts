@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import HookComponentModal from "@/components/ComponentModal";
 import { SidebarHook } from "@/components/Layouts/sidebar/hook";
+import { Report, ReportResponseDto } from "@/types/global";
 
 // --- TYPES ---
 export type UserInfo = {
@@ -65,18 +66,18 @@ export function RepportsListHook() {
   const [repportsArrayCloned, setRepportsArrayCloned] = useState<RepportsValue[]>([]);
   const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [adminReportCommentArray, setAdminReportCommentArray] = useState<AdminComment[]>([]);
+  const [adminReportCommentArray, setAdminReportCommentArray] = useState<Report[]>([]);
   const [loader, setLoader] = useState<boolean>(true);
 
   // --- API HANDLERS ---
   const getAdminResponse = useCallback(async () => {
     try {
-      const comments = await providers.API.getAll(
+      const comments = await providers.API.getAll<ReportResponseDto>(
         providers.APIUrl,
-        "getAdminReportComment",
+        "repports",
         null
       );
-      setAdminReportCommentArray(comments || []);
+      setAdminReportCommentArray(comments.data || []);
     } catch (error) {
       console.error("Erreur lors de la récupération des commentaires admin:", error);
     }
@@ -164,7 +165,7 @@ export function RepportsListHook() {
       try {
         const response = await providers.API.post(
           providers.APIUrl,
-          "addAdminReportComment",
+          "reports/admin",
           null,
           {
             UserId: userId,
@@ -173,10 +174,8 @@ export function RepportsListHook() {
           }
         );
 
-        if (response?.status) {
-          setAdminResponse("");
-          await getAdminResponse(); // Rafraîchit les données après ajout
-        }
+        setAdminResponse("");
+        await getAdminResponse();
       } catch (error) {
         console.error("Erreur lors de l'envoi du commentaire:", error);
       } finally {

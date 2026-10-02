@@ -145,16 +145,16 @@ export default function useAddDepartment() {
         inputs
       );
 
-      if (response.status) {
-        localStorage.removeItem("inputMemoryOfAddDepartmentPage");
-      }
+      // if (response.status) {
+      //   localStorage.removeItem("inputMemoryOfAddDepartmentPage");
+      // }
 
-      providers.alertMessage(
-        response.status,
-        response.title,
-        response.message,
-        response.status ? "/dashboard/ADMIN/addDepartment" : null
-      );
+      // providers.alertMessage(
+      //   response.status,
+      //   response.title,
+      //   response.message,
+      //   response.status ? "/dashboard/ADMIN/addDepartment" : null
+      // );
     } catch (error) {
       console.error("Erreur lors de l'envoi :", error);
       providers.alertMessage(

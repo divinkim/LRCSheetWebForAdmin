@@ -1,31 +1,12 @@
 import { providers } from "@/index";
+import { NotificationDto, NotificationsResponseDto } from "@/types/global";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-export interface Notification {
-    id: number;
-    title: string | null;
-    description: string | null;
-    fcmToken: string | null;
-    UserId: number | null;
-    createdAt: string | Date;
-    updatedAt: string | Date;
-    EnterpriseId: number | null;
-    Enterprise?: {
-        logo: string | null,
-        MainEnterpriseId: string | null,
-    }
-    User?: {
-        id: number;
-        firstname?: string;
-        lastname?: string;
-        email?: string
-    } | null;
-    file: string | null,
-}
+
 
 export function useNotification() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<NotificationDto[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const { data: session, status } = useSession();
     const adminRole = (session?.user as any)?.adminRole ?? "";
@@ -33,12 +14,12 @@ export function useNotification() {
     useEffect(() => {
         (async () => {
             try {
-                const notifications = await providers.API.getAll(
-                    "https://vps118934.serveur-vps.net:4001",
+                const notifications = await providers.API.getAll<NotificationsResponseDto>(
+                    providers.APIUrl,
                     "notifications",
                     null
                 );
-                let filterdNotifications: Notification[] = notifications;
+                let filterdNotifications = notifications.data;
 
                 if (adminRole === "Super_Admin_Platform") {
                     setNotifications(filterdNotifications)

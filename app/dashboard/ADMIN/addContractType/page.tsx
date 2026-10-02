@@ -62,14 +62,14 @@ export default function AddContractType() {
                                                     if (e.type === "file") {
                                                         const files = v.target.files?.[0];
                                                         const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                                                        if (response.status) {
-                                                            setInputs({
-                                                                ...inputs,
-                                                                [field]: response.filename
-                                                            })
-                                                            localStorage.setItem("inputMemoryOfAddContractTypePage", JSON.stringify({ ...inputs, [field]: response.filename }));
-                                                            return;
-                                                        }
+                                                        // if (response.status) {
+                                                        //     setInputs({
+                                                        //         ...inputs,
+                                                        //         [field]: response.filename
+                                                        //     })
+                                                        //     localStorage.setItem("inputMemoryOfAddContractTypePage", JSON.stringify({ ...inputs, [field]: response.filename }));
+                                                        //     return;
+                                                        // }
                                                     }
                                                     setInputs({
                                                         ...inputs,

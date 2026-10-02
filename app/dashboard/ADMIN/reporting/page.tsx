@@ -104,7 +104,7 @@ export default function Repports() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-4 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* En-tête Pro */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-5 border-b border-slate-200 dark:border-slate-800 gap-4">
           <div>
@@ -119,7 +119,7 @@ export default function Repports() {
 
         {/* Barre d'outils et de filtres */}
         <div className="bg-white dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-          
+
           {/* Champ de Recherche */}
           <div className="relative w-full md:w-80">
             <input
@@ -280,13 +280,13 @@ export default function Repports() {
                       {/* Zone interactive (Dépliée) */}
                       {isExpanded && (
                         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 space-y-4">
-                          
+
                           {/* Commentaires existants */}
                           {adminReportCommentArray.length > 0 &&
                             adminReportCommentArray.map(
-                              (item: { UserId: number; RepportId: number; content: string }, idx: number) => (
-                                <div key={idx}>
-                                  {item.UserId === repport.UserId && item.RepportId === repport.id && (
+                              item => (
+                                <div key={item.id}>
+                                  {item.UserId === repport.UserId && (
                                     <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-sm flex gap-3">
                                       <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 text-amber-500" />
                                       <div>

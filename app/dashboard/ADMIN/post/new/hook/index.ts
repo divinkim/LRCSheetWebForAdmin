@@ -80,14 +80,14 @@ export default function useAddPost() {
 
       const enterprises = await providers.API.getAll(providers.APIUrl, "getEnterprises", null);
 
-      if (role !== "Super-Admin" && enterpriseIdOfAdmin) {
-        const getEnterprisesByAdminRole = enterprises.filter(
-          (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
-        );
-        setEnterprises(getEnterprisesByAdminRole);
-      } else {
-        setEnterprises(enterprises);
-      }
+      // if (role !== "Super-Admin" && enterpriseIdOfAdmin) {
+      //   const getEnterprisesByAdminRole = enterprises.filter(
+      //     (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
+      //   );
+      //   setEnterprises(getEnterprisesByAdminRole);
+      // } else {
+      //   setEnterprises(enterprises);
+      // }
     })();
   }, [session, status]);
 
@@ -98,11 +98,11 @@ export default function useAddPost() {
         setDepartmentPosts([]);
         return;
       }
-      const departmentPosts = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
-      const filterDepartmentsByAdminEnterpriseId = departmentPosts.filter(
-        (department: { EnterpriseId: number }) => department.EnterpriseId === inputs.EnterpriseId
-      );
-      setDepartmentPosts(filterDepartmentsByAdminEnterpriseId);
+      // const departmentPosts = await providers.API.getAll(providers.APIUrl, "getDepartmentPosts", null);
+      // const filterDepartmentsByAdminEnterpriseId = departmentPosts.filter(
+      //   (department: { EnterpriseId: number }) => department.EnterpriseId === inputs.EnterpriseId
+      // );
+      // setDepartmentPosts(filterDepartmentsByAdminEnterpriseId);
     })();
   }, [inputs.EnterpriseId]);
 
@@ -156,16 +156,16 @@ export default function useAddPost() {
 
     const response = await providers.API.post(providers.APIUrl, "createPoste", null, inputs);
 
-    if (response.status) {
-      localStorage.removeItem("inputMemoryOfAddPostPage");
-    }
+    // if (response.status) {
+    //   localStorage.removeItem("inputMemoryOfAddPostPage");
+    // }
 
-    providers.alertMessage(
-      response.status,
-      response.title,
-      response.message,
-      response.status ? "/dashboard/ADMIN/addPost" : null
-    );
+    // providers.alertMessage(
+    //   response.status,
+    //   response.title,
+    //   response.message,
+    //   response.status ? "/dashboard/ADMIN/addPost" : null
+    // );
 
     setIsLoading(false);
   };
