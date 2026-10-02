@@ -105,17 +105,17 @@ export default function AddPost() {
                           placeholder={e.placeholder}
                           onChange={async (v) => {
                             let field = e.alias;
-                            if (e.type === "file") {
-                              const files = v.target.files?.[0];
-                              if (!files) return;
-                              const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                              if (response.status) {
-                                const updatedInputs = { ...inputs, [field]: response.filename };
-                                setInputs(updatedInputs);
-                                localStorage.setItem("inputMemoryOfAddPostPage", JSON.stringify(updatedInputs));
-                                return;
-                              }
-                            }
+                            // if (e.type === "file") {
+                            //   const files = v.target.files?.[0];
+                            //   if (!files) return;
+                            //   const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
+                            //   if (response.status) {
+                            //     const updatedInputs = { ...inputs, [field]: response.filename };
+                            //     setInputs(updatedInputs);
+                            //     localStorage.setItem("inputMemoryOfAddPostPage", JSON.stringify(updatedInputs));
+                            //     return;
+                            //   }
+                            // }
                             const updatedInputs = { ...inputs, [field]: v.target.value };
                             setInputs(updatedInputs);
                             localStorage.setItem("inputMemoryOfAddPostPage", JSON.stringify(updatedInputs));

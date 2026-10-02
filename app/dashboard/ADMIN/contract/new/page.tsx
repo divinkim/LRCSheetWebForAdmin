@@ -111,27 +111,27 @@ export default function AddContractType() {
                         placeholder={e.placeholder}
                         onChange={async (v) => {
                           const field = e.alias;
-                          if (e.type === "file") {
-                            const files = v.target.files?.[0];
-                            const response = await providers.API.post(
-                              providers.APIUrl,
-                              "sendFiles",
-                              null,
-                              { files }
-                            );
-                            if (response.status) {
-                              const updated = {
-                                ...inputs,
-                                [field]: response.filename,
-                              };
-                              setInputs(updated);
-                              localStorage.setItem(
-                                "inputMemoryOfAddContractPage",
-                                JSON.stringify(updated)
-                              );
-                              return;
-                            }
-                          }
+                          // if (e.type === "file") {
+                          //   const files = v.target.files?.[0];
+                          //   const response = await providers.API.post(
+                          //     providers.APIUrl,
+                          //     "sendFiles",
+                          //     null,
+                          //     { files }
+                          //   );
+                          //   if (response.status) {
+                          //     const updated = {
+                          //       ...inputs,
+                          //       [field]: response.filename,
+                          //     };
+                          //     setInputs(updated);
+                          //     localStorage.setItem(
+                          //       "inputMemoryOfAddContractPage",
+                          //       JSON.stringify(updated)
+                          //     );
+                          //     return;
+                          //   }
+                          // }
                           const updated = {
                             ...inputs,
                             [field]: v.target.value,
