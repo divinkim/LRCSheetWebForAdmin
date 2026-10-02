@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import HookComponentModal from "@/components/ComponentModal";
 import { SidebarHook } from "@/components/Layouts/sidebar/hook";
-import { Report, ReportResponseDto } from "@/types/global";
+import { Report, ReportResponseDto, ReportsResponseDto } from "@/types/global";
 
 // --- TYPES ---
 export type UserInfo = {
@@ -62,8 +62,8 @@ export function RepportsListHook() {
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [adminResponse, setAdminResponse] = useState<string>("");
   const [monthIndice, setMonthIndice] = useState<number>(new Date().getMonth());
-  const [repportsArray, setRepportsArray] = useState<RepportsValue[]>([]);
-  const [repportsArrayCloned, setRepportsArrayCloned] = useState<RepportsValue[]>([]);
+  const [repportsArray, setRepportsArray] = useState<Report[]>([]);
+  const [repportsArrayCloned, setRepportsArrayCloned] = useState<Report[]>([]);
   const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [adminReportCommentArray, setAdminReportCommentArray] = useState<Report[]>([]);
@@ -72,7 +72,7 @@ export function RepportsListHook() {
   // --- API HANDLERS ---
   const getAdminResponse = useCallback(async () => {
     try {
-      const comments = await providers.API.getAll<ReportResponseDto>(
+      const comments = await providers.API.getAll<ReportsResponseDto>(
         providers.APIUrl,
         "repports",
         null
@@ -117,7 +117,7 @@ export function RepportsListHook() {
 
   // --- FILTERS & NAVIGATION ---
   const navigateBetweenMonths = useCallback(
-    (repportArray: RepportsValue[], targetMonthIndice: number, targetEnterpriseId: number) => {
+    (repportArray: Report[], targetMonthIndice: number, targetEnterpriseId: number) => {
       const filteredReports = repportArray.filter(
         (repport) =>
           repport.EnterpriseId === targetEnterpriseId &&

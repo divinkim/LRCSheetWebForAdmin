@@ -7,6 +7,7 @@ import { formElements } from "@/components/FormElements/forms";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import UpdateCompanyHookModal from "./hook";
+import { UploadFileResponseDto } from "@/types/global";
 
 export default function UpdateCompany() {
   const {
@@ -166,15 +167,13 @@ export default function UpdateCompany() {
                         onChange={async (v) => {
                           const field = e.alias;
                           if (e.type === "file") {
-                            const files = v.target.files?.[0];
-                            if (!files) return;
-                            const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                            if (response.status) {
-                              const updatedInputs = { ...inputs, [field]: response.filename };
-                              setInputs(updatedInputs);
-                              localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(updatedInputs));
-                              return;
-                            }
+                            const file = v.target.files?.[0];
+                            if (!file) return;
+                            const response = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
+                            const updatedInputs = { ...inputs, [field]: response.filename };
+                            setInputs(updatedInputs);
+                            localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(updatedInputs));
+                            return;
                           }
                           const updatedInputs = { ...inputs, [field]: v.target.value };
                           setInputs(updatedInputs);

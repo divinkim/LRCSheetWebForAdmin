@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
-
+import { CitiesResponseDto, ContractsResponseDto, ContractTypesResponseDto, CountryResponseDto, DepartmentsResponseDto, DistrictResponseDto, EnterprisesResponseDto, PlanningsResponseDto, PostsResponseDto, QuarterResponseDto, QuartersResponseDto, SalariesResponseDto, UserResponseDto } from "@/types/global";
 export type InputsValue = {
   firstname: string | null;
   lastname: string | null;

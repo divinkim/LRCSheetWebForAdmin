@@ -42,7 +42,7 @@ const ICE_SERVERS: RTCConfiguration = {
   ],
 };
 
-export const CollaboratorsSkeleton = () => {
+const CollaboratorsSkeleton = () => {
   return (
     <div className="flex h-screen w-full bg-slate-900 text-slate-100">
       <div className="flex flex-col flex-1 bg-white max-w-md border-r border-slate-200">
@@ -757,7 +757,7 @@ export default function ChatPage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (file) {
-                        const res = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "sendFiles", null, {
+                        const res = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, {
                           file
                         });
                         setSelectedFile(file)

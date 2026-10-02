@@ -15,7 +15,7 @@ export default function Edit() {
     usersArrayCloned = [],
     addEditUserPlanningOfWeek,
     weekDays = [],
-    plannings = [],
+    plannings,
     isLoading = false,
     datas = [],
     getFormatTime,

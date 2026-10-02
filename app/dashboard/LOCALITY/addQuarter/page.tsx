@@ -58,16 +58,16 @@ export default function AddDistrict() {
                                             {!e.selectedInput ?
                                                 <input value={inputs[e.alias] ?? ""} onChange={async (v) => {
                                                     let field = e.alias;
-                                                    if (e.type === "file") {
-                                                        const files = v.target.files?.[0];
-                                                        const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
-                                                        if (response.status) {
-                                                            setInputs({
-                                                                ...inputs,
-                                                                [field]: response.filename
-                                                            })
-                                                        }
-                                                    }
+                                                    // if (e.type === "file") {
+                                                    //     const files = v.target.files?.[0];
+                                                    //     const response = await providers.API.post(providers.APIUrl, "sendFiles", null, { files });
+                                                    //     if (response.status) {
+                                                    //         setInputs({
+                                                    //             ...inputs,
+                                                    //             [field]: response.filename
+                                                    //         })
+                                                    //     }
+                                                    // }
                                                     setInputs({
                                                         ...inputs,
                                                         [field]: v.target.value

@@ -41,6 +41,7 @@ export type PlanningType = {
 };
 
 export type Planning = {
+    id: number;
     startTime: string;
     breakingStartTime: string;
     resumeEndTime: string;
@@ -305,7 +306,7 @@ export type AttendanceSingleResponseDto = {
     data: AttendanceListDto;
 };
 
-export interface Report {
+export type Report= {
     id: number;
     title: string;
     UserId: number;
@@ -323,8 +324,14 @@ export interface Report {
 
 export interface ReportResponseDto {
     message: string;
+    data: Report;
+}
+
+export interface ReportsResponseDto {
+    message: string;
     data: Report[];
 }
+
 export type AppointmentDto = {
     fullName: string;
     email: string;

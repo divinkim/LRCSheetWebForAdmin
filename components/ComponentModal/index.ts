@@ -1,5 +1,6 @@
 "use client";
 import { providers } from "@/index";
+import { Report, ReportsResponseDto } from "@/types/global";
 import { useEffect, useState } from "react";
 
 type RepportsValue = {
@@ -22,18 +23,19 @@ type RepportsValue = {
 
 export default function HookComponentModal() {
     if (typeof (window) === "undefined") return
-    const [repports, setRepports] = useState<RepportsValue[]>([]);
+    const [repports, setRepports] = useState<Report[]>([]);
     const [tasks, setTasks] = useState<RepportsValue[]>([])
     let EnterpriseId = localStorage.getItem("EnterpriseId");
 
     useEffect(() => {
         (async () => {
-            const allRepports = await providers.API.getAll(providers.APIUrl, "getAllRepports", null);
+            const allRepports = await providers.API.getAll<ReportsResponseDto>(providers.APIUrl, "reports", null);
             if (parseInt(EnterpriseId ?? "") !== 1) {
-                const getRepportsByEnterprise = allRepports.filter((repport: { EnterpriseId: number }) => repport.EnterpriseId === parseInt(EnterpriseId ?? ""));
-                return setRepports(getRepportsByEnterprise)
+                const getRepportsByEnterprise = allRepports.data.filter(report => report.EnterpriseId === parseInt(EnterpriseId ?? ""));
+                setRepports(getRepportsByEnterprise)
+                return;
             }
-            const getRepportsByEnterprise = allRepports.filter((repport: { EnterpriseId: number }) => [1, 4].includes(repport.EnterpriseId));
+            const getRepportsByEnterprise = allRepports.data.filter((repport: { EnterpriseId: number }) => [1, 4].includes(repport.EnterpriseId));
             setRepports(getRepportsByEnterprise)
         })();
     }, []);
@@ -43,12 +45,12 @@ export default function HookComponentModal() {
     useEffect(() => {
         (async () => {
             const Tasks = await providers.API.getAll(providers.APIUrl, "getAllTasks", null);
-            if (parseInt(EnterpriseId ?? "") !== 1) {
-                const getRepportsByEnterprise = Tasks.filter((repport: { EnterpriseId: number }) => repport.EnterpriseId === parseInt(EnterpriseId ?? ""));
-                return setTasks(getRepportsByEnterprise)
-            }
-            const getRepportsByEnterprise = Tasks.filter((repport: { EnterpriseId: number }) => [1, 4, null].includes(repport.EnterpriseId));
-            setTasks(getRepportsByEnterprise)
+            // if (parseInt(EnterpriseId ?? "") !== 1) {
+            //     const getRepportsByEnterprise = Tasks.filter((repport: { EnterpriseId: number }) => repport.EnterpriseId === parseInt(EnterpriseId ?? ""));
+            //     return setTasks(getRepportsByEnterprise)
+            // }
+            // const getRepportsByEnterprise = Tasks.filter((repport: { EnterpriseId: number }) => [1, 4, null].includes(repport.EnterpriseId));
+            // setTasks(getRepportsByEnterprise)
         })()
     }, [repports])
 

@@ -4,21 +4,7 @@ import { providers } from "@/index";
 import Swal from "sweetalert2";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/toast";
-type User = {
-    lastname: string,
-    firstname: string,
-    photo: string | null,
-    email: string,
-    id: number,
-    DepartmentPost: {
-        name: string | undefined
-    }
-    EnterpriseId: number,
-    Enterprise: {
-        MainEnterpriseId: number | null
-    },
-    status: boolean
-}
+import { User, UsersResponseDto } from "@/types/global";
 
 type Data = {
     title: string,
@@ -50,7 +36,7 @@ export default function useNotifications() {
     const toast = useToast();
     const { data: session } = useSession();
     const [email, setEmail] = useState<string | null>(null)
-    const BASE_URL = "https://vps118934.serveur-vps.net:4001";
+    const BASE_URL = "https://vps118934.serveur-vps.net:8102";
 
     useEffect(() => {
         (async () => {
@@ -60,15 +46,15 @@ export default function useNotifications() {
                 const email = String((session?.user as any)?.email);
                 const role = String((session?.user as any)?.adminRole);
 
-                const users = await providers.API.getAll(BASE_URL, "getUsers", null);
+                const users = await providers.API.getAll<UsersResponseDto>(BASE_URL, "users", null);
 
-                let getUsersbyAdminRole: User[] = users;
+                let getUsersbyAdminRole = users.data;
 
                 console.log(session?.user)
 
                 if (role === "Super_Admin_Platform") {
-                    setUsers(users);
-                    setUsersCloned(users)
+                    setUsers(users.data);
+                    setUsersCloned(users.data)
                 } else if (role === "Super_Admin_Enterprise") {
                     getUsersbyAdminRole = getUsersbyAdminRole.filter(user => user?.Enterprise?.MainEnterpriseId === Number(EnterpriseId) && user.status);
                     setUsers(getUsersbyAdminRole);

@@ -15,6 +15,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { providers } from "@/index";
 import useNotifications from "./hook";
+import { UploadFileResponseDto } from "@/types/global";
 
 // Composant Skeleton complet de la page
 function NotificationsSkeleton() {
@@ -320,7 +321,7 @@ export default function Notifications() {
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                const result = await providers.API.post(providers.APIUrl, "sendFiles", null, { files: file });
+                                                const result = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
                                                 setFiles(result.filename);
                                             }
                                         }}
