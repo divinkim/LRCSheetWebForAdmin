@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,7 +15,7 @@ import {
   faEye,
   faTrashAlt,
   faFileDownload,
-  faPlus
+  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 
@@ -29,14 +28,50 @@ import { useToast } from "@/components/toast";
 
 const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise"];
 
+/* =========================================================
+   THEME — même identité que le tableau de bord
+========================================================= */
+
+const GOLD = "#c9a24b";
+const SERIF = "'Fraunces', 'Playfair Display', Georgia, serif";
+
+const CARD =
+  "rounded-3xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-12px_rgba(15,23,42,0.10)] dark:border-white/5 dark:bg-[#0f1a33] dark:shadow-none";
+
+const GHOST_BTN =
+  "inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-[#c9a24b]/60 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a24b] disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:text-white";
+
+const STATUS_STYLES = {
+  onTime: {
+    pill: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    dot: "bg-emerald-500",
+  },
+  late: {
+    pill: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    dot: "bg-amber-500",
+  },
+  other: {
+    pill: "bg-rose-500/10 text-rose-700 dark:text-rose-400",
+    dot: "bg-rose-500",
+  },
+};
+
+const statusKey = (status?: string | null) =>
+  status === "A temps" ? "onTime" : status === "En retard" ? "late" : "other";
+
 export default function PresencesList() {
-  const { presencesListCloned = [], adminRole, onSearch, isLoading } = PresencesListHookModal();
+  const {
+    presencesListCloned = [],
+    adminRole,
+    onSearch,
+    isLoading,
+    setPresencesListCloned
+  } = PresencesListHookModal();
   const toast = useToast();
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 8;
-  const [pagination, setPagination] = useState(0);
 
   // Modals
   const [showAddPresenceModal, setShowAddPresenceModal] = useState(false);
@@ -65,6 +100,37 @@ export default function PresencesList() {
     return { total, onTime, late, absent };
   }, [presencesListCloned]);
 
+  const kpis = [
+    {
+      label: "Total enregistrés",
+      value: stats.total,
+      icon: faUsers,
+      tone: "text-[#c9a24b] bg-[#c9a24b]/10 ring-[#c9a24b]/30",
+      valueTone: "text-slate-900 dark:text-white",
+    },
+    {
+      label: "À temps",
+      value: stats.onTime,
+      icon: faUserCheck,
+      tone: "text-emerald-600 bg-emerald-500/10 ring-emerald-500/25 dark:text-emerald-400",
+      valueTone: "text-emerald-700 dark:text-emerald-400",
+    },
+    {
+      label: "En retard",
+      value: stats.late,
+      icon: faClock,
+      tone: "text-amber-600 bg-amber-500/10 ring-amber-500/25 dark:text-amber-400",
+      valueTone: "text-amber-700 dark:text-amber-400",
+    },
+    {
+      label: "Absences / autre",
+      value: stats.absent,
+      icon: faUserXmark,
+      tone: "text-rose-600 bg-rose-500/10 ring-rose-500/25 dark:text-rose-400",
+      valueTone: "text-rose-700 dark:text-rose-400",
+    },
+  ];
+
   // Contrôle des accès d'administration
   const hasAdminAccess = useCallback(() => {
     if (!REQUIRED_ADMIN_ROLES.includes(adminRole ?? "")) {
@@ -74,7 +140,7 @@ export default function PresencesList() {
         text: "Vous n'avez pas les droits nécessaires pour effectuer cette action.",
         customClass: {
           confirmButton:
-            "bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-5 py-2.5 shadow-sm transition-colors",
+            "bg-[#0b1530] hover:bg-[#14244f] text-white font-medium rounded-full px-6 py-2.5 shadow-sm transition-colors",
         },
       });
       return false;
@@ -109,7 +175,7 @@ export default function PresencesList() {
   }, [presencesListCloned]);
 
   // Suppression
-  const handleDelete = (userId: number, createdAt: string) => {
+  const handleDelete = (userId: number, date: string) => {
     if (!hasAdminAccess()) return;
 
     Swal.fire({
@@ -119,22 +185,17 @@ export default function PresencesList() {
       showCancelButton: true,
       cancelButtonText: "Annuler",
       confirmButtonText: "Oui, supprimer",
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: "#e11d48",
       cancelButtonColor: "#64748b",
       customClass: {
-        popup: "dark:bg-slate-800 dark:text-white rounded-xl border dark:border-slate-700",
+        popup: "dark:bg-[#0f1a33] dark:text-white rounded-3xl border dark:border-white/10",
       },
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await providers.API.delete(
-            providers.APIUrl,
-            "attendances",
-            userId,
-            { createdAt }
-          );
+          await providers.API.delete(providers.APIUrl, "attendances/from-admin", null, { usersId: [userId], date });
           toast.success("Bravo", "Présence supprimée avec succès.");
-          window.location.reload();
+          setPresencesListCloned(prev => prev.filter(a => a.UserId !== userId && a.createdAt !== date))
         } catch (err) {
           toast.error("Erreur", "Une erreur est survenue lors de la suppression.");
         }
@@ -142,20 +203,23 @@ export default function PresencesList() {
     });
   };
 
+  const time = (v?: string | null) => v || "--:--";
+
   return (
-    <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50/50 dark:bg-slate-950 transition-colors">
-      <main className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen w-full bg-[#f5f6fa] p-4 transition-colors dark:bg-[#070e20] sm:p-6 lg:p-8">
+      <main className="mx-auto max-w-7xl space-y-7">
         {/* Overlay Modales */}
         {(showAddPresenceModal || showUpdatePresenceModal) && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-all">
-            <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border dark:border-slate-800 p-6">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#070e20]/70 p-4 backdrop-blur-sm">
+            <div className="relative w-full max-w-2xl rounded-3xl border border-white/10 bg-white p-6 shadow-2xl dark:bg-[#0f1a33]">
               <button
                 onClick={() => {
                   setShowAddPresenceModal(false);
                   setShowUpdatePresenceModal(false);
                   window.location.reload();
                 }}
-                className="absolute right-4 top-4 flex h-10 w-10 z-50 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                aria-label="Fermer"
+                className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a24b] dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               >
                 <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
               </button>
@@ -165,120 +229,104 @@ export default function PresencesList() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex flex-col gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 flex items-center gap-3">
-              <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 border border-blue-500/20 dark:bg-blue-400/10 dark:text-blue-400">
-                <FontAwesomeIcon icon={faUsers} className="text-lg" />
-              </span>
-              {tablesModal[0]?.presencesList?.pageTitle || "Présences au poste"}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Suivi en temps réel des pointages et de la ponctualité des équipes.
-            </p>
+        {/* ===============================================
+            HERO
+        =============================================== */}
+        <section
+          className="relative overflow-hidden rounded-3xl text-white shadow-[0_24px_60px_-20px_rgba(11,21,48,0.55)]"
+          style={{
+            background:
+              "radial-gradient(120% 160% at 0% 0%, #1b2f66 0%, #0b1530 55%, #070e20 100%)",
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full opacity-25 blur-3xl"
+            style={{ background: GOLD }}
+          />
+          <div className="relative flex items-center gap-5 px-6 py-8 sm:px-10 sm:py-10">
+            <div
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[#0b1530]"
+              style={{ background: GOLD }}
+            >
+              <FontAwesomeIcon icon={faUsers} className="text-xl" />
+            </div>
+            <div className="min-w-0">
+              <h1
+                className="text-3xl font-medium leading-tight tracking-tight sm:text-4xl"
+                style={{ fontFamily: SERIF }}
+              >
+                {tablesModal[0]?.presencesList?.pageTitle || "Présences au poste"}
+              </h1>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/60">
+                Suivi en temps réel des pointages et de la ponctualité des équipes.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Cartes KPI */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, idx) => (
+        {/* ===============================================
+            KPI
+        =============================================== */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between animate-pulse"
+                className={`${CARD} flex animate-pulse items-center justify-between p-6`}
               >
-                <div className="space-y-2 w-full">
-                  <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                  <div className="h-7 w-12 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                <div className="w-full space-y-3">
+                  <div className="h-3 w-24 rounded bg-slate-200 dark:bg-white/10" />
+                  <div className="h-8 w-14 rounded bg-slate-200 dark:bg-white/10" />
                 </div>
-                <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex-shrink-0"></div>
+                <div className="h-12 w-12 shrink-0 rounded-full bg-slate-100 dark:bg-white/10" />
               </div>
             ))
-          ) : (
-            <>
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+            : kpis.map((kpi) => (
+              <div key={kpi.label} className={`${CARD} flex items-center justify-between p-6`}>
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Total Enregistrés
-                  </p>
-                  <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                    {stats.total}
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{kpi.label}</p>
+                  <p
+                    className={`mt-1.5 text-4xl font-medium tracking-tight ${kpi.valueTone}`}
+                    style={{ fontFamily: SERIF }}
+                  >
+                    {kpi.value}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
-                  <FontAwesomeIcon icon={faUsers} />
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base ring-1 ${kpi.tone}`}
+                >
+                  <FontAwesomeIcon icon={kpi.icon} />
                 </div>
               </div>
-
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    À temps
-                  </p>
-                  <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                    {stats.onTime}
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
-                  <FontAwesomeIcon icon={faUserCheck} />
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    En retard
-                  </p>
-                  <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
-                    {stats.late}
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-                  <FontAwesomeIcon icon={faClock} />
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Absences / Autre
-                  </p>
-                  <p className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
-                    {stats.absent}
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
-                  <FontAwesomeIcon icon={faUserXmark} />
-                </div>
-              </div>
-            </>
-          )}
+            ))}
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="relative flex-1 max-w-md">
+        {/* ===============================================
+            TOOLBAR
+        =============================================== */}
+        <div className={`${CARD} flex flex-col items-stretch justify-between gap-4 p-4 sm:flex-row sm:items-center`}>
+          <div className="relative max-w-md flex-1">
             <input
               type="text"
-              placeholder="Rechercher un collaborateur..."
+              placeholder="Rechercher un collaborateur…"
               onChange={(e) => onSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-500"
+              className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#c9a24b] focus:bg-white focus:ring-4 focus:ring-[#c9a24b]/15 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-white/10"
             />
             <FontAwesomeIcon
               icon={faSearch}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"
             />
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 lg:justify-end">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-end">
             <button
               onClick={exportToCSV}
               disabled={isLoading || presencesListCloned.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-50 transition-all"
+              className={GHOST_BTN}
               title="Exporter au format CSV"
             >
-              <FontAwesomeIcon icon={faFileDownload} className="text-slate-400" />
+              <FontAwesomeIcon icon={faFileDownload} className="text-[#c9a24b]" />
               <span className="hidden sm:inline">Exporter</span>
             </button>
 
@@ -294,7 +342,7 @@ export default function PresencesList() {
                         : setShowUpdatePresenceModal(true);
                     }
                   }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-all dark:bg-blue-600 dark:hover:bg-blue-500"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0b1530] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#0b1530]/20 transition-colors hover:bg-[#14244f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a24b] focus-visible:ring-offset-2 dark:bg-[#c9a24b] dark:text-[#0b1530] dark:shadow-none dark:hover:bg-[#d8b45f] dark:focus-visible:ring-offset-[#0f1a33]"
                 >
                   <FontAwesomeIcon icon={item.icon || faPlus} className="text-sm" />
                   <span>{item.title}</span>
@@ -304,11 +352,13 @@ export default function PresencesList() {
           </div>
         </div>
 
-        {/* Tableau */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        {/* ===============================================
+            TABLEAU
+        =============================================== */}
+        <div className={`${CARD} overflow-hidden`}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-              <thead className="bg-slate-50/80 text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200/80 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-800">
+              <thead className="border-b border-slate-100 bg-slate-50/70 text-xs font-medium text-slate-500 dark:border-white/5 dark:bg-white/[0.03] dark:text-slate-400">
                 <tr>
                   <th scope="col" className="px-6 py-4">Collaborateur</th>
                   <th scope="col" className="px-6 py-4">Arrivée / Pause</th>
@@ -320,180 +370,170 @@ export default function PresencesList() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {isLoading ? (
                   Array.from({ length: limit }).map((_, idx) => (
                     <tr key={idx} className="animate-pulse">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex-shrink-0"></div>
+                          <div className="h-11 w-11 shrink-0 rounded-full bg-slate-200 dark:bg-white/10" />
                           <div className="space-y-1.5">
-                            <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                            <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                            <div className="h-4 w-32 rounded bg-slate-200 dark:bg-white/10" />
+                            <div className="h-3 w-20 rounded bg-slate-200 dark:bg-white/10" />
                           </div>
                         </div>
                       </td>
+                      {[0, 1].map((i) => (
+                        <td key={i} className="px-6 py-4">
+                          <div className="space-y-1.5">
+                            <div className="h-3.5 w-24 rounded bg-slate-200 dark:bg-white/10" />
+                            <div className="h-3 w-20 rounded bg-slate-200 dark:bg-white/10" />
+                          </div>
+                        </td>
+                      ))}
                       <td className="px-6 py-4">
-                        <div className="space-y-1.5">
-                          <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                          <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                        </div>
+                        <div className="h-4 w-28 rounded bg-slate-200 dark:bg-white/10" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="space-y-1.5">
-                          <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                          <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                        </div>
+                        <div className="mx-auto h-8 w-8 rounded-lg bg-slate-200 dark:bg-white/10" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                        <div className="mx-auto h-6 w-20 rounded-full bg-slate-200 dark:bg-white/10" />
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800 mx-auto"></div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800 mx-auto"></div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800"></div>
-                          <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800"></div>
+                          <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10" />
+                          <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10" />
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : paginatedData.length > 0 ? (
-                  paginatedData.map((u) => (
-                    <tr
-                      key={`${u.UserId}-${u.createdAt}`}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                            <img
-                              src={
-                                u.User?.photo
-                                  ? `${providers.ImageUrl}/${u.User.photo}`
-                                  : "/images/clientProfile.png"
-                              }
-                              alt={u.User?.lastname || "Avatar"}
-                              sizes="40px"
-                              className="object-cover"
-                            />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-slate-900 dark:text-slate-100">
-                              {u.User?.firstname}
+                  paginatedData.map((u) => {
+                    const st = STATUS_STYLES[statusKey(u.status)];
+                    return (
+                      <tr
+                        key={`${u.UserId}-${u.createdAt}`}
+                        className="transition-colors hover:bg-[#c9a24b]/[0.04] dark:hover:bg-white/[0.03]"
+                      >
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 ring-[#c9a24b]/30 dark:bg-white/10">
+                              <img
+                                src={
+                                  u.User?.photo
+                                    ? `${providers.ImageUrl}/${u.User.photo}`
+                                    : "/images/clientProfile.png"
+                                }
+                                alt={u.User?.lastname || "Avatar"}
+                                className="h-full w-full object-cover"
+                              />
                             </div>
-                            <p className="text-sm text-slate-400">Collaborateur</p>
+                            <div>
+                              <div className="font-semibold text-slate-900 dark:text-white">
+                                {u.User?.firstname}
+                              </div>
+                              <p className="text-xs text-slate-400">Collaborateur</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-0.5 text-sm font-medium">
-                          <span className="text-slate-800 dark:text-slate-200">
-                            <span className="text-slate-400 font-normal">Arrivée :</span>{" "}
-                            {["00:00:00", "00:00"].includes(String(u.arrivalTime))
-                              ? "--:--"
-                              : u.arrivalTime}
-                          </span>
-                          <span className="text-slate-400">
-                            Pause : {u.breakStartTime ?? "--:--"}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-0.5 text-sm font-medium">
-                          <span className="text-slate-800 dark:text-slate-200">
-                            <span className="text-slate-400 font-normal">Reprise :</span>{" "}
-                            {u.resumeTime ?? "--:--"}
-                          </span>
-                          <span className="text-slate-400">
-                            Départ : {u.departureTime ?? "--:--"}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-300">
-                        {u.createdAt
-                          ? new Date(u.createdAt).toLocaleDateString("fr-FR", {
-                            weekday: "short",
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                          : "-"}
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {u.Enterprise?.logo ? (
-                          <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 mx-auto">
-                            <img
-                              src={`${providers.ImageUrl}/${u.Enterprise.logo}`}
-                              alt={u.Enterprise.name || "Logo"}
-                              sizes="32px"
-                              className="object-cover"
-                            />
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="flex flex-col gap-0.5 text-sm">
+                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                              <span className="font-normal text-slate-400">Arrivée :</span>{" "}
+                              {["00:00:00", "00:00"].includes(String(u.arrivalTime))
+                                ? "--:--"
+                                : u.arrivalTime}
+                            </span>
+                            <span className="text-slate-400">
+                              Pause : {u.breakStartTime ?? "--:--"}
+                            </span>
                           </div>
-                        ) : (
-                          <span className="text-sm font-semibold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {u.Enterprise?.name || "N/A"}
-                          </span>
-                        )}
-                      </td>
+                        </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${u.status === "A temps"
-                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400"
-                            : u.status === "En retard"
-                              ? "bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400"
-                              : "bg-rose-500/10 text-rose-600 border border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400"
-                            }`}
-                        >
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="flex flex-col gap-0.5 text-sm">
+                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                              <span className="font-normal text-slate-400">Reprise :</span>{" "}
+                              {u.resumeTime ?? "--:--"}
+                            </span>
+                            <span className="text-slate-400">
+                              Départ : {u.departureTime ?? "--:--"}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">
+                          {u.createdAt
+                            ? new Date(u.createdAt).toLocaleDateString("fr-FR", {
+                              weekday: "short",
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                            : "-"}
+                        </td>
+
+                        <td className="whitespace-nowrap px-6 py-4 text-center">
+                          {u.Enterprise?.logo ? (
+                            <div className="mx-auto h-9 w-9 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
+                              <img
+                                src={`${providers.ImageUrl}/${u.Enterprise.logo}`}
+                                alt={u.Enterprise.name || "Logo"}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300">
+                              {u.Enterprise?.name || "N/A"}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="whitespace-nowrap px-6 py-4 text-center">
                           <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${u.status === "A temps"
-                              ? "bg-emerald-500"
-                              : u.status === "En retard"
-                                ? "bg-amber-500"
-                                : "bg-rose-500"
-                              }`}
-                          />
-                          {u.status}
-                        </span>
-                      </td>
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${st.pill}`}
+                          >
+                            <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${st.dot}`} />
+                            {u.status}
+                          </span>
+                        </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/dashboard/RH/user/presences/${u.UserId}`}
-                            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-all"
-                            title="Voir l'historique"
-                          >
-                            <FontAwesomeIcon icon={faEye} className="w-4 h-4" />
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(u.UserId, String(u.createdAt))}
-                            className="p-2 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all"
-                            title="Supprimer"
-                          >
-                            <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        <td className="whitespace-nowrap px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/dashboard/RH/user/presences/${u.UserId}`}
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-[#c9a24b]/15 hover:text-[#9a7a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a24b] dark:hover:text-[#e3c47a]"
+                              title="Voir l'historique"
+                              aria-label="Voir l'historique"
+                            >
+                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                            </Link>
+                            <button
+                              onClick={() => handleDelete(u.UserId, String(u.createdAt))}
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                              title="Supprimer"
+                              aria-label="Supprimer"
+                            >
+                              <FontAwesomeIcon icon={faTrashAlt} className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={7} className="py-16 text-center">
                       <div className="mx-auto flex max-w-xs flex-col items-center justify-center">
-                        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full text-[#c9a24b] ring-1 ring-[#c9a24b]/30">
                           <FontAwesomeIcon icon={faSearch} className="text-lg" />
                         </div>
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h3
+                          className="text-lg font-medium text-slate-900 dark:text-white"
+                          style={{ fontFamily: SERIF }}
+                        >
                           Aucune présence trouvée
                         </h3>
                         <p className="mt-1 text-sm text-slate-400">
@@ -507,38 +547,36 @@ export default function PresencesList() {
             </table>
           </div>
 
-          {/* Footer Pagination */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+          {/* Pagination */}
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/60 p-4 dark:border-white/5 dark:bg-white/[0.02] sm:flex-row">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Page{" "}
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
-                {currentPage === 1 ? totalPages : (totalPages - currentPage) + 1}
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {currentPage === 1 ? totalPages : totalPages - currentPage + 1}
               </span>{" "}
               sur{" "}
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
-                {totalPages}
-              </span>
+              <span className="font-semibold text-slate-900 dark:text-white">{totalPages}</span>
             </p>
 
             <div className="flex items-center gap-2">
-              {/* Bouton Précédent (Retourne aux données plus récentes, désactivé à la page 1) */}
+              {/* Précédent : retourne aux données plus récentes */}
               <button
                 disabled={currentPage === totalPages || isLoading}
                 onClick={() => setCurrentPage((prev) => Math.max(prev + 1, 1))}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                className={GHOST_BTN}
               >
-                <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
+                <FontAwesomeIcon icon={faChevronLeft} className="text-xs" />
                 <span>Précédent</span>
               </button>
 
-              {/* Bouton Suivant (Avance vers les données plus anciennes, désactivé à la dernière page) */}
+              {/* Suivant : avance vers les données plus anciennes */}
               <button
                 disabled={currentPage === 1 || isLoading}
                 onClick={() => setCurrentPage((prev) => Math.min(prev - 1, totalPages))}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                className={GHOST_BTN}
               >
                 <span>Suivant</span>
-                <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+                <FontAwesomeIcon icon={faChevronRight} className="text-xs" />
               </button>
             </div>
           </div>

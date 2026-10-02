@@ -136,7 +136,7 @@ export default function Edit() {
                           <img
                             src={
                               user.photo
-                                ? `${providers.APIUrl}/images/${user.photo}`
+                                ? `${providers.ImageUrl}/${user.photo}`
                                 : "/images/clientProfile.png"
                             }
                             alt={`${user.firstname} ${user.lastname}`}

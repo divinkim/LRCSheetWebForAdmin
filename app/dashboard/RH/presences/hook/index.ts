@@ -109,7 +109,6 @@ export function PresencesListHookModal() {
 
                 setPresencesList(filteredAttendances);
                 setPresencesListCloned(filteredAttendances);
-                console.log(filteredAttendances)
             } catch (error) {
                 console.error("Erreur lors de la récupération des données :", error);
             } finally {

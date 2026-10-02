@@ -242,9 +242,9 @@ export class Api {
         }
     }
 
-    async delete<T>(APIUrl: string, methodName: string, UserId: number, data: Record<string, any> = {}): Promise<T> {
+    async delete<T>(APIUrl: string, methodName: string, UserId: number | null, data: Record<string, any> = {}): Promise<T> {
         try {
-            const endPoint = `${APIUrl}/api/${methodName}/${UserId}`;
+            const endPoint = UserId ? `${APIUrl}/api/${methodName}/${UserId}` : `${APIUrl}/api/${methodName}`;
 
             console.log(endPoint);
 
