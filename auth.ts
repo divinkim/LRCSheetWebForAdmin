@@ -42,8 +42,8 @@ export const authOptions = {
 
                 try {
                     const res = await providers.API.post<LoginAdminResponseDto>(
-                        "https://vps118934.serveur-vps.net:4001",
-                        "loginFromAdmin",
+                        providers.APIUrl,
+                        "admin/login",
                         null,
                         {
                             email: credentials.email,
