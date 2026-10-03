@@ -143,7 +143,7 @@ export default function Notifications() {
                                         >
                                             <div className="flex items-center gap-3">
                                                 <img
-                                                    src={item.photo ? `${providers.APIUrl}/images/${item.photo}` : "/images/clientProfile.png"}
+                                                    src={item.photo ? `${providers.ImageUrl}/${item.photo}` : "/images/clientProfile.png"}
                                                     alt={`${item.firstname} ${item.lastname}`}
                                                     className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
                                                 />
@@ -254,7 +254,7 @@ export default function Notifications() {
                                     >
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={item.photo ? `${providers.APIUrl}/images/${item.photo}` : "/images/clientProfile.png"}
+                                                src={item.photo ? `${providers.ImageUrl}/${item.photo}` : "/images/clientProfile.png"}
                                                 alt={`${item.firstname} ${item.lastname}`}
                                                 className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
                                             />
@@ -321,7 +321,7 @@ export default function Notifications() {
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                const result = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
+                                                const result = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "media/upload-single", null, { file });
                                                 setFiles(result.filename);
                                             }
                                         }}

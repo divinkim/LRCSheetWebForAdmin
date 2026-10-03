@@ -97,16 +97,15 @@ export default function useNotifications() {
                 role,
                 files,
             };
-            console.log(inputs.usersIds)
-            // await providers.API.post(BASE_URL, "sendMail", null, {
-            //     subject: inputs.title,
-            //     content: inputs.content,
-            //     emails: inputs.emails,
-            //     senderEmail: "murphykimbatsa@gmail.com",
-            // });
+            await providers.API.post(BASE_URL, "mail/send", null, {
+                subject: inputs.title,
+                content: inputs.content,
+                emails: inputs.emails,
+                senderEmail: "murphykimbatsa@gmail.com",
+            });
 
             for (const receiverId of inputs.usersIds) {
-                const notification = await providers.API.post(BASE_URL, "sendNotificationPush", null, {
+                await providers.API.post(BASE_URL, "notification-push", null, {
                     path: "",
                     messagingType: "general",
                     title: inputs.title,
@@ -119,16 +118,15 @@ export default function useNotifications() {
                     adminPageIndex: "1",
                     email
                 });
-                console.log(notification)
-                // providers.API.post(BASE_URL, "createChatMessage", null, {
-                //     content: inputs.content,
-                //     title: inputs.title,
-                //     receiverId: receiverId,
-                //     senderId: UserId,
-                //     EnterpriseId,
-                //     file: data.files,
-                //     role,
-                // })
+                providers.API.post(BASE_URL, "chats", null, {
+                    content: inputs.content,
+                    title: inputs.title,
+                    receiverId: receiverId,
+                    senderId: UserId,
+                    EnterpriseId,
+                    file: data.files,
+                    role,
+                })
             }
 
             setInputs({
