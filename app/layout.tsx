@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
@@ -6,9 +5,11 @@ import NextTopLoader from "nextjs-toploader";
 import "@/lib/fontawesome";
 import ClientLayout from "./clientLayout";
 import { ThemeProvider } from "next-themes";
-import { getServerSession } from "next-auth";
 import { ToastProvider } from "@/components/toast";
 import SessionProvider from "@/components/providers";
+import ChatSocketProvider from "@/components/call/ChatSocketProvider";
+import CallProvider from "@/components/call/CallProvider";
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
@@ -16,8 +17,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "LRCSheetWebClient",
-  description: "Tableau de bord pour les utilisateur web LRCSheet",
+  title: "LRCSheet",
+  description: "Tableau de bord pour les administrateurs web LRCSheet",
 };
 
 export default function RootLayout({
@@ -36,13 +37,14 @@ export default function RootLayout({
           <ToastProvider>
             <NextTopLoader color="#5750F1" showSpinner={false} />
             <SessionProvider>
-              <ClientLayout>
-                {children}
-              </ClientLayout>
+              {/* Socket + appels globaux : le modal d'appel entrant s'affiche sur toutes les pages */}
+              <ChatSocketProvider>
+                <CallProvider>
+                  <ClientLayout>{children}</ClientLayout>
+                </CallProvider>
+              </ChatSocketProvider>
             </SessionProvider>
-
           </ToastProvider>
-
         </ThemeProvider>
       </body>
     </html>

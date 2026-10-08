@@ -306,7 +306,7 @@ export type AttendanceSingleResponseDto = {
     data: AttendanceListDto;
 };
 
-export type Report= {
+export type Report = {
     id: number;
     title: string;
     UserId: number;
@@ -617,6 +617,7 @@ export interface ChatDto {
     content: string;
     file: string | null;
     role: 'CLIENT' | 'ADMIN' | string;
+    status: string;
     title: string;
     callStatus: boolean;
     callDuration: number;

@@ -12,7 +12,7 @@ const ENDPOINTS = {
   resetPassword: "reset-password/reset",
 };
 
-export const OTP_LENGTH = 6;
+export const OTP_LENGTH = 4;
 export const MIN_PASSWORD = 8;
 const RESEND_DELAY = 60; // secondes avant de pouvoir renvoyer le code
 
