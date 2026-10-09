@@ -78,7 +78,8 @@ const useRingtone = (active: boolean) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* Provider (logique uniquement : l'UI est dans <CallModal />)         */
+/* Provider (logique uniquement : l'UI est dans <CallModal />, monté   */
+/* dans app/layout.tsx à l'intérieur de <CallProvider>)                */
 /* ------------------------------------------------------------------ */
 export default function CallProvider({ children }: { children: React.ReactNode }) {
   const { socket } = useChatSocket();

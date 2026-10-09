@@ -1,134 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import { providers } from "@/index";
-import { UserResponseDto } from "@/types/global";
-
-type User = {
-    id: number,
-    firstname: string | null,
-    lastname: string | null,
-    birthDate: string | null,
-    gender: string | null,
-    email: string | null,
-    password: string | null,
-    phone: string | null,
-    EnterpriseId: number | null,
-    PostId: number | null,
-    SalaryId: number | null,
-    ContractTypeId: number | null,
-    ContractType: {
-        title: string,
-        description: string
-    },
-    Salary: {
-        netSalary: string,
-        dailySalary: string
-    },
-    Enterprise: {
-        name: string,
-        description: string,
-    },
-    Contract: {
-        endDate: string,
-        startDate: string
-    },
-
-    Country: {
-        name: string
-    },
-    Post: {
-        title: string,
-        description: string,
-    },
-    City: {
-        name: string
-    },
-    District: {
-        name: string
-    },
-    Quarter: {
-        name: string
-    },
-    ContractId: number | null,
-    CountryId: number | null,
-    CityId: number | null,
-    PlanningId: number | null,
-    DistrictId: number | null,
-    QuarterId: number | null,
-    photo: string | null,
-    role: string | null,
-    DepartmentPostId: number | null,
-    marialStatus: string | null,
-    adminService: string | null,
-    status: boolean | null,
-    [key: string]: string | number | null | undefined | any,
-}
+import { UserResponseDto, UsersResponseDto, User } from "@/types/global";
 
 export default function useUserProfile() {
-    const [user, setUser] = useState<User>({
-        id: 0,
-        firstname: null,
-        lastname: null,
-        birthDate: null,
-        gender: null,
-        email: null,
-        password: null,
-        phone: null,
-        EnterpriseId: null,
-        PostId: null,
-        SalaryId: null,
-        ContractTypeId: null,
-        ContractId: null,
-        CountryId: null,
-        CityId: null,
-        DistrictId: null,
-        PlanningId: null,
-        QuarterId: null,
-        photo: null,
-        role: null,
-        DepartmentPostId: null,
-        marialStatus: null,
-        adminService: null,
-        Post: {
-            title: "",
-            description: ""
-        },
-        status: null,
-        ContractType: {
-            title: "",
-            description: ""
-        },
-        Salary: {
-            netSalary: "",
-            dailySalary: ""
-        },
-        Enterprise: {
-            name: "",
-            description: "",
-        },
-        Contract: {
-            endDate: "",
-            startDate: ""
-        },
-
-        Country: {
-            name: ""
-        },
-        City: {
-            name: ""
-        },
-        District: {
-            name: ""
-        },
-        Quarter: {
-            name: ""
-        },
-    });
-
+    const [user, setUser] = useState<any>();
+    const [users, setUsers] = useState<User[]>([])
     useEffect(() => {
         (async () => {
             const userId = window.location.href.split('/').pop();
-            const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", parseInt(userId ?? ""));
+            const [user, users] = await Promise.all([
+                await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", parseInt(userId ?? "")),
+                await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null),
+            ])
             setUser({
                 id: Number(userId),
                 firstname: user.data.firstname ?? null,
@@ -187,9 +71,10 @@ export default function useUserProfile() {
                     title: user.data.Post?.title ?? "",
                     description: user.data.Post?.description ?? ""
                 },
-            })
+            });
+            setUsers(users.data)
         })()
     }, []);
 
-    return { user }
+    return { user, users }
 }

@@ -9,6 +9,7 @@ import { ToastProvider } from "@/components/toast";
 import SessionProvider from "@/components/providers";
 import ChatSocketProvider from "@/components/call/ChatSocketProvider";
 import CallProvider from "@/components/call/CallProvider";
+import CallModal from "@/components/call/CallModal";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -37,10 +38,12 @@ export default function RootLayout({
           <ToastProvider>
             <NextTopLoader color="#5750F1" showSpinner={false} />
             <SessionProvider>
-              {/* Socket + appels globaux : le modal d'appel entrant s'affiche sur toutes les pages */}
+              {/* Socket + appels globaux : le modal d'appel s'affiche sur toutes les pages */}
               <ChatSocketProvider>
                 <CallProvider>
                   <ClientLayout>{children}</ClientLayout>
+                  {/* UI des appels (entrant / sortant), doit être DANS CallProvider */}
+                  <CallModal />
                 </CallProvider>
               </ChatSocketProvider>
             </SessionProvider>

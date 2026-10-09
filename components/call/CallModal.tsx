@@ -10,13 +10,17 @@ import { useCallContext } from './CallProvider';
 const formatTimer = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
-const StreamEl = ({
-  stream, kind, muted, className,
-}: { stream: MediaStream | null; kind: 'video' | 'audio'; muted?: boolean; className?: string }) => {
-  const ref = useRef<any>(null);
+/**
+ * Lecteur vidéo uniquement.
+ * Le SON distant est joué par le <audio> du CallProvider : les vidéos sont donc
+ * toujours muettes ici pour éviter l'écho / le double son.
+ */
+const VideoEl = ({
+  stream, className,
+}: { stream: MediaStream | null; className?: string }) => {
+  const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => { if (ref.current) ref.current.srcObject = stream; }, [stream]);
-  if (kind === 'audio') return <audio ref={ref} autoPlay muted={muted} />;
-  return <video ref={ref} autoPlay playsInline muted={muted} className={className} />;
+  return <video ref={ref} autoPlay playsInline muted className={className} />;
 };
 
 export default function CallModal() {
@@ -25,18 +29,7 @@ export default function CallModal() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Sonnerie sur appel entrant (optionnel : place /sounds/ringtone.mp3 dans /public)
-  const ringRef = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => {
-    if (callState?.status === 'incoming') {
-      try {
-        ringRef.current = new Audio('/sounds/ringtone.mp3');
-        ringRef.current.loop = true;
-        ringRef.current.play().catch(() => undefined);
-      } catch { /* ignore */ }
-    }
-    return () => { ringRef.current?.pause(); ringRef.current = null; };
-  }, [callState?.status]);
+  // La sonnerie d'appel entrant est gérée par useRingtone() dans CallProvider.
 
   if (!mounted || !callState) return null;
 
@@ -50,11 +43,6 @@ export default function CallModal() {
 
   return createPortal(
     <>
-      {/* Son de l'interlocuteur : toujours monté, même réduit */}
-      {callState.type === 'audio' && (
-        <StreamEl stream={call.remoteStream} kind="audio" muted={!call.isSpeakerOn} />
-      )}
-
       {/* Bandeau appel réduit */}
       {call.isMinimized && callState.status !== 'incoming' && (
         <div className="fixed inset-x-0 top-0 z-[90] flex items-center justify-between bg-emerald-600 px-4 py-2 text-white shadow-lg">
@@ -105,13 +93,13 @@ export default function CallModal() {
             {callState.type === 'video' && callState.status === 'connected' ? (
               <>
                 {call.remoteStream ? (
-                  <StreamEl stream={call.remoteStream} kind="video" muted={!call.isSpeakerOn} className="h-full w-full object-cover" />
+                  <VideoEl stream={call.remoteStream} className="h-full w-full object-cover" />
                 ) : (
                   <p className="text-sm text-white">Connexion de la vidéo distante…</p>
                 )}
                 {call.localStream && !call.isVideoOff && (
                   <div className="absolute bottom-4 right-4 h-44 w-32 overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-900 shadow-2xl">
-                    <StreamEl stream={call.localStream} kind="video" muted className="h-full w-full -scale-x-100 object-cover" />
+                    <VideoEl stream={call.localStream} className="h-full w-full -scale-x-100 object-cover" />
                   </div>
                 )}
               </>
