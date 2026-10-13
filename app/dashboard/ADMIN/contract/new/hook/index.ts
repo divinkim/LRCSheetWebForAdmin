@@ -1,8 +1,10 @@
-'use client';
+"use client";
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { providers } from "@/index";
+import { ContractTypesResponseDto, EnterprisesResponseDto } from "@/types/global";
+import { useToast } from "@/components/toast";
 
 type InputsValue = {
   EnterpriseId: number | null;
@@ -22,33 +24,18 @@ const INITIAL_INPUTS: InputsValue = {
 };
 
 export default function useAddContract() {
-  // 1. Récupération de la session utilisateur via useSession
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
+  const toast = useToast();
 
-  // 2. États
   const [inputs, setInputs] = useState<InputsValue>(INITIAL_INPUTS);
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
   const [getContractTypes, setContractTypes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [adminRole, setAdminRole] = useState("");
-  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState("")
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState<string | number | null>(null);
+
+  // 1. Restauration du brouillon de formulaire depuis sessionStorage au montage
   useEffect(() => {
-    if (status === "authenticated" && session.user) {
-      const user = session?.user as (typeof session.user & { role?: string; EnterpriseId?: number | string }) | undefined;
-
-      const adminRole = user?.role ?? null;
-      const enterpriseIdOfAdmin = user?.EnterpriseId ?? null;
-      setAdminRole(adminRole ?? "");
-      setEnterpriseIdOfAdmin(String(enterpriseIdOfAdmin))
-    }
-  }, [])
-
-  // Extraction des rôles/identifiants depuis la session
-
-
-  // 3. Restauration du brouillon de formulaire + Récupération des Entreprises
-  useEffect(() => {
-    // Restauration de la mémoire de saisie du formulaire si présente
     const storedInputMemory = sessionStorage.getItem("inputMemoryOfAddContractPage");
     if (storedInputMemory) {
       try {
@@ -57,47 +44,72 @@ export default function useAddContract() {
         setInputs(INITIAL_INPUTS);
       }
     }
+  }, []);
 
-    (async () => {
-      const enterprises = await providers.API.getAll(
-        providers.APIUrl,
-        "getEnterprises",
-        null
-      );
+  // 2. Chargement des entreprises et récupération des rôles depuis la session
+  useEffect(() => {
+    const fetchEnterprises = async () => {
+      const AdminRole = (session?.user as any)?.adminRole ?? null;
+      const AdminEnterpriseId = (session?.user as any)?.EnterpriseId ?? null;
 
-      // if (adminRole && adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
-      //   const filteredEnterprises = enterprises.filter(
-      //     (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
-      //   );
-      //   setEnterprises(filteredEnterprises);
-      // } else {
-      //   setEnterprises(enterprises);
-      // }
-    })();
-  }, [adminRole, enterpriseIdOfAdmin]);
+      try {
+        const enterprisesData = await providers.API.getAll<EnterprisesResponseDto>(
+          providers.APIUrl,
+          "enterprises",
+          null
+        );
 
-  // 4. Récupération des Types de Contrat selon l'Entreprise sélectionnée
+        if (enterprisesData && Array.isArray(enterprisesData.data)) {
+          if (AdminRole !== "Super_Admin_Platform") {
+            const filteredEnterprises = enterprisesData.data.filter(
+              (item) => item.MainEnterpriseId === Number(AdminEnterpriseId)
+            );
+            setEnterprises(filteredEnterprises);
+          } else {
+            setEnterprises(enterprisesData.data);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des entreprises :", error);
+      }
+
+      setAdminRole(AdminRole);
+      setEnterpriseIdOfAdmin(AdminEnterpriseId);
+    };
+
+    fetchEnterprises();
+  }, [session]);
+
   useEffect(() => {
     if (!inputs.EnterpriseId) {
       setContractTypes([]);
       return;
     }
 
-    (async () => {
-      // const allContractTypes = await providers.API.getAll(
-      //   providers.APIUrl,
-      //   "getContractTypes",
-      //   null
-      // );
-      // const filteredTypes = allContractTypes.filter(
-      //   (contractType: { EnterpriseId: number }) =>
-      //     contractType.EnterpriseId === inputs.EnterpriseId
-      // );
-      // setContractTypes(filteredTypes);
-    })();
+    const fetchContractTypes = async () => {
+      try {
+        const allContractTypes = await providers.API.getAll<ContractTypesResponseDto>(
+          providers.APIUrl,
+          "contract-types",
+          null
+        );
+
+        if (allContractTypes && Array.isArray(allContractTypes.data)) {
+          const filteredTypes = allContractTypes.data.filter(
+            contractType =>
+              contractType.EnterpriseId === Number(inputs.EnterpriseId)
+          );
+          setContractTypes(filteredTypes);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des types de contrat :", error);
+      }
+    };
+
+    fetchContractTypes();
   }, [inputs.EnterpriseId]);
 
-  // 5. Données dynamiques & statiques
+  // 4. Données dynamiques & statiques
   const dynamicArrayData = [
     {
       alias: "EnterpriseId",
@@ -120,47 +132,43 @@ export default function useAddContract() {
     },
   ];
 
-  // 6. Soumission du formulaire
+  // 5. Soumission du formulaire
   const handleSubmit = async () => {
     const requiredFields = {
-      EnterpriseId: inputs.EnterpriseId,
-      startDate: inputs.startDate,
-      endDate: inputs.endDate,
-      ContractTypeId: inputs.ContractTypeId,
+      "Entreprise": inputs.EnterpriseId,
+      "Date de début": inputs.startDate,
+      "Date de fin": inputs.endDate,
+      "Type de contrat": inputs.ContractTypeId,
     };
 
-    const hasEmptyField = Object.values(requiredFields).some((value) => !value);
-
-    if (hasEmptyField) {
-      return providers.alertMessage(
-        false,
-        "Champs invalides",
-        "Veuillez renseigner tous les champs obligatoires",
-        null
-      );
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value) {
+        return toast.info("Champs invalides", `Le champ ${key} est obligatoire`);
+      }
     }
 
     setIsLoading(true);
 
-    const response = await providers.API.post(
-      providers.APIUrl,
-      "createContract",
-      null,
-      inputs
-    );
+    try {
+      await providers.API.post(
+        providers.APIUrl,
+        "contracts",
+        null,
+        inputs
+      );
 
-    setIsLoading(false);
-
-    // if (response.status) {
-    //   sessionStorage.removeItem("inputMemoryOfAddContractPage");
-    // }
-
-    // providers.alertMessage(
-    //   response.status,
-    //   response.title,
-    //   response.message,
-    //   response.status ? "/dashboard/ADMIN/addContract" : null
-    // );
+      sessionStorage.removeItem("inputMemoryOfAddContractPage");
+      toast.success("Succès", "Contrat créé avec succès");
+      window.location.reload();
+    } catch (error) {
+      console.error("Erreur lors de la création du contrat :", error);
+      toast.error(
+        "Erreur",
+        error instanceof Error ? error.message : "Erreur serveur lors de la création"
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {

@@ -18,13 +18,21 @@ import {
   faArrowLeft,
   faCheckCircle
 } from "@fortawesome/free-solid-svg-icons";
-import useUserProfile from "../../presences/[id]/hook";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { dateFormat, providers } from "@/index";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { User, UserResponseDto } from "@/types/global";
 
 export default function GetUserProfile() {
-  const { user } = useUserProfile();
+  const [user, setUser] = useState<User>()
+  useEffect(() => {
+    (async () => {
+      const userId = window.location.href.split("/").pop();
+      const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", Number(userId));
+      setUser(user.data)
+    })()
+  }, [])
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-200">
@@ -68,7 +76,7 @@ export default function GetUserProfile() {
           {/* Boutons d'action */}
           <div className="flex items-center gap-3">
             <Link
-              href={`/dashboard/RH/user/edit/${user.id}`}
+              href={`/dashboard/RH/user/edit/${user?.id}`}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm transition-all shadow-md shadow-amber-500/10 active:scale-95"
             >
               <FontAwesomeIcon icon={faPen} />
@@ -161,7 +169,7 @@ export default function GetUserProfile() {
                     {(user?.Contract?.startDate || user?.Contract?.endDate) && (
                       <span className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800">
                         <FontAwesomeIcon icon={faCalendarAlt} className="text-slate-400 dark:text-slate-500" />
-                        {dateFormat(user?.Contract?.startDate)} au {dateFormat(user?.Contract?.endDate)}
+                        {dateFormat(String(user?.Contract?.startDate))} au {dateFormat(String(user?.Contract?.endDate))}
                       </span>
                     )}
                   </div>

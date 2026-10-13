@@ -342,7 +342,7 @@ export default function AddUserHookModal() {
   }, [inputs.DistrictId]);
 
   // Options dynamiques
-  const dynamicArrayData = [
+  const dynamicOptions = [
     {
       alias: "EnterpriseId",
       arrayData: getEnterprises
@@ -411,8 +411,18 @@ export default function AddUserHookModal() {
     },
   ];
 
-  // Listes statiques
-  const staticArrayData = [
+  interface OptionItem {
+    title: string;
+    value: string;
+    status?: boolean;
+  }
+
+  interface OptionGroup {
+    alias: string;
+    arrayData: OptionItem[];
+  }
+
+  const staticOptions: OptionGroup[] = [
     {
       alias: "gender",
       arrayData: [
@@ -431,10 +441,22 @@ export default function AddUserHookModal() {
     {
       alias: "role",
       arrayData: [
-        { title: "Super administrateur", value: "Super-Admin" },
-        { title: "Administrateur général", value: "Supervisor-Admin" },
-        { title: "Administrateur de contrôle", value: "Controllor-Admin" },
-        { title: "Utilisateur client", value: "client" },
+        {
+          value: "Super_Admin_Platform",
+          title: "Super administrateur de la plateforme",
+          status: adminRole === "Super_Admin_Platform",
+        },
+        {
+          value: "Super_Admin_Enterprise",
+          title: "Super administrateur d'enterprise",
+          status: ["Super_Admin_Platform", "Super_Admin_Enterprise"].includes(String(adminRole)),
+        },
+        {
+          value: "Enterprise_Admin",
+          title: "Administrateur d'entreprise",
+          status: ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"].includes(String(adminRole)),
+        },
+        { value: "Employee", title: "employé(e)", status: true },
       ],
     },
     {
@@ -449,65 +471,60 @@ export default function AddUserHookModal() {
       alias: "marialStatus",
       arrayData: [
         { title: "Célibataire", value: "Célibataire" },
-        { title: "Fiancé(e)", value: "Fiancé" },
+        { title: "Fiancé", value: "Fiancé" },
         { title: "En couple", value: "En couple" },
         { title: "Divorcé(e)", value: "Divorcé(e)" },
       ],
     },
   ];
 
-  // Soumission
   const handleSubmit = async () => {
-    try {
-      const requiredFields = {
-        firstname: inputs.firstname,
-        gender: inputs.gender,
-        password: inputs.password,
-        EnterpriseId: inputs.EnterpriseId,
-        email: inputs.email,
-        role: inputs.role,
-        CountryId: inputs.CountryId,
-        CityId: inputs.CityId,
-        status: inputs.status,
-      };
+    if (!userId) return;
 
-      for (const [key, value] of Object.entries(requiredFields)) {
-        if (!value) {
-          return toast.error(
-            "Champ obligatoire manquant",
-            "Veuillez renseigner tous les champs obligatoires."
-          );
-        }
+    const requireFields = {
+      'Nom': inputs.firstname,
+      'Genre': inputs.gender,
+      'Mot de passe': inputs.password,
+      'Entreprise': inputs.EnterpriseId,
+      'Email': inputs.email,
+      'Rôle': inputs.role,
+      'Téléphone': inputs.phone,
+      'Ville': inputs.CityId,
+      'Pays': inputs.CountryId,
+    };
+
+    for (const [key, value] of Object.entries(requireFields)) {
+      if (!value) {
+        return toast.info('Attention', `Veuillez sélectionner ou saisir une valeur pour le champs ${key}.`);
       }
+    }
 
+    try {
       setIsLoading(true);
-
-      const payload = {
+      const data = {
         ...inputs,
-        status: inputs.status === "Actif",
-      };
-
-      const res = await providers.API.post<UserResponseDto>(
+        status: inputs.status === "Actif"
+      }
+      await providers.API.post(
         providers.APIUrl,
         "users",
         null,
-        payload
+        data,
       );
-      console.log(res)
-      localStorage.removeItem("inputMemoryOfAddUserPage");
-      toast.success("Succès", "Collaborateur enregistré avec succès.");
+      toast.success("Bravo", "Opération effectuée avec succès.");
+      window.location.reload();
     } catch (error) {
-      console.error("Erreur lors de la création :", error);
-      const errText = error instanceof Error ? error.message : "Une erreur inattendue est survenue.";
-      toast.error("Erreur", errText);
+      toast.error("Oups", error instanceof Error
+        ? error.message : "Erreur inconnue. Veuillez réessayer"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return {
-    dynamicArrayData,
-    staticArrayData,
+    dynamicOptions,
+    staticOptions,
     handleSubmit,
     inputs,
     setInputs,

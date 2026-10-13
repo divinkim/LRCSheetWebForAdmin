@@ -762,12 +762,12 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Liste des salaires",
-                    href: "/dashboard/COMPTA/salariesList",
+                    href: "/dashboard/COMPTA/salary/list",
                     icon: faMoneyCheckAlt
                 },
                 {
                     title: "Ajouter un poste",
-                    href: "/dashboard/ADMIN/addPost",
+                    href: "/dashboard/ADMIN/post/new",
                     icon: faContactCard
                 },
             ],
@@ -825,17 +825,17 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Liste des Postes",
-                    href: "/dashboard/ADMIN/potesList",
+                    href: "/dashboard/ADMIN/post/list",
                     icon: faIdBadge
                 },
                 {
                     title: "Ajouter une entreprise",
-                    href: "/dashboard/OTHERS/addEnterprise",
+                    href: "/dashboard/OTHERS/enterprise/new",
                     icon: faBuilding
                 },
                 {
                     title: "Ajouter un département",
-                    href: "/dashboard/ADMIN/addDepartment",
+                    href: "/dashboard/ADMIN/department/new",
                     icon: faSuitcaseRolling
                 }
             ],
@@ -1049,7 +1049,7 @@ export const formElements = [
                     dynamicOptions: {
                         status: true
                     },
-                    alias: "CountriesTypeId"
+                    alias: "CountryId"
                 },
             ],
         },

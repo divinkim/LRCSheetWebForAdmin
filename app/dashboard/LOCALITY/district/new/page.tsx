@@ -17,14 +17,14 @@ export default function AddDistrict() {
                         formElements.map((element) => (
                             <div className="text-gray-700 w-full space-y-4 md:space-y-0 items-center">
                                 <div className="flex justify-between flex-wrap">
-                                    <h1 className="font-bold mb-3 text-[20px] dark:text-gray-300 text-gray-700">Ajouter un quartier</h1>
-                                    <p className="text-blue-700 dark:text-blue-600">Dashboard/Localités/Ajouter un quartier</p>
+                                    <h1 className="font-bold mb-3 text-[20px] dark:text-gray-300 text-gray-700">Ajouter un arrondissement</h1>
+                                    <p className="text-blue-700 dark:text-blue-600">Dashboard/Localités/Ajouter un arrondissement</p>
                                 </div>
                                 <hr className='bg-gray-400' />
                                 <div className="flex flex-wrap py-4 lg:space-x-4 space-y-4 items-center">
                                     {
-                                        element.addQuarter.navigationLinks.map((element, index) => (
-                                            <Link href={element.href} className={`bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 px-4 relative top-2.5 rounded-md ${index === 1 && adminRole !== "Super-Admin" ? "hidden" : index === 0 ? "top-[18px]" : "block"}`}>
+                                        element.addDistrict.navigationLinks.map((element, index) => (
+                                            <Link href={element.href} className={`bg-blue-800 hover:bg-blue-900 ease duration-500 py-3 px-4 relative top-2.5 rounded-md ${index === 1 && adminRole !== "Super_Admin_Platform" ? "hidden" : index === 0 ? "top-[18px]" : "block"}`}>
                                                 <FontAwesomeIcon icon={element.icon} className="text-white" /> <span className='text-white'>{element.title}</span>
                                             </Link>
                                         ))
@@ -39,7 +39,7 @@ export default function AddDistrict() {
                             formElements.map((element) => (
 
                                 <div className="flex flex-wrap space-y-4 justify-between mb-2 items-center dark:text-gray-300 text-gray-700">
-                                    <h2 className="font-bold">{element.addQuarter.titleForm}</h2>
+                                    <h2 className="font-bold">{element.addDistrict.titleForm}</h2>
                                     <p className="font-semibold"> <span className="text-red-600">*</span> Champs obligatoires</p>
                                 </div>
                             ))
@@ -52,7 +52,7 @@ export default function AddDistrict() {
                             {
                                 formElements.map((element) => (
 
-                                    element.addQuarter.inputs.map((e, index) => (
+                                    element.addDistrict.inputs.map((e, index) => (
                                         <div className={cn('w-full mb-4')}>
                                             <label htmlFor="" className={cn("mb-3 font-semibold dark:text-gray-300 text-gray-700")}><span className={e.requireField ? "text-red-600" : "hidden"}>*</span> {e.label}</label>
                                             {!e.selectedInput ?
@@ -72,7 +72,7 @@ export default function AddDistrict() {
                                                         ...inputs,
                                                         [field]: v.target.value
                                                     });
-                                                    window?.localStorage.setItem("inputMemoryOfAddQuarterPage", JSON.stringify({ ...inputs, [field]: v.target.value }));
+                                                    window?.localStorage.setItem("inputMemoryOfAddDistrictPage", JSON.stringify({ ...inputs, [field]: v.target.value }));
 
                                                 }} type={e.type} maxLength={e.type === "tel" ? 9 : undefined} placeholder={e.placeholder} className="w-full outline-none rounded-md  dark:shadow-none p-2.5 bg-transparent border border-gray-400 dark:border-gray-300  dark:placeholder-gray-300 f dark:text-gray-300 text-gray-700 font-semibold placeholder-gray-600" />
                                                 :
@@ -84,7 +84,7 @@ export default function AddDistrict() {
                                                             [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value
                                                         }
                                                         setInputs(fieldValue)
-                                                        localStorage.setItem("inputMemoryOfAddQuarterPage", JSON.stringify(fieldValue))
+                                                        localStorage.setItem("inputMemoryOfAddDistrictPage", JSON.stringify(fieldValue))
                                                     }} name="" id="" className={cn("w-full mt-1 outline-none rounded-md  dark:shadow-none p-2.5 bg-transparent border border-gray-400 dark:border-gray-300 dark:bg-gray-900  dark:placeholder-gray-300 font-semibold dark:text-gray-300 text-gray-700 placeholder-gray-700", e.alias === "adminService" && inputs.role === null ? "hidden" : "block")}>
                                                         <option value="" selected>
                                                             {e.placeholder}
@@ -114,7 +114,7 @@ export default function AddDistrict() {
                                                                 [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value
                                                             }
                                                             setInputs(fieldValue)
-                                                            localStorage.setItem("inputMemoryOfAddQuarterPage", JSON.stringify(fieldValue))
+                                                            localStorage.setItem("inputMemoryOfAddDistrictPage", JSON.stringify(fieldValue))
                                                         }} placeholder={e.placeholder}>
                                                         </textarea> : ""
                                             }

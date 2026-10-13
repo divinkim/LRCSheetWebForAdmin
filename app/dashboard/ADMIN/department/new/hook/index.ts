@@ -1,97 +1,83 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useToast } from "@/components/toast";
 import { providers } from "@/index";
+import { EnterprisesResponseDto } from "@/types/global";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 type InputsValue = {
-  title: string | null;
+  name: string | null;
   description: string | null;
   EnterpriseId: number | null;
-  DepartmentPostId: number | null;
   Enterprise: {
-    name: string;
-  };
-  DepartmentPost: {
     name: string;
   };
   [key: string]: any;
 };
 
 export default function useAddDepartment() {
-  const { data: session, status } = useSession();
+  // Récupération de la session NextAuth et du Toast
+  const { data: session } = useSession();
+  const toast = useToast();
 
   const [enterprises, setEnterprises] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [adminRole, setAdminRole] = useState("");
-  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState("")
-  // Valeurs extraites de la session NextAuth
-  useEffect(() => {
-    if (status === "authenticated" && session.user) {
-      const user = session?.user as (typeof session.user & { role?: string; EnterpriseId?: number | string }) | undefined;
-
-      const adminRole = user?.role ?? null;
-      const enterpriseIdOfAdmin = user?.EnterpriseId ?? null;
-      setAdminRole(adminRole ?? "");
-      setEnterpriseIdOfAdmin(String(enterpriseIdOfAdmin))
-    }
-  }, [])
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [EnterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState<string | number | null>(null);
 
   const [inputs, setInputs] = useState<InputsValue>({
     EnterpriseId: null,
-    DepartmentPostId: null,
     description: null,
-    title: null,
+    name: null,
     Enterprise: {
-      name: "",
-    },
-    DepartmentPost: {
       name: "",
     },
   });
 
-  // 1. Récupération des données locales et API
+  // Récupération des données locales et des entreprises avec filtrage par rôle
   useEffect(() => {
-    // Si la session est encore en cours de chargement, on attend
-    if (status === "loading") return;
-
     (async () => {
       // Restauration de la mémoire du formulaire
-      const savedInputs = localStorage.getItem("inputMemoryOfAddDepartmentPage");
-      if (savedInputs) {
+      const getInputMemory = localStorage.getItem("inputMemoryOfAddDepartmentPage");
+      if (getInputMemory) {
         try {
-          setInputs(JSON.parse(savedInputs));
+          setInputs(JSON.parse(getInputMemory));
         } catch (error) {
           console.error("Erreur de lecture du localStorage :", error);
         }
       }
 
-      // Récupération des entreprises via l'API
+      const AdminRole = (session?.user as any)?.role;
+      const AdminEnterpriseId = (session?.user as any)?.EnterpriseId;
+
       try {
-        const fetchedEnterprises = await providers.API.getAll(
+        const fetchedEnterprises = await providers.API.getAll<EnterprisesResponseDto>(
           providers.APIUrl,
-          "getEnterprises",
+          "enterprises",
           null
         );
 
-        if (Array.isArray(fetchedEnterprises)) {
-          // Filtrage selon le rôle de l'administrateur
-          if (adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
-            const filteredEnterprises = fetchedEnterprises.filter(
-              (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
+        if (fetchedEnterprises && Array.isArray(fetchedEnterprises.data)) {
+          if (AdminRole !== "Super_Admin_Platform") {
+            const filteredEnterprises = fetchedEnterprises.data.filter(
+              (item: any) => item.id === Number(AdminEnterpriseId) || item.MainEnterpriseId === Number(AdminEnterpriseId)
             );
             setEnterprises(filteredEnterprises);
           } else {
-            setEnterprises(fetchedEnterprises);
+            setEnterprises(fetchedEnterprises.data);
           }
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des entreprises :", error);
       }
-    })();
-  }, [status, adminRole, enterpriseIdOfAdmin]);
 
-  // 2. Options dynamiques pour le composant UI
+      setAdminRole(AdminRole);
+      setEnterpriseIdOfAdmin(AdminEnterpriseId);
+    })();
+  }, [session]);
+
+  // Options dynamiques pour le composant UI
   const dynamicArrayData = [
     {
       alias: "EnterpriseId",
@@ -116,53 +102,35 @@ export default function useAddDepartment() {
     },
   ];
 
-  // 3. Soumission du formulaire
   const handleSubmit = async () => {
-    const requiredFields = {
-      Entreprise: inputs.EnterpriseId,
-      Titre: inputs.title, // Corrected key check from EnterpriseId to title
-      Description: inputs.description,
-    };
-
-    for (const [key, value] of Object.entries(requiredFields)) {
-      if (!value) {
-        return providers.alertMessage(
-          false,
-          "Champs invalides",
-          `Le champ ${key} est obligatoire.`,
-          null
-        );
-      }
-    }
-
-    setIsLoading(true);
-
     try {
-      const response = await providers.API.post(
+      const requiredFields = {
+        "Entreprise": inputs.EnterpriseId,
+        "Nom": inputs.name,
+        "Description": inputs.description,
+      };
+
+      for (const [key, value] of Object.entries(requiredFields)) {
+        if (!value) {
+          return toast.info("Champs invalides", `Le champ ${key} est obligatoire.`);
+        }
+      }
+
+      setIsLoading(true);
+
+      await providers.API.post(
         providers.APIUrl,
-        "createDepartmentPost",
+        "departments",
         null,
         inputs
       );
 
-      // if (response.status) {
-      //   localStorage.removeItem("inputMemoryOfAddDepartmentPage");
-      // }
-
-      // providers.alertMessage(
-      //   response.status,
-      //   response.title,
-      //   response.message,
-      //   response.status ? "/dashboard/ADMIN/addDepartment" : null
-      // );
+      localStorage.removeItem("inputMemoryOfAddDepartmentPage");
+      toast.success("Bravo", "Opération réussie");
+      window.location.reload();
     } catch (error) {
       console.error("Erreur lors de l'envoi :", error);
-      providers.alertMessage(
-        false,
-        "Erreur",
-        "Une erreur est survenue lors de la création du département.",
-        null
-      );
+      toast.error("Erreur", "Une erreur est survenue lors de la création du département.");
     } finally {
       setIsLoading(false);
     }

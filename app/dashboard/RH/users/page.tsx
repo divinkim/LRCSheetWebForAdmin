@@ -517,7 +517,7 @@ export default function UsersList() {
                             onClick={() =>
                               checkAccessAndExecute(() => {
                                 router.push(
-                                  `/dashboard/RH/user/view/${user.id}`
+                                  `/dashboard/RH/user/view/${user?.id}`
                                 );
                               })
                             }

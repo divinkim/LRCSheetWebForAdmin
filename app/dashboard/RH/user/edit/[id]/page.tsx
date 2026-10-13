@@ -104,17 +104,13 @@ export default function UpdateUser() {
             {/* Grille des Champs */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {currentFormElement?.addOrUpdateUser.inputs.map((e, index) => {
-                // Règle de masquage
-                const isHidden =
-                  e.alias === "adminService" &&
-                  ["Super-Admin", "Supervisor-Admin", "client"].includes(
-                    inputs.role ?? ""
-                  );
-
-                if (isHidden) return null;
+                
+                const isUserAdminRole = ["Super_Admin_Platform",
+                  "Super_Admin_Enterprise", "Enterprise_Admin"
+                ].includes(String(inputs.role))
 
                 return (
-                  <div key={e.alias || index} className="flex flex-col gap-2">
+                  <div key={e.alias || index} className={isUserAdminRole && e.alias === "adminService" ? "flex flex-col gap-2" : !isUserAdminRole && e.alias === "adminService" ? "hidden" : "flex flex-col gap-2"}>
                     <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                       {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                       {e.label}
@@ -139,7 +135,7 @@ export default function UpdateUser() {
                             if (file) {
                               const response = await providers.API.post<UploadFileResponseDto>(
                                 providers.APIUrl,
-                                "upload-single",
+                                "/media/upload-single",
                                 null,
                                 { file }
                               );
@@ -189,7 +185,7 @@ export default function UpdateUser() {
                           : staticOptions
                             .find((item) => item.alias === e.alias)
                             ?.arrayData.map((option) => (
-                              <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                              <option key={option.value} value={option.value} className={e.alias === "role" && option?.status ? "text-slate-800 dark:bg-slate-900 dark:text-slate-200" : e.alias === "role" && !option.status ? "hidden" : "text-slate-800 dark:bg-slate-900 dark:text-slate-200"}>
                                 {option.title}
                               </option>
                             ))}

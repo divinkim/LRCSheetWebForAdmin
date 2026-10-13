@@ -134,7 +134,7 @@ export function UpdateUserHookModal() {
           gender: getUser.data.gender ?? null,
           email: getUser.data.email ?? null,
           password: getUser.data.password ?? null,
-          phone: getUser.data.phone ?? null,
+          phone: getUser.data.phone.slice(4)  ?? null,
           EnterpriseId: getUser.data.EnterpriseId ?? null,
           PostId: getUser.data.PostId ?? null,
           SalaryId: getUser.data.SalaryId ?? null,
@@ -415,7 +415,18 @@ export function UpdateUserHookModal() {
   ];
 
   // Options statiques
-  const staticOptions = [
+  interface OptionItem {
+    title: string;
+    value: string;
+    status?: boolean;
+  }
+
+  interface OptionGroup {
+    alias: string;
+    arrayData: OptionItem[];
+  }
+
+  const staticOptions: OptionGroup[] = [
     {
       alias: "gender",
       arrayData: [
@@ -434,10 +445,22 @@ export function UpdateUserHookModal() {
     {
       alias: "role",
       arrayData: [
-        { title: "Super-Admin", value: "Super administrateur" },
-        { title: "Administrateur de contrôle", value: "Moderator-Admin" },
-        { title: "Supervisor-Admin", value: "Administrateur de gestion" },
-        { title: "Utilisateur client", value: "client" },
+        {
+          value: "Super_Admin_Platform",
+          title: "Super administrateur de la plateforme",
+          status: adminRole === "Super_Admin_Platform",
+        },
+        {
+          value: "Super_Admin_Enterprise",
+          title: "Super administrateur d'enterprise",
+          status: ["Super_Admin_Platform", "Super_Admin_Enterprise"].includes(String(adminRole)),
+        },
+        {
+          value: "Enterprise_Admin",
+          title: "Administrateur d'entreprise",
+          status: ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"].includes(String(adminRole)),
+        },
+        { value: "Employee", title: "employé(e)", status: true },
       ],
     },
     {
@@ -459,54 +482,46 @@ export function UpdateUserHookModal() {
     },
   ];
 
-  // Soumission
   const handleSubmit = async () => {
     if (!userId) return;
 
     const requireFields = {
-      firstname: inputs.firstname,
-      gender: inputs.gender,
-      password: inputs.password,
-      EnterpriseId: inputs.EnterpriseId,
-      email: inputs.email,
-      role: inputs.role,
-      phone: inputs.phone,
-      CityId: inputs.CityId,
-      CountryId: inputs.CountryId,
+      'Nom': inputs.firstname,
+      'Genre': inputs.gender,
+      'Mot de passe': inputs.password,
+      'Entreprise': inputs.EnterpriseId,
+      'Email': inputs.email,
+      'Rôle': inputs.role,
+      'Téléphone': inputs.phone,
+      'Ville': inputs.CityId,
+      'Pays': inputs.CountryId,
     };
 
     for (const [key, value] of Object.entries(requireFields)) {
       if (!value) {
-        return providers.alertMessage(
-          false,
-          "Champs invalides",
-          "Veuillez renseigner tous les champs obligatoires",
-          null
-        );
+        return toast.info('Attention', `Veuillez sélectionner ou saisir une valeur pour le champs ${key}.`);
       }
     }
 
     try {
       setIsLoading(true);
-
-      const response = await providers.API.update(
+      const data = {
+        ...inputs,
+        status: inputs.status === "Actif"
+      }
+      await providers.API.update(
         providers.APIUrl,
-        "updateUser",
+        "users",
         null,
-        {
-          ...inputs,
-          birthDate: inputs.birthDate
-            ? new Date(String(inputs.birthDate)).toISOString()
-            : null,
-          status: inputs.status === "Actif",
-        },
-        userId
+        data,
+        null
       );
-      toast.success("Bravo", "Collaborateur modifié avec succès.");
+      toast.success("Bravo", "Opération effectuée avec succès.");
       window.location.reload();
     } catch (error) {
-      console.error("Erreur lors de la mise à jour :", error);
-      toast.error("Oups", error instanceof Error ? error.message : "Erreur lors de la mise à jour")
+      toast.error("Oups", error instanceof Error
+        ? error.message : "Erreur inconnue. Veuillez réessayer"
+      );
     } finally {
       setIsLoading(false);
     }

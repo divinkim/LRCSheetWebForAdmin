@@ -41,7 +41,7 @@ export default function AddPost() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               {element.addOrEditPost.navigationLinks.map((navItem, index) => {
                 // Masquer selon le rôle si nécessaire
-                if (index === 1 && adminRole !== "Super-Admin") return null;
+                if (index === 1 && adminRole !== "Super_Admin_Platform") return null;
 
                 return (
                   <Link

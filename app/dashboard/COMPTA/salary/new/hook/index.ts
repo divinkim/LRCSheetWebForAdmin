@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useMemo } from "react";
 import { providers } from "@/index";
-import { EnterprisesResponseDto, PostsResponseDto, Salary, SalaryResponseDto } from "@/types/global";
+import { EnterprisesResponseDto, PostsResponseDto, SalaryResponseDto } from "@/types/global";
 import { useToast } from "@/components/toast";
 
 type InputsValue = {
@@ -33,17 +33,14 @@ const initialInputState: InputsValue = {
 
 export default function useAddSalary() {
   const { data: session } = useSession();
-  const toast = useToast()
-  // On extrait le rôle et l'EnterpriseId de la session de façon sécurisée
-  const adminRole = (session?.user as any)?.role ?? null;
-  const enterpriseIdOfAdmin = (session?.user as any)?.EnterpriseId ?? null;
+  const toast = useToast();
 
-  // États des données
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
   const [getPosts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState<string | number | null>(null);
 
-  // État du formulaire
   const [inputs, setInputs] = useState<InputsValue>(initialInputState);
 
   // 1. Restauration de la mémoire du formulaire depuis LocalStorage au montage
@@ -58,9 +55,12 @@ export default function useAddSalary() {
     }
   }, []);
 
-  // 2. Chargement des entreprises (dépend du rôle & id entreprise issus de la session)
+  // 2. Chargement des entreprises et récupération des rôles depuis la session
   useEffect(() => {
     const fetchEnterprises = async () => {
+      const AdminRole = (session?.user as any)?.adminRole ?? null;
+      const AdminEnterpriseId = (session?.user as any)?.EnterpriseId ?? null;
+
       try {
         const enterprisesData = await providers.API.getAll<EnterprisesResponseDto>(
           providers.APIUrl,
@@ -68,23 +68,26 @@ export default function useAddSalary() {
           null
         );
 
-        if (adminRole !== "Super-Admin" && enterpriseIdOfAdmin) {
-          const filtered = enterprisesData.data.filter(
-            (item: { id: number }) => item.id === Number(enterpriseIdOfAdmin)
-          );
-          setEnterprises(filtered);
-        } else {
-          setEnterprises(enterprisesData.data);
+        if (enterprisesData && Array.isArray(enterprisesData.data)) {
+          if (AdminRole !== "Super_Admin_Platform") {
+            const filtered = enterprisesData.data.filter(
+              (item) => item.id === Number(AdminEnterpriseId) || item.MainEnterpriseId === Number(AdminEnterpriseId)
+            );
+            setEnterprises(filtered);
+          } else {
+            setEnterprises(enterprisesData.data);
+          }
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des entreprises:", error);
       }
+
+      setAdminRole(AdminRole);
+      setEnterpriseIdOfAdmin(AdminEnterpriseId);
     };
 
     fetchEnterprises();
-  }, [adminRole, enterpriseIdOfAdmin]);
-
-  // 3. Récupération des postes filtrés par entreprise sélectionnée
+  }, [session]);
   useEffect(() => {
     if (!inputs.EnterpriseId) {
       setPosts([]);
@@ -98,10 +101,12 @@ export default function useAddSalary() {
           "posts",
           null
         );
-        const filteredPosts = postsData.data.filter(
-          post => post.EnterpriseId === Number(inputs.EnterpriseId)
-        );
-        setPosts(filteredPosts);
+        if (postsData && Array.isArray(postsData.data)) {
+          const filteredPosts = postsData.data.filter(
+            (post) => post.EnterpriseId === Number(inputs.EnterpriseId)
+          );
+          setPosts(filteredPosts);
+        }
       } catch (error) {
         console.error("Erreur lors de la récupération des postes:", error);
       }
@@ -136,19 +141,17 @@ export default function useAddSalary() {
     },
   ];
 
-  // Soumission du formulaire
   const handleSubmit = async () => {
     const requireFields = {
-      grossSalary: inputs.grossSalary,
-      dailySalary: inputs.dailySalary,
-      EnterpriseId: inputs.EnterpriseId,
-      PostId: inputs.PostId,
+      "Salaire brut": inputs.grossSalary,
+      "Salaire journalier": inputs.dailySalary,
+      "Entreprise": inputs.EnterpriseId,
+      "Poste": inputs.PostId,
     };
 
-    // Validation des champs requis
     for (const [key, value] of Object.entries(requireFields)) {
       if (!value) {
-        return toast.info("Champs invalides", "Veuillez remplir tous les champs obligatoires");
+        return toast.info("Champs invalides", `Le champ ${key} est obligatoire`);
       }
     }
 
@@ -172,7 +175,7 @@ export default function useAddSalary() {
       toast.error(
         "Erreur",
         error instanceof Error ? error.message : "Erreur au serveur lors de la connexion"
-      )
+      );
     } finally {
       setIsLoading(false);
     }
