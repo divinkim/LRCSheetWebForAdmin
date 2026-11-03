@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import socket from "@/socket";
 import { providers } from "@/index";
 import { useSidebarContext } from "./sidebar-context";
-import { SidebarHook } from "./hook";
+import { SidebarHook, toIndex } from "./hook";
 import Swal from "sweetalert2";
 
 function getInitials(firstname?: string, lastname?: string) {
@@ -28,6 +28,10 @@ export function Sidebar() {
   const [toggleAsideSections, setToggleAsideSections] = useState<number[]>([]);
   const [avatarFailed, setAvatarFailed] = useState(false);
 
+  // Évite le décalage d'hydratation : les badges (qui dépendent de
+  // localStorage / socket) ne sont affichés qu'après le montage côté client.
+  const [mounted, setMounted] = useState(false);
+
   const {
     ItemAside,
     getPageNotificationsCount,
@@ -35,6 +39,10 @@ export function Sidebar() {
     storedNotificationsArray,
     setStoredNotificationsArray,
   } = SidebarHook();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // -------------------------------------------------------------
   // Initialisation de la Socket avec les données de Session
@@ -57,6 +65,7 @@ export function Sidebar() {
         setToggleAsideSections((prev) => [...prev, sectionIndex]);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, ItemAside]);
 
   // -------------------------------------------------------------
@@ -87,7 +96,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "relative z-50 flex flex-col overflow-hidden border-r border-white/5 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-200 shadow-2xl shadow-black/30 transition-all duration-300 ease-in-out",
+          "relative z-50 flex flex-col shrink-0 overflow-hidden border-r border-white/5 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-200 shadow-2xl shadow-black/30 transition-all duration-300 ease-in-out",
           isMobile ? "fixed inset-y-0 left-0 w-[280px]" : "sticky top-0 h-screen w-[280px]",
           !isOpen && (isMobile ? "-translate-x-full" : "hidden")
         )}
@@ -153,7 +162,10 @@ export function Sidebar() {
             <nav className="space-y-1.5">
               {ItemAside.map((aside, sectionIndex) => {
                 const isExpanded = toggleAsideSections.includes(sectionIndex);
-                const sectionBadgeCount = getSectionNotificationsCount(sectionIndex);
+                // Badge de section : uniquement après le montage client
+                const sectionBadgeCount = mounted
+                  ? getSectionNotificationsCount(sectionIndex)
+                  : 0;
                 const hasActiveChild = aside.ItemLists.some((item) => item.href === pathname);
 
                 return (
@@ -183,7 +195,7 @@ export function Sidebar() {
 
                       <span className="flex items-center gap-2.5">
                         {sectionBadgeCount > 0 && (
-                          <span className="min-w-[22px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-slate-900 motion-safe:animate-pulse">
+                          <span className="min-w-[22px] rounded-full bg-red-500 p-1.5 text-center text-[11px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-slate-900 motion-safe:animate-pulse">
                             {sectionBadgeCount}
                           </span>
                         )}
@@ -209,12 +221,17 @@ export function Sidebar() {
                         <div className="ml-[1.1rem] mt-1 space-y-0.5 border-l border-white/10 pb-1 pl-3">
                           {aside.ItemLists.map((list, pageIndex) => {
                             const isActive = pathname === list.href;
-                            const pageBadgeCount = getPageNotificationsCount(pageIndex);
-                            const hasNotification = storedNotificationsArray.some(
-                              (item) =>
-                                Number(item.adminPageIndex) === pageIndex &&
-                                Number(item.adminSectionIndex) === sectionIndex
-                            );
+                            // Badge de page : uniquement après le montage client
+                            const pageBadgeCount = mounted
+                              ? getPageNotificationsCount(pageIndex)
+                              : 0;
+                            const hasNotification =
+                              mounted &&
+                              storedNotificationsArray.some(
+                                (item) =>
+                                  toIndex(item.adminPageIndex) === pageIndex &&
+                                  toIndex(item.adminSectionIndex) === sectionIndex
+                              );
 
                             return (
                               <Link
@@ -233,8 +250,8 @@ export function Sidebar() {
                                   if (sectionIndex !== 0 || pageIndex !== 0) {
                                     const filtered = storedNotificationsArray.filter(
                                       (item) =>
-                                        item.adminPageIndex !== pageIndex.toString() ||
-                                        item.adminSectionIndex !== sectionIndex.toString()
+                                        toIndex(item.adminPageIndex) !== pageIndex ||
+                                        toIndex(item.adminSectionIndex) !== sectionIndex
                                     );
                                     setStoredNotificationsArray(filtered);
                                     localStorage.setItem(
@@ -274,7 +291,7 @@ export function Sidebar() {
                                 </span>
 
                                 {hasNotification && pageBadgeCount > 0 && (
-                                  <span className="ml-2 min-w-[20px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-slate-900">
+                                  <span className="ml-2 min-w-[20px] rounded-full bg-red-500 px-1.5 py-1 text-center text-[11px] font-bold leading-none text-white shadow-sm ring-2 ring-slate-900">
                                     {pageBadgeCount}
                                   </span>
                                 )}

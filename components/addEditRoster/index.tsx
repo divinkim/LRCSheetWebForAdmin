@@ -5,32 +5,26 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsersGear, faUserPen, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Planning, PlanningsResponseDto, User, UsersResponseDto } from "@/types/global";
 
-
+import { useSession } from "next-auth/react";
 export default function AddOrEditUserPlanningOfWeek() {
     const [users, setUsers] = useState<User[]>([]);
     const [plannings, setPlannings] = useState<Planning[]>([]);
-    const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
+    const [EnterpriseId, setEnterpriseId] = useState<number>(0);
+    const { data: session } = useSession()
     useEffect(() => {
         (async () => {
-            let EnterpriseId = localStorage.getItem("EnterpriseId");
+            let EnterpriseId = Number((session?.user as any)?.EnterpriseId);
             setEnterpriseId(EnterpriseId);
 
             const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
 
-            if (Number(EnterpriseId) === 1) {
-                const filterUserByEnterpriseId = users.data.filter(user =>
-                    [1, 2, 3, 4, null].includes(user.EnterpriseId)
-                );
-                setUsers(filterUserByEnterpriseId);
-                return;
-            }
+
             const filterUserByEnterpriseId = users.data.filter(user =>
-                user.EnterpriseId === Number(EnterpriseId) &&
-                user.adminService === null
+                user.Enterprise.MainEnterpriseId === EnterpriseId
             );
             setUsers(filterUserByEnterpriseId);
         })()
-    }, []);
+    }, [session]);
 
     useEffect(() => {
         (async () => {
@@ -39,7 +33,7 @@ export default function AddOrEditUserPlanningOfWeek() {
                 "plannings",
                 null
             );
-            const filterPlanningsByEnterpriseId = plannings.data.filter((planning: { EnterpriseId: number }) => planning.EnterpriseId === parseInt(enterpriseId ?? ""))
+            const filterPlanningsByEnterpriseId = plannings.data.filter((planning: { EnterpriseId: number }) => planning.EnterpriseId === EnterpriseId)
             setPlannings(filterPlanningsByEnterpriseId);
         })()
     }, [users])

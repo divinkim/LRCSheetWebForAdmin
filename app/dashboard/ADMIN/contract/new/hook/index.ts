@@ -12,6 +12,7 @@ type InputsValue = {
   endDate: string | null;
   delay: string | null;
   ContractTypeId: number | null;
+  status:string,
   [key: string]: string | number | boolean | null | any;
 };
 
@@ -21,6 +22,7 @@ const INITIAL_INPUTS: InputsValue = {
   endDate: null,
   delay: null,
   ContractTypeId: null,
+  status:"ACTIVE"
 };
 
 export default function useAddContract() {

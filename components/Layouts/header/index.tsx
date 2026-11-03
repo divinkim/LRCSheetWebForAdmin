@@ -58,7 +58,7 @@ export function Header() {
   const showPhoto = userInfo.image && !imageFailed;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-slate-200/70 bg-white/75 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/60 dark:border-slate-700/50 dark:bg-slate-900/70 dark:supports-[backdrop-filter]:bg-slate-900/60">
+    <header className="sticky top-0 z-30 w-full border-b border-slate-200/70  backdrop-blur-xl backdrop-saturate-150 bg-white dark:border-slate-700/50 dark:bg-slate-900/70 dark:supports-[backdrop-filter]:bg-slate-900/60">
       {/* Filet lumineux ambré, signature discrète */}
       <div
         aria-hidden

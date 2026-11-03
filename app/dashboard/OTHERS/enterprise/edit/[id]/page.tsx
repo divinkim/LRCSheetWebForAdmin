@@ -17,9 +17,10 @@ export default function UpdateCompany() {
     setInputs,
     isLoading,
     handleSubmit,
-    adminRole
+    adminRole,
+    LOCAL_KEY
   } = UpdateCompanyHookModal();
-
+  if (!inputs) return
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -80,7 +81,7 @@ export default function UpdateCompany() {
             {inputs.logo && (
               <div className="mb-8 flex items-center gap-4 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-4 transition-all">
                 <img
-                  src={`${providers.APIUrl}/images/${inputs.logo}`}
+                  src={`${providers.ImageUrl}/${inputs.logo}`}
                   alt="Logo de l'entreprise"
                   className="h-16 w-16 rounded-xl border-2 border-blue-500 object-contain bg-white dark:bg-slate-800 p-1 shadow-sm"
                 />
@@ -119,7 +120,7 @@ export default function UpdateCompany() {
                             [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value,
                           };
                           setInputs(fieldValue);
-                          localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(fieldValue));
+                          localStorage.setItem(LOCAL_KEY, JSON.stringify(fieldValue));
                         }}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 p-3.5 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
@@ -134,7 +135,7 @@ export default function UpdateCompany() {
                             [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value,
                           };
                           setInputs(fieldValue);
-                          localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(fieldValue));
+                          localStorage.setItem(LOCAL_KEY, JSON.stringify(fieldValue));
                         }}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                       >
@@ -172,12 +173,12 @@ export default function UpdateCompany() {
                             const response = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
                             const updatedInputs = { ...inputs, [field]: response.filename };
                             setInputs(updatedInputs);
-                            localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(updatedInputs));
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedInputs));
                             return;
                           }
                           const updatedInputs = { ...inputs, [field]: v.target.value };
                           setInputs(updatedInputs);
-                          localStorage.setItem("inputMemoryOfUpdateCompanyPage", JSON.stringify(updatedInputs));
+                          localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedInputs));
                         }}
                         className={cn(
                           "w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20",

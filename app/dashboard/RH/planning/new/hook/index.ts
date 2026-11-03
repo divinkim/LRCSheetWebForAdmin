@@ -84,19 +84,19 @@ export default function useAddPlanning() {
     // Soumission du formulaire
     const handleSubmit = async () => {
         // Validation des champs obligatoires
-        const requireFields = {
-            startTime: inputs.startTime,
-            endTime: inputs.endTime,
-            description: inputs.description,
-            EnterpriseId: inputs.EnterpriseId,
-        };
+        // const requireFields = {
+        //     startTime: inputs.startTime,
+        //     endTime: inputs.endTime,
+        //     description: inputs.description,
+        //     EnterpriseId: inputs.EnterpriseId,
+        // };
 
-        for (const [key, value] of Object.entries(requireFields)) {
-            if (!value) {
-                toast.error("Erreur", "Veuillez renseigner tous les champs obligatoires (*)");
-                return;
-            }
-        }
+        // for (const [key, value] of Object.entries(requireFields)) {
+        //     if (!value) {
+        //         toast.error("Erreur", "Veuillez renseigner tous les champs obligatoires (*)");
+        //         return;
+        //     }
+        // }
 
         try {
             setIsLoading(true);
@@ -111,25 +111,15 @@ export default function useAddPlanning() {
             };
 
             await providers.API.post(
-                "https://vps118934.serveur-vps.net:4001",
-                "createPlanning",
+                providers.APIUrl,
+                "plannings",
                 null,
                 payload
             );
 
-
             toast.success("Bravo", "Planning horaire créé avec succès !");
-
-            // Nettoyage de la mémoire et réinitialisation du formulaire
             localStorage.removeItem("inputMemoryOfAddPlanningPage");
-            setInputs({
-                startTime: null,
-                breakingStartTime: null,
-                resumeEndTime: null,
-                endTime: null,
-                description: null,
-                EnterpriseId: (session?.user as any)?.EnterpriseId !== 1 ? (session?.user as any)?.EnterpriseId : null,
-            });
+            window.location.reload();
 
         } catch (error) {
             toast.error("Erreur", error instanceof Error ? error.message : "Erreur inconnue");

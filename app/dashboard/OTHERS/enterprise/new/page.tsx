@@ -7,7 +7,7 @@ import { formElements } from "@/components/FormElements/forms";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import useAddDepartment from "./hook";
-import { UploadFileResponseDto } from "@/types/global";
+import { EnterpriseDto, UploadFileResponseDto } from "@/types/global";
 
 export default function AddEnterprise() {
   const {
@@ -18,6 +18,7 @@ export default function AddEnterprise() {
     isLoading,
     handleSubmit,
     adminRole,
+    LOCAL_KEY
   } = useAddDepartment();
 
   return (
@@ -82,10 +83,10 @@ export default function AddEnterprise() {
           <div className="p-6 sm:p-8">
 
             {/* Preview Logo / Image Upload */}
-            {inputs.photo && (
+            {inputs?.photo && (
               <div className="mb-8 flex items-center gap-4 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-4 transition-all">
                 <img
-                  src={`${providers.APIUrl}/images/${inputs.photo}`}
+                  src={`${providers.APIUrl}/images/${inputs?.photo}`}
                   alt="Aperçu"
                   className="h-16 w-16 rounded-xl border-2 border-blue-500 object-cover shadow-sm"
                 />
@@ -114,16 +115,15 @@ export default function AddEnterprise() {
                         e.textarea && "md:col-span-2 xl:col-span-3", ["subscriptionStatus", "subscriptionType"].includes(e.alias) && adminRole !== "Super_Admin_Platform" && "hidden"
                       )}
                     >
-                      <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                         {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                         {e.label}
                       </label>
 
-                      {/* 1. INPUT TEXT / FILE / NUMBER */}
                       {!e.selectedInput && !e.textarea && (
                         <input
                           type={e.type}
-                          value={e.type === "file" ? undefined : (inputs[e.alias] ?? "")}
+                          value={e.type === "file" ? undefined : (inputs?.[e.alias] ?? "")}
                           maxLength={e.type === "tel" ? 9 : undefined}
                           placeholder={e.placeholder}
                           onChange={async (v) => {
@@ -133,14 +133,15 @@ export default function AddEnterprise() {
                               if (!file) return;
                               const response = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
 
-                              const updatedInputs = { ...inputs, [field]: response.filename };
+                              const updatedInputs = { ...inputs, [field]: response.filename } as EnterpriseDto;
+                             
                               setInputs(updatedInputs);
-                              localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify(updatedInputs));
+                              localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedInputs));
                               return;
                             }
-                            const updatedInputs = { ...inputs, [field]: v.target.value };
+                            const updatedInputs = { ...inputs, [field]: v.target.value } as EnterpriseDto;
                             setInputs(updatedInputs);
-                            localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify(updatedInputs));
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedInputs));
                           }}
                           className={cn(
                             "w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20",
@@ -152,15 +153,15 @@ export default function AddEnterprise() {
                       {/* 2. SELECT INPUT */}
                       {e.selectedInput && !e.textarea && (
                         <select
-                          value={inputs[e.alias] ?? ""}
+                          value={inputs?.[e.alias] ?? ""}
                           onChange={(v) => {
                             let field = e.alias;
                             const fieldValue = {
                               ...inputs,
                               [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value,
-                            };
+                            } as EnterpriseDto;
                             setInputs(fieldValue);
-                            localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify(fieldValue));
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(fieldValue));
                           }}
                           className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                         >
@@ -189,12 +190,12 @@ export default function AddEnterprise() {
                       {e.textarea && (
                         <textarea
                           rows={4}
-                          value={inputs[e.alias] ?? ""}
+                          value={inputs?.[e.alias] ?? ""}
                           onChange={(v) => {
                             let field = e.alias;
-                            const fieldValue = { ...inputs, [field]: v.target.value };
+                            const fieldValue = { ...inputs, [field]: v.target.value } as EnterpriseDto;
                             setInputs(fieldValue);
-                            localStorage.setItem("inputMemoryOfAddEnterprisePage", JSON.stringify(fieldValue));
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(fieldValue));
                           }}
                           placeholder={e.placeholder}
                           className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-y"

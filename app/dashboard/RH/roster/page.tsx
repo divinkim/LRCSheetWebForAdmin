@@ -24,9 +24,10 @@ import {
   faFilter,
   faLayerGroup,
 } from "@fortawesome/free-solid-svg-icons";
+import { useToast } from "@/components/toast";
 
 // Roles autorisés à supprimer un planning
-const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Supervisor-Admin"];
+const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"];
 
 // Mapping des couleurs pour les jours de la semaine
 const WEEKDAY_COLORS: Record<string, string> = {
@@ -45,7 +46,7 @@ export default function WeekDaysPlanningsList() {
   // États principaux
   const [weekDaysPlannings, setWeekDaysPlannings] = useState<UsersPlanningsDto[]>([]);
   const [loading, setIsLoading] = useState(true);
-
+  const toast = useToast();
   // Filtres & Recherche
   const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState<string>("ALL");
@@ -218,26 +219,10 @@ export default function WeekDaysPlanningsList() {
     if (result.isConfirmed) {
       try {
         await providers.API.delete(providers.APIUrl, "users-plannings", id, {});
-        // Mise à jour de l'état local sans rechargement de page
         setWeekDaysPlannings((prev) => prev.filter((item) => item.id !== id));
-
-        Swal.fire({
-          icon: "success",
-          title: "Supprimé !",
-          text: "Le planning a été mis à jour avec succès.",
-          timer: 2000,
-          showConfirmButton: false,
-          customClass: {
-            popup: "dark:bg-slate-900 dark:text-white rounded-2xl border dark:border-slate-800",
-          },
-        });
+        toast.success("Bravo", "Planning supprimé avec succès");
       } catch (error) {
-        console.error("[Planning Error] Échec de suppression:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Erreur",
-          text: "Impossible de supprimer cet enregistrement.",
-        });
+        toast.error("Erreur", "Impossible de supprimer cet enregistrement.")
       }
     }
   };
@@ -462,10 +447,9 @@ export default function WeekDaysPlanningsList() {
                           <div className="flex items-center gap-2">
                             {item.Enterprise?.logo ? (
                               <div className="relative h-6 w-6 shrink-0 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
-                                <Image
-                                  src={`${providers.APIUrl}/images/${item.Enterprise.logo}`}
+                                <img
+                                  src={`${providers.ImageUrl}/${item.Enterprise.logo}`}
                                   alt={item.Enterprise?.name || "Logo"}
-                                  fill
                                   sizes="24px"
                                   className="object-cover"
                                 />

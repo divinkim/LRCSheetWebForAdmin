@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+
 import socket from "@/socket";
+
 import { getFirebaseMessaging } from "@/firebase/firebaseConfig";
+
 import { onMessage } from "firebase/messaging";
+
 import {
   faComments,
   faBullhorn,
@@ -19,9 +23,22 @@ import {
   faBriefcase,
   faCity,
   faLandmark,
-  faBellConcierge,
   faBell,
+  faCalculator,
+  faFileInvoice,
+  faMoneyBillWave,
+  faReceipt,
+  faBoxesStacked,
+  faWarehouse,
+  faTruck,
+  faCartShopping,
+  faHandshake,
+  faChartPie,
+  faGears,
+  faBuildingFlag,
+  faBriefcaseClock,
 } from "@fortawesome/free-solid-svg-icons";
+
 import { useSession } from "next-auth/react";
 
 export interface AppNotification {
@@ -35,25 +52,56 @@ export interface AppNotification {
 
 const STORAGE_KEY = "storedNotificationsArray";
 
-async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
+/* ================= INDEXED DB (identique au service worker) ================= */
+const DB_NAME = "NotificationDB";
+const DB_VERSION = 3; // doit être identique au service worker
+const STORE_NAME = "notifications";
+
+function openNotificationDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("NotificationDB", 2);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains("notifications")) return resolve([]);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    // IDENTIQUE au SW : crée le store quelle que soit la partie qui ouvre en premier
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
 
-      const tx = db.transaction("notifications", "readwrite");
-      const store = tx.objectStore("notifications");
-      const getAllReq = store.getAll();
+async function getAndClearIndexedDBNotifications(): Promise<AppNotification[]> {
+  const db = await openNotificationDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    let items: AppNotification[] = [];
 
-      getAllReq.onsuccess = () => {
-        store.clear();
-        resolve(getAllReq.result || []);
-      };
+    const req = store.getAll();
+    req.onsuccess = () => {
+      items = req.result || [];
+      store.clear();
+    };
+    tx.oncomplete = () => {
+      db.close();
+      resolve(items);
+    };
+    tx.onerror = tx.onabort = () => {
+      db.close();
+      reject(tx.error);
     };
   });
 }
+
+// "" / undefined / null => -1 (ne matche aucune section/page)
+export const toIndex = (v: unknown): number =>
+  v === undefined || v === null || v === "" ? -1 : Number(v);
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
@@ -68,8 +116,13 @@ export function useNotifications() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
   }, [notifications]);
 
+  // Synchronisation des notifs reçues en arrière-plan (SW -> IndexedDB -> état)
   useEffect(() => {
-    async function syncBackgroundNotifications() {
+    let busy = false;
+
+    const sync = async () => {
+      if (busy) return;
+      busy = true;
       try {
         const bgNotifs = await getAndClearIndexedDBNotifications();
         if (bgNotifs.length > 0) {
@@ -77,9 +130,39 @@ export function useNotifications() {
         }
       } catch (err) {
         console.error("Erreur IndexedDB:", err);
+      } finally {
+        busy = false;
       }
-    }
-    syncBackgroundNotifications();
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    const onSwMessage = (e: MessageEvent) => {
+      if (e.data?.type === "NOTIF_SAVED") sync();
+    };
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("notif-sync");
+      bc.onmessage = (e) => {
+        if (e.data?.type === "NOTIF_SAVED") sync();
+      };
+    } catch {}
+
+    sync();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", sync);
+    window.addEventListener("pageshow", sync);
+    navigator.serviceWorker?.addEventListener("message", onSwMessage);
+
+    return () => {
+      bc?.close();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("pageshow", sync);
+      navigator.serviceWorker?.removeEventListener("message", onSwMessage);
+    };
   }, []);
 
   useEffect(() => {
@@ -132,13 +215,13 @@ export function useNotifications() {
 
   const getSectionCount = useCallback(
     (sectionIndex: number) =>
-      notifications.filter((n) => Number(n.adminSectionIndex) === sectionIndex).length,
+      notifications.filter((n) => toIndex(n.adminSectionIndex) === sectionIndex).length,
     [notifications]
   );
 
   const getPageCount = useCallback(
     (pageIndex: number) =>
-      notifications.filter((n) => Number(n.adminPageIndex) === pageIndex).length,
+      notifications.filter((n) => toIndex(n.adminPageIndex) === pageIndex).length,
     [notifications]
   );
 
@@ -180,9 +263,9 @@ export function SidebarHook() {
       {
         title: "💬 Communication",
         ItemLists: [
-          { title: "Messagerie & Chat", href: "/dashboard/NOTIF/chat", icon: faComments, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
-          { title: "Notifications générales", href: "/dashboard/NOTIF/notification/list", icon: faBell, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
-          { title: "Notifications groupées", href: "/dashboard/NOTIF/notification/new", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
+          { title: "Messagerie & Chat", href: "/dashboard/COM/chat", icon: faComments, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
+          { title: "Notifications générales", href: "/dashboard/COM/notification/list", icon: faBell, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+          { title: "Notifications groupées", href: "/dashboard/COM/notification/new", icon: faBullhorn, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
         ],
       },
       {
@@ -207,8 +290,43 @@ export function SidebarHook() {
         ItemLists: [
           { title: "Rapports", href: "/dashboard/ADMIN/reporting", icon: faFileLines, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau contrat", href: "/dashboard/ADMIN/contract/new", icon: faFileContract, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "List des contrats", href: "/dashboard/ADMIN/contract/list", icon: faFileContract, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau Département", href: "/dashboard/ADMIN/department/new", icon: faBuilding, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "liste des Départements", href: "/dashboard/ADMIN/department/list", icon: faBuildingFlag, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau Poste", href: "/dashboard/ADMIN/post/new", icon: faBriefcase, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "List des Postes", href: "/dashboard/ADMIN/post/list", icon: faBriefcaseClock, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+        ],
+      },
+      {
+        title: "💰 Comptabilité",
+        ItemLists: [
+          { title: "Ajouter un salaire", href: "/dashboard/COMPTA/salary/new", icon: faMoneyBillWave, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Liste des salaires", href: "/dashboard/ADMIN/salary/list", icon: faFileInvoice, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Bulletin de paie", href: "/dashboard/ADMIN/salary/details", icon: faReceipt, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Journal des dépenses", href: "/dashboard/COMPTA/expenses", icon: faCalculator, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+        ],
+      },
+      {
+        title: "📊 Fiscalité",
+        ItemLists: [
+          { title: "Ajouter un salaire", href: "/dashboard/COMPTA/salary/new", icon: faMoneyBillWave, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Liste des salaires", href: "/dashboard/ADMIN/salary/list", icon: faFileInvoice, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Déclarations & Taxes", href: "/dashboard/FISCAL/declarations", icon: faChartPie, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+        ],
+      },
+      {
+        title: "🛒 Ventes & CRM",
+        ItemLists: [
+          { title: "Clients & Leads", href: "/dashboard/CRM/clients", icon: faHandshake, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
+          { title: "Devis & Commandes", href: "/dashboard/SALES/orders", icon: faCartShopping, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"]) },
+        ],
+      },
+      {
+        title: "📦 Stocks & Logistique",
+        ItemLists: [
+          { title: "Gestion des produits", href: "/dashboard/STOCK/products", icon: faBoxesStacked, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Entrepôts", href: "/dashboard/STOCK/warehouses", icon: faWarehouse, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Mouvements de stock", href: "/dashboard/STOCK/movements", icon: faTruck, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
         ],
       },
       {
@@ -216,6 +334,7 @@ export function SidebarHook() {
         ItemLists: [
           { title: "Ajouter une entreprise", href: "/dashboard/OTHERS/enterprise/new", icon: faCity, access: accessToPage(["Super_Admin_Platform"]) },
           { title: "Liste des entreprises", href: "/dashboard/OTHERS/enterprise/list", icon: faLandmark, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Paramètres généraux", href: "/dashboard/OTHERS/settings", icon: faGears, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
         ],
       },
     ];

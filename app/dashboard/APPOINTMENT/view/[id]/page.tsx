@@ -36,6 +36,7 @@ export type Appointment = {
     id: number;
     lastname: string;
     firstname: string;
+    photo: string
   };
 };
 
@@ -129,7 +130,7 @@ export default function ViewAppointment() {
           "appointments",
           Number(id)
         );
-       
+
         if (res) {
           setAppointment(res.data);
         }
@@ -190,7 +191,15 @@ export default function ViewAppointment() {
           <div className="flex items-center gap-5">
             {/* Avatar / Icône du Visiteur */}
             <div className="relative w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-              <FontAwesomeIcon icon={faUser} className="text-3xl text-slate-400 dark:text-slate-500" />
+              {appointment?.User?.photo ? (
+                <img
+                  src={`${providers.ImageUrl}/${appointment.User.photo}`}
+                  alt={appointment.fullName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FontAwesomeIcon icon={faUser} className="text-3xl text-slate-400 dark:text-slate-500" />
+              )}
             </div>
 
             <div>
@@ -211,7 +220,7 @@ export default function ViewAppointment() {
           {/* Boutons d'action */}
           <div className="flex items-center gap-3">
             {/* <Link
-              href={`/dashboard/ADMIN/updateAppointment/${appointment?.id}`}
+              href={`/dashboard/ADMIN/appointment/edit/${appointment?.id}`}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-md shadow-blue-600/10 active:scale-95"
             >
               <FontAwesomeIcon icon={faPen} />

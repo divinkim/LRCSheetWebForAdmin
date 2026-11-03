@@ -1,6 +1,7 @@
 "use client";
 import { providers } from "@/index";
 import { Report, ReportsResponseDto } from "@/types/global";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 type RepportsValue = {
@@ -22,23 +23,24 @@ type RepportsValue = {
 }
 
 export default function HookComponentModal() {
-    if (typeof (window) === "undefined") return
+
     const [repports, setRepports] = useState<Report[]>([]);
     const [tasks, setTasks] = useState<RepportsValue[]>([])
-    let EnterpriseId = localStorage.getItem("EnterpriseId");
+    const { data: session, status } = useSession();
+
 
     useEffect(() => {
         (async () => {
+            const AdminRole = (session?.user as any)?.adminRole;
+            const EnterpriseIdOfAdmin = (session?.user as any)?.EnterpriseId;
+
             const allRepports = await providers.API.getAll<ReportsResponseDto>(providers.APIUrl, "reports", null);
-            if (parseInt(EnterpriseId ?? "") !== 1) {
-                const getRepportsByEnterprise = allRepports.data.filter(report => report.EnterpriseId === parseInt(EnterpriseId ?? ""));
-                setRepports(getRepportsByEnterprise)
-                return;
-            }
-            const getRepportsByEnterprise = allRepports.data.filter((repport: { EnterpriseId: number }) => [1, 4].includes(repport.EnterpriseId));
+            const getRepportsByEnterprise: Report[] = allRepports.data.filter(report => report.Enterprise?.MainEnterpriseId === parseInt(EnterpriseIdOfAdmin ?? ""));
+            console.log(getRepportsByEnterprise)
             setRepports(getRepportsByEnterprise)
+            return;
         })();
-    }, []);
+    }, [session]);
 
     //Récupération des tâches
 

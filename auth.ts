@@ -50,7 +50,7 @@ export const authOptions = {
                             password: credentials.password,
                         }
                     );
-                   
+
                     return {
                         id: res.user.id.toString(),
                         firstname: res.user.firstname,
@@ -111,6 +111,7 @@ export const authOptions = {
                     adminRole: token.adminRole,
                     EnterpriseId: token.EnterpriseId,
                     adminService: token.adminService,
+                    MainEnterpriseId: token.MainEnterpriseId,
                 };
                 //Erreur de refresh à la session pour que le client sache quand déconnecter
                 session.error = token.error;

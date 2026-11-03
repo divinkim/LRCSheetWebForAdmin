@@ -7,9 +7,9 @@ import ClientLayout from "./clientLayout";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/components/toast";
 import SessionProvider from "@/components/providers";
-import ChatSocketProvider from "@/components/call/ChatSocketProvider";
-import CallProvider from "@/components/call/CallProvider";
-import CallModal from "@/components/call/CallModal";
+import ChatSocketProvider from "@/app/dashboard/COM/chat/components/ChatSocketProvider";
+import CallProvider from "@/app/dashboard/COM/chat/components/CallProvider";
+import CallModal from "@/app/dashboard/COM/chat/components/CallModal";
 
 const poppins = Poppins({
   subsets: ["latin"],

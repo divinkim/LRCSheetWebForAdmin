@@ -44,8 +44,7 @@ export type AppointmentData = {
   };
 };
 
-const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Admin_Enterprise", "Reception_Admin"];
-const STATUS_API_URL = "https://vps118934.serveur-vps.net:4001";
+const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Admin_Enterprise"]
 const PAGE_SIZE = 8;
 
 /* ------------------------------------------------------------------ */
@@ -370,8 +369,8 @@ export default function AppointmentsList() {
         if (!confirmed.isConfirmed) return;
         try {
           const response = await providers.API.update(
-            STATUS_API_URL,
-            "updateAppointmentStatus",
+            providers.APIUrl,
+            "appointments",
             null,
             { status: newStatus },
             id

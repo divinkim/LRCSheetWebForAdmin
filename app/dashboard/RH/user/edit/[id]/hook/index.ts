@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
 import { CitiesResponseDto, ContractsResponseDto, ContractTypesResponseDto, CountryResponseDto, DepartmentsResponseDto, DistrictResponseDto, EnterprisesResponseDto, PlanningsResponseDto, PostsResponseDto, QuarterResponseDto, QuartersResponseDto, SalariesResponseDto, UserResponseDto } from "@/types/global";
+import { dateFormat } from "@/index";
 export type InputsValue = {
   firstname: string | null;
   lastname: string | null;
@@ -30,6 +31,7 @@ export type InputsValue = {
   marialStatus: string | null;
   adminService: string | null;
   status: string | null;
+  working_days_count: number | null;
   [key: string]: string | number | boolean | null | undefined;
 };
 
@@ -84,6 +86,7 @@ export function UpdateUserHookModal() {
     marialStatus: null,
     adminService: null,
     status: null,
+    working_days_count: null,
   });
 
   // 1. Initialisation : Chargement des entreprises & pays
@@ -124,7 +127,6 @@ export function UpdateUserHookModal() {
           "users",
           userId
         );
-
         setInputs({
           firstname: getUser.data.firstname ?? null,
           lastname: getUser.data.lastname ?? null,
@@ -134,7 +136,7 @@ export function UpdateUserHookModal() {
           gender: getUser.data.gender ?? null,
           email: getUser.data.email ?? null,
           password: getUser.data.password ?? null,
-          phone: getUser.data.phone.slice(4)  ?? null,
+          phone: getUser.data.phone.slice(4) ?? null,
           EnterpriseId: getUser.data.EnterpriseId ?? null,
           PostId: getUser.data.PostId ?? null,
           SalaryId: getUser.data.SalaryId ?? null,
@@ -151,6 +153,7 @@ export function UpdateUserHookModal() {
           marialStatus: getUser.data.marialStatus ?? null,
           adminService: getUser.data.adminService ?? null,
           status: getUser.data.status ? "Actif" : "Inactif",
+          working_days_count: getUser.data.working_days_count,
         });
       } catch (error) {
         console.error("Erreur lors de la récupération de l'utilisateur :", error);
@@ -167,10 +170,10 @@ export function UpdateUserHookModal() {
         "plannings",
         null
       );
-      if (adminRole !== "Super-Admin") {
+      if (adminRole !== "Super_Admin_Platform") {
         setPlannings(
           plannings.data.filter(
-            (item: { EnterpriseId: number }) =>
+            item =>
               item.EnterpriseId === inputs.EnterpriseId
           )
         );
@@ -352,12 +355,12 @@ export function UpdateUserHookModal() {
         .filter((item) => item.id && item.name)
         .map((item) => ({ value: item.id, title: item.name })),
     },
-    {
-      alias: "PlanningId",
-      arrayData: getPlannings
-        .filter((item) => item.id && item.PlanningType)
-        .map((item) => ({ value: item.id, title: item.PlanningType.title })),
-    },
+    // {
+    //   alias: "PlanningId",
+    //   arrayData: getPlannings
+    //     .filter((item) => item.id && item.PlanningType)
+    //     .map((item) => ({ value: item.id, title: item.PlanningType.title })),
+    // },
     {
       alias: "DepartmentPostId",
       arrayData: getDepartmentPosts
@@ -386,7 +389,7 @@ export function UpdateUserHookModal() {
       alias: "ContractId",
       arrayData: getContracts
         .filter((item) => item.id && item.delay)
-        .map((item) => ({ value: item.id, title: item.delay })),
+        .map((item) => ({ value: item.id, title: `${item.delay} du ${item.startDate ? dateFormat(item.startDate) : "-"} au ${item.endDate ? dateFormat(item.endDate) : "-"}` })),
     },
     {
       alias: "CountryId",
@@ -493,13 +496,16 @@ export function UpdateUserHookModal() {
       'Email': inputs.email,
       'Rôle': inputs.role,
       'Téléphone': inputs.phone,
-      'Ville': inputs.CityId,
+      'Nombre des jour de travail / mois': inputs.working_days_count,
       'Pays': inputs.CountryId,
+      'Ville': inputs.CityId,
     };
 
     for (const [key, value] of Object.entries(requireFields)) {
       if (!value) {
-        return toast.info('Attention', `Veuillez sélectionner ou saisir une valeur pour le champs ${key}.`);
+        return toast.info('Attention',
+          `Veuillez sélectionner ou saisir une valeur pour le champs ${key}.`
+        );
       }
     }
 
@@ -516,8 +522,9 @@ export function UpdateUserHookModal() {
         data,
         null
       );
-      toast.success("Bravo", "Opération effectuée avec succès.");
-      window.location.reload();
+      toast.success("Bravo",
+        "Compte utilisateur mis à jour avec succès."
+      );
     } catch (error) {
       toast.error("Oups", error instanceof Error
         ? error.message : "Erreur inconnue. Veuillez réessayer"

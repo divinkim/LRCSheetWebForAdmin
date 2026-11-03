@@ -22,8 +22,8 @@ import Swal from "sweetalert2";
 import { providers } from "@/index";
 import { tablesModal } from "@/components/Tables/tablesModal";
 import { PresencesListHookModal } from "./hook";
-import AddPresenceModal from "./addPresenceModal/page";
-import UpdatePresenceModal from "./updatePresenceModal/page";
+import AddPresenceModal from "./new/page";
+import UpdatePresenceModal from "./edit/page";
 import { useToast } from "@/components/toast";
 
 const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise"];
@@ -61,7 +61,8 @@ const statusKey = (status?: string | null) =>
 
 export default function PresencesList() {
   const {
-    presencesListCloned = [],
+    presencesListCloned,
+    setPresencesList,
     adminRole,
     onSearch,
     isLoading,
@@ -69,15 +70,12 @@ export default function PresencesList() {
   } = PresencesListHookModal();
   const toast = useToast();
 
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 8;
 
-  // Modals
   const [showAddPresenceModal, setShowAddPresenceModal] = useState(false);
   const [showUpdatePresenceModal, setShowUpdatePresenceModal] = useState(false);
 
-  // Calcul du nombre de pages
   const totalPages = Math.max(1, Math.ceil(presencesListCloned.length / limit));
 
   // Recalcul du découpage actuel des données
@@ -175,7 +173,7 @@ export default function PresencesList() {
   }, [presencesListCloned]);
 
   // Suppression
-  const handleDelete = (userId: number, date: string) => {
+  const handleDelete = (userId: number, date: string, itemId: number) => {
     if (!hasAdminAccess()) return;
 
     Swal.fire({
@@ -194,8 +192,8 @@ export default function PresencesList() {
       if (result.isConfirmed) {
         try {
           await providers.API.delete(providers.APIUrl, "attendances/from-admin", null, { usersId: [userId], date });
-          toast.success("Bravo", "Présence supprimée avec succès.");
-          setPresencesListCloned(prev => prev.filter(a => a.UserId !== userId && a.createdAt !== date))
+          toast.success("Bravo", "Horaires supprimées avec succès.");
+          setPresencesListCloned(prev => prev.filter(a => a.id !== itemId))
         } catch (err) {
           toast.error("Erreur", "Une erreur est survenue lors de la suppression.");
         }
@@ -216,7 +214,12 @@ export default function PresencesList() {
                 onClick={() => {
                   setShowAddPresenceModal(false);
                   setShowUpdatePresenceModal(false);
-                  window.location.reload();
+                  const presencesData = localStorage.getItem("presencesData");
+                  if (presencesData) {
+                    setPresencesListCloned(JSON.parse(presencesData))
+                    setPresencesList(JSON.parse(presencesData))
+                  }
+                  // window.location.reload();
                 }}
                 aria-label="Fermer"
                 className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a24b] dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -358,7 +361,7 @@ export default function PresencesList() {
         <div className={`${CARD} overflow-hidden`}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-              <thead className="border-b border-slate-100 bg-slate-50/70 text-xs font-medium text-slate-500 dark:border-white/5 dark:bg-white/[0.03] dark:text-slate-400">
+              <thead className="border-b border-slate-100 bg-slate-50/70 text-sm font-medium text-slate-500 dark:border-white/5 dark:bg-white/[0.03] dark:text-slate-400">
                 <tr>
                   <th scope="col" className="px-6 py-4">Collaborateur</th>
                   <th scope="col" className="px-6 py-4">Arrivée / Pause</th>
@@ -511,7 +514,7 @@ export default function PresencesList() {
                               <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                             </Link>
                             <button
-                              onClick={() => handleDelete(u.UserId, String(u.createdAt))}
+                              onClick={() => handleDelete(u.UserId, String(u.createdAt), u.id)}
                               className="flex h-9 w-9 items-center justify-center rounded-full text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                               title="Supprimer"
                               aria-label="Supprimer"

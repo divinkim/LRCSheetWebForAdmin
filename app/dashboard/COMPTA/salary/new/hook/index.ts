@@ -144,7 +144,7 @@ export default function useAddSalary() {
   const handleSubmit = async () => {
     const requireFields = {
       "Salaire brut": inputs.grossSalary,
-      "Salaire journalier": inputs.dailySalary,
+      // "Salaire journalier": inputs.dailySalary,
       "Entreprise": inputs.EnterpriseId,
       "Poste": inputs.PostId,
     };

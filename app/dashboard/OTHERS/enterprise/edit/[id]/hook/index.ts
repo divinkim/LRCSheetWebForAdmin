@@ -4,39 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
-import { CitiesResponseDto, CountryResponseDto, DepartmentPost, DepartmentsPostResponseDto, DepartmentsResponseDto, EnterpriseResponseDto, EnterprisesResponseDto } from "@/types/global";
-
-export type InputsValue = {
-  name: string;
-  description: string;
-  logo: string;
-  activityDomain: string;
-  phone: string;
-  toleranceTime: string | null;
-  maxToleranceTime: string | null;
-  pourcentageOfHourlyDeduction: string | null;
-  maxPourcentageOfHourlyDeduction: string | null;
-  email: string;
-  address: string;
-  website: string | null;
-  latitude: string;
-  longitude: string;
-  CityId: number | null;
-  MainEnterpriseId: number | null,
-  City: {
-    name: string;
-  };
-  CountryId: number | null;
-  Country: {
-    name: string;
-  };
-  legalForm: string;
-  rccm: string | null;
-  nui: string | null;
-  subscriptionType: string;
-  subscriptionStatus: string;
-  [key: string]: any;
-};
+import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, Enterprise, EnterprisesResponseDto } from "@/types/global";
 
 export default function useUpdateEnterprise() {
   const { data: session } = useSession();
@@ -52,51 +20,22 @@ export default function useUpdateEnterprise() {
   const [adminRole, setAdminRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const toast = useToast();
+  const LOCAL_KEY = "inputMemoryOfEditEnterprisePage"
+
   // État des inputs
-  const [inputs, setInputs] = useState<InputsValue>({
-    name: "",
-    description: "",
-    logo: "",
-    activityDomain: "",
-    phone: "",
-    toleranceTime: null,
-    maxToleranceTime: null,
-    pourcentageOfHourlyDeduction: null,
-    maxPourcentageOfHourlyDeduction: null,
-    email: "",
-    address: "",
-    website: null,
-    latitude: "",
-    longitude: "",
-    CityId: null,
-    MainEnterpriseId: null,
-    City: { name: "" },
-    CountryId: null,
-    Country: { name: "" },
-    legalForm: "",
-    rccm: null,
-    nui: null,
-    subscriptionType: "",
-    subscriptionStatus: "",
-  });
+  const [inputs, setInputs] = useState<Enterprise>();
 
   // 1. Initialisation de la session et chargement des données de l'entreprise
   useEffect(() => {
     (async () => {
-      const user = session?.user
-      // Récupération de l'ID d'entreprise (URL ou fallback session)
+      const user = session?.user;
       const enterpriseIdFromUrl = window.location.href.split("/").pop();
       const currentEnterpriseId = (user as any)?.EnterpriseId || null
       const adminRole = (user as any)?.adminRole || null;
-
-      if (currentEnterpriseId) setEnterpriseId(String(currentEnterpriseId));
-      if (adminRole) setAdminRole(adminRole);
-
       // Récupération de la mémoire locale si elle existe
-      const getInputMemory = localStorage.getItem("inputMemoryOfAddEnterprisePage");
+      const getInputMemory = localStorage.getItem(LOCAL_KEY);
       if (getInputMemory) {
         setInputs(JSON.parse(getInputMemory));
-        return;
       }
 
       //Chargement depuis l'API si pas de mémoire locale
@@ -109,37 +48,16 @@ export default function useUpdateEnterprise() {
         );
 
         if (currentEnterprise) {
+          const subscriptionExpiresAt = currentEnterprise.subscriptionExpiresAt;
           setInputs({
-            name: currentEnterprise.name || "",
-            description: currentEnterprise.description || "",
-            logo: currentEnterprise.logo || "",
-            activityDomain: currentEnterprise.activityDomain || "",
-            phone: currentEnterprise.phone || "",
-            toleranceTime: currentEnterprise.toleranceTime,
-            maxToleranceTime: currentEnterprise.maxToleranceTime,
-            pourcentageOfHourlyDeduction: currentEnterprise.pourcentageOfHourlyDeduction,
-            maxPourcentageOfHourlyDeduction: currentEnterprise.maxPourcentageOfHourlyDeduction,
-            email: currentEnterprise.email || "",
-            address: currentEnterprise.address || "",
-            website: currentEnterprise.website,
-            latitude: currentEnterprise.latitude || "",
-            longitude: currentEnterprise.longitude || "",
-            CityId: currentEnterprise.CityId,
-            MainEnterpriseId: currentEnterprise.MainEnterpriseId,
-            City: {
-              name: currentEnterprise.City?.name || "",
-            },
-            CountryId: currentEnterprise.CountryId || currentEnterprise.Country?.id,
-            Country: {
-              name: currentEnterprise.Country?.name || "",
-            },
-            legalForm: currentEnterprise.legalForm || "",
-            rccm: currentEnterprise.rccm,
-            nui: currentEnterprise.nui || currentEnterprise.nui,
-            subscriptionType: currentEnterprise.subscriptionType || "",
-            subscriptionStatus: currentEnterprise.subscriptionStatus || "",
+            ...currentEnterprise,
+            subscriptionExpiresAt: subscriptionExpiresAt
+              ? (new Date(subscriptionExpiresAt).toISOString().split('T')[0] as unknown as Date)
+              : null
           });
         }
+        setEnterpriseId(String(currentEnterpriseId));
+        setAdminRole(adminRole);
       }
     })();
   }, [session]);
@@ -154,20 +72,20 @@ export default function useUpdateEnterprise() {
 
   // 3. Chargement des départements filtrés par entreprise
   useEffect(() => {
-    if (!inputs.EnterpriseId && !enterpriseId) return;
+    if (!inputs?.EnterpriseId && !enterpriseId) return;
     (async () => {
-      const targetEnterpriseId = inputs.EnterpriseId || Number(enterpriseId);
+      const targetEnterpriseId = inputs?.EnterpriseId || Number(enterpriseId);
       const departmentPostsList = await providers.API.getAll<DepartmentsPostResponseDto>(providers.APIUrl, "departments", null);
       const filteredDepartments = departmentPostsList.data.filter(
         (department: { EnterpriseId: number }) => department.EnterpriseId === targetEnterpriseId
       );
       setDepartmentPosts(filteredDepartments);
     })();
-  }, [inputs.EnterpriseId, enterpriseId]);
+  }, [inputs?.EnterpriseId, enterpriseId]);
 
   // 4. Chargement des villes filtrées par pays
   useEffect(() => {
-    if (!inputs.CountryId) return;
+    if (!inputs?.CountryId) return;
     (async () => {
       const citiesList = await providers.API.getAll<CitiesResponseDto>(providers.APIUrl, "cities", null);
       const filteredCities = citiesList.data.filter(
@@ -175,7 +93,7 @@ export default function useUpdateEnterprise() {
       );
       setCity(filteredCities);
     })();
-  }, [inputs.CountryId]);
+  }, [inputs?.CountryId]);
 
   // Structure des options dynamiques
   const dynamicArrayData = [
@@ -216,16 +134,36 @@ export default function useUpdateEnterprise() {
     {
       alias: "subscriptionStatus",
       arrayData: [
-        { title: "En cours", value: "onGoing" },
-        { title: "Expiré", value: "expired" },
+        { title: "Actif", value: "ACTIVE" },
+        { title: "En attente", value: "PENDING" },
+        { title: "Expiré", value: "INACTIVE" },
+      ],
+    },
+    {
+      alias: "legalForm",
+      arrayData: [
+        { title: "SARL", value: "SARL" },
+        { title: "SARLU", value: "SARLU" },
+        { title: "SA", value: "SA" },
+        { title: "ETS", value: "ETS" },
       ],
     },
     {
       alias: "subscriptionType",
       arrayData: [
-        { title: "Premium", value: "premium" },
-        { title: "Pro", value: "pro" },
-        { title: "Standard", value: "standard" },
+        { title: "Starter", value: "STARTER" },
+        { title: "PREMIUM", value: "PREMIUM" },
+        { title: "PRO", value: "PRO" },
+      ],
+    },
+    {
+      alias: "paymentFrequency",
+      arrayData: [
+        { title: "Mensuel", value: "MONTHLY" },
+        { title: "Trimestriel", value: "QUARTERLY" },
+        { title: "Semestriel", value: "SEMI_ANNUAL" },
+        { title: "Annuel", value: "ANNUAL" },
+
       ],
     },
   ];
@@ -233,39 +171,71 @@ export default function useUpdateEnterprise() {
   // Soumission des modifications
   const handleSubmit = async () => {
     try {
+      if (!inputs) return;
       const requiredFields = {
-        name: inputs.name,
-        description: inputs.description,
-        logo: inputs.logo,
-        activityDomain: inputs.activityDomain,
-        phone: inputs.phone,
-        CityId: inputs.CityId,
-        CountryId: inputs.CountryId,
-        latitude: inputs.latitude,
-        longitude: inputs.longitude,
+        'Nom': inputs.name,
+        'Description': inputs.description,
+        'Logo': inputs.logo,
+        "Statut d'abonnement": inputs.subscriptionStatus,
+        "Type d'abonnement": inputs.subscriptionType,
+        "Domaine d'activité": inputs.activityDomain,
+        'Téléphone': inputs.phone,
+        'Villes': inputs.CityId,
+        'Pays': inputs.CountryId,
+        'Latitude': inputs.latitude,
+        'Longitude': inputs.longitude,
       };
 
       for (const [key, value] of Object.entries(requiredFields)) {
         if (!value) {
-          return toast.error("Champs invalides", "Veuillez renseigner tous les champs obligatoires.")
+          return toast.error("Champs invalides", `Veuillez renseigner le champs ${key}`)
         }
       }
 
       setIsLoading(true);
 
-      await providers.API.update<EnterpriseResponseDto>(
+      await providers.API.update(
         providers.APIUrl,
         "enterprises",
         null,
-        inputs,
+        {
+          name: inputs.name,
+          description: inputs.description,
+          logo: inputs.logo,
+          activityDomain: inputs.activityDomain,
+          phone: inputs.phone,
+          email: inputs.email,
+          address: inputs.address,
+          website: inputs.website,
+          latitude: inputs.latitude,
+          longitude: inputs.longitude,
+          legalForm: inputs.legalForm,
+          rccm: inputs.rccm,
+          nui: inputs.nui,
+          subscriptionType: inputs.subscriptionType,
+          subscriptionStatus: inputs.subscriptionStatus,
+          toleranceTime: inputs.toleranceTime,
+          pourcentageOfHourlyDeduction: inputs.pourcentageOfHourlyDeduction,
+          maxToleranceTime: inputs.maxToleranceTime,
+          maxPourcentageOfHourlyDeduction: inputs.maxPourcentageOfHourlyDeduction,
+          paymentFrequency: inputs.paymentFrequency,
+          paymentMode: inputs.paymentMode,
+          paymentCurrency: inputs.paymentCurrency,
+          paymentMethod: inputs.paymentMethod,
+          subscriptionAmount: inputs.subscriptionAmount,
+          subscribeCurrency: inputs.subscribeCurrency,
+          subscriptionExpiresAt: inputs.subscriptionExpiresAt
+            ? new Date(inputs.subscriptionExpiresAt).toISOString()
+            : null,
+        },
         Number(enterpriseId)
       );
 
-      localStorage.removeItem("inputMemoryOfAddEnterprisePage");
+      localStorage.removeItem(LOCAL_KEY);
       toast.success("Bravo", "Mise à jour effectuée avec succès.")
 
     } catch (error) {
-      console.log(error);
+      toast.error("Erreur", error instanceof Error ? error.message : "Erreur réseau")
     } finally {
       setIsLoading(false);
     }
@@ -280,5 +250,6 @@ export default function useUpdateEnterprise() {
     setInputs,
     isLoading,
     adminRole,
+    LOCAL_KEY
   };
 }

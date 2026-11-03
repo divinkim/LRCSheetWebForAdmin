@@ -30,21 +30,17 @@ export type InputsValue = {
   marialStatus: string | null;
   adminService: string | null;
   status: string | null;
+  working_days_count: number | null,
   [key: string]: string | number | boolean | null | undefined;
 };
 
 export default function AddUserHookModal() {
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session } = useSession();
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   // Informations issues de la session NextAuth
-  const adminRole = (session?.user as any)?.role ?? null;
-  const userId = (session?.user as any)?.id ?? null;
 
-  const adminEnterpriseId = (session?.user as any)?.EnterpriseId
-    ? Number((session?.user as any).EnterpriseId)
-    : null;
 
   // Listes dynamiques depuis l'API
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
@@ -84,13 +80,14 @@ export default function AddUserHookModal() {
     marialStatus: null,
     adminService: null,
     status: "",
+    working_days_count: null,
   });
-
-
+  const [adminRole, setAdminRole] = useState("");
+  const [userId, setUserId] = useState(0);
+  const [adminEnterpriseId, setAdminEnterpriseId] = useState(0);
+  const LOCAL_KEY = "inputMemoryOfAddUserPage";
   // 1. Initialisation : Chargement des entreprises & pays
   useEffect(() => {
-    if (sessionStatus === "loading") return;
-
     (async () => {
       try {
         const [enterprises, countries] = await Promise.all([
@@ -98,21 +95,25 @@ export default function AddUserHookModal() {
           providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null),
         ]);
 
-        setCountry(countries.data);
 
-        if (adminEnterpriseId && adminEnterpriseId !== 1) {
-          const filtered = enterprises.data.filter(
-            (e: { id: number }) => e.id === adminEnterpriseId
-          );
-          setEnterprises(filtered);
-        } else {
-          setEnterprises(enterprises.data);
-        }
+        const adminRole = String((session?.user as any)?.adminRole);
+        const userId = Number((session?.user as any)?.id);
+
+        const adminEnterpriseId = Number((session?.user as any)?.EnterpriseId);
+
+        const filtered = enterprises.data.filter(
+          e => e.MainEnterpriseId === adminEnterpriseId
+        );
+        setEnterprises(filtered);
+        setCountry(countries.data);
+        setAdminRole(adminRole);
+        setUserId(userId);
+        setAdminEnterpriseId(adminEnterpriseId)
       } catch (error) {
         console.error("Erreur lors de l'initialisation :", error);
       }
     })();
-  }, [sessionStatus, adminEnterpriseId]);
+  }, [session]);
 
   // 2. Chargement des données de l'utilisateur à modifier
   useEffect(() => {
@@ -120,37 +121,34 @@ export default function AddUserHookModal() {
 
     (async () => {
       try {
-        const getUser = await providers.API.getOne<UserResponseDto>(
-          providers.APIUrl,
-          "users",
-          userId
-        );
-
+        const data = localStorage.getItem(LOCAL_KEY);
+        const getUser = data ? JSON.parse(data) : null
         setInputs({
-          firstname: getUser.data.firstname ?? null,
-          lastname: getUser.data.lastname ?? null,
-          birthDate: getUser.data.birthDate
-            ? new Date(getUser.data.birthDate).toISOString().split("T")[0]
+          firstname: getUser.firstname ?? null,
+          lastname: getUser.lastname ?? null,
+          birthDate: getUser.birthDate
+            ? new Date(getUser.birthDate).toISOString().split("T")[0]
             : null,
-          gender: getUser.data.gender ?? null,
-          email: getUser.data.email ?? null,
-          password: getUser.data.password ?? null,
-          phone: getUser.data.phone ?? null,
-          EnterpriseId: getUser.data.EnterpriseId ?? null,
-          PostId: getUser.data.PostId ?? null,
-          SalaryId: getUser.data.SalaryId ?? null,
-          ContractTypeId: getUser.data.ContractTypeId ?? null,
-          ContractId: getUser.data.ContractId ?? null,
-          CountryId: getUser.data.CountryId ?? null,
-          PlanningId: getUser.data.PlanningId ?? null,
-          CityId: getUser.data.CityId ?? null,
-          DistrictId: getUser.data.DistrictId ?? null,
-          QuarterId: getUser.data.QuarterId ?? null,
-          photo: getUser.data.photo ?? null,
-          role: getUser.data.role ?? null,
-          DepartmentPostId: getUser.data.DepartmentPostId ?? null,
-          marialStatus: getUser.data.marialStatus ?? null,
-          adminService: getUser.data.adminService ?? null,
+          gender: getUser.gender ?? null,
+          email: getUser.email ?? null,
+          password: getUser.password ?? null,
+          phone: getUser.phone ?? null,
+          EnterpriseId: getUser.EnterpriseId ?? null,
+          PostId: getUser.PostId ?? null,
+          SalaryId: getUser.SalaryId ?? null,
+          ContractTypeId: getUser.ContractTypeId ?? null,
+          ContractId: getUser.ContractId ?? null,
+          CountryId: getUser.CountryId ?? null,
+          PlanningId: getUser.PlanningId ?? null,
+          CityId: getUser.CityId ?? null,
+          DistrictId: getUser.DistrictId ?? null,
+          QuarterId: getUser.QuarterId ?? null,
+          photo: getUser.photo ?? null,
+          role: getUser.role ?? null,
+          DepartmentPostId: getUser.DepartmentPostId ?? null,
+          marialStatus: getUser.marialStatus ?? null,
+          adminService: getUser.adminService ?? null,
+          working_days_count: null,
           status: getUser.data.status ? "Actif" : "Inactif",
         });
       } catch (error) {
@@ -489,6 +487,7 @@ export default function AddUserHookModal() {
       'Email': inputs.email,
       'Rôle': inputs.role,
       'Téléphone': inputs.phone,
+      'Nombre des jours de travail / mois': inputs.phone,
       'Ville': inputs.CityId,
       'Pays': inputs.CountryId,
     };
@@ -511,7 +510,8 @@ export default function AddUserHookModal() {
         null,
         data,
       );
-      toast.success("Bravo", "Opération effectuée avec succès.");
+      toast.success("Bravo", "Compté créé avec succès.");
+      localStorage.removeItem(LOCAL_KEY);
       window.location.reload();
     } catch (error) {
       toast.error("Oups", error instanceof Error
@@ -530,6 +530,6 @@ export default function AddUserHookModal() {
     setInputs,
     isLoading,
     adminRole,
-    isSessionLoading: sessionStatus === "loading",
+    LOCAL_KEY,
   };
 }

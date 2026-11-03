@@ -91,7 +91,7 @@ export default function AddPost() {
                         e.textarea && "md:col-span-2" // Met le textarea sur toute la largeur sur grand écran
                       )}
                     >
-                      <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                         {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                         {e.label}
                       </label>

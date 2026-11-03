@@ -1,5 +1,7 @@
 const APIUrl = "https://vps118934.serveur-vps.net:8102";
 const ImageUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/images";
+export const OthersUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/others";
+export const AudioUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/audios";
 
 interface MonthData {
     monthIndice: number;
@@ -23,17 +25,17 @@ export const validateFields = (input: string | undefined) => {
     }
 }
 
-const verifyRequireField = (data: Record<string, string | number>) => {
-    for (const [_, value] of Object.entries(data)) {
-        if (value === "" || value === null || value === undefined || ((Array.isArray(value)) && value?.length === 0)) {
-            return {
-                message: alertMessage(false, "Champs invalides", "Veuillez remplir tous les champs obligatoires", null),
-                status: false,
-            }
-        }
-    }
-    return { status: true };
-}
+// const verifyRequireField = (data: Record<string, string | number>) => {
+//     for (const [_, value] of Object.entries(data)) {
+//         if (value === "" || value === null || value === undefined || ((Array.isArray(value)) && value?.length === 0)) {
+//             return {
+//                 message: alertMessage(false, "Champs invalides", "Veuillez remplir tous les champs obligatoires", null),
+//                 status: false,
+//             }
+//         }
+//     }
+//     return { status: true };
+// }
 
 export const speak = (text: string) => {
     const synth = window.speechSynthesis;
@@ -63,29 +65,29 @@ export const speak = (text: string) => {
     }
 };
 
-function alertMessage(status: boolean, title: string, message: string, path: string | null) {
-    setTimeout(async () => {
-        return Swal.fire({
-            icon: status ? "success" : "error",
-            title,
-            text: message,
-        }).then((confirm) => {
-            if (confirm.isConfirmed && path !== null) {
-                window.location.href = `${path}`;
-            }
-        });
-    }, 1000)
-}
+// function alertMessage(status: boolean, title: string, message: string, path: string | null) {
+//     setTimeout(async () => {
+//         return Swal.fire({
+//             icon: status ? "success" : "error",
+//             title,
+//             text: message,
+//         }).then((confirm) => {
+//             if (confirm.isConfirmed && path !== null) {
+//                 window.location.href = `${path}`;
+//             }
+//         });
+//     }, 1000)
+// }
 
 function navigateBetweenMonths(array: MonthData[], monthIndice: number) {
     const filterDatasByCurrentmonth = array.filter((data: { monthIndice: number }) => data.monthIndice === monthIndice);
     return filterDatasByCurrentmonth;
 }
 
-const filterDataOfAdministrationSection = (array: MonthData[], input: string, monthIndice: number, getAdminEnterpriseId: number) => {
-    const datas = array.filter((data: { monthIndice: number, EnterpriseId: number, User: { lastname: string, firstname: string } }) => data.monthIndice === monthIndice && data.EnterpriseId === getAdminEnterpriseId && (data.User?.firstname.toLowerCase()?.includes(input.toLowerCase())) || data.User?.lastname?.toLowerCase().includes(input.toLowerCase()));
-    return datas;
-}
+// const filterDataOfAdministrationSection = (array: MonthData[], input: string, monthIndice: number, getAdminEnterpriseId: number) => {
+//     const datas = array.filter((data: { monthIndice: number, EnterpriseId: number, User: { lastname: string, firstname: string } }) => data.monthIndice === monthIndice && data.EnterpriseId === getAdminEnterpriseId && (data.User?.firstname.toLowerCase()?.includes(input.toLowerCase())) || data.User?.lastname?.toLowerCase().includes(input.toLowerCase()));
+//     return datas;
+// }
 
 const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
@@ -102,6 +104,7 @@ export function dateFormat(date: string) {
     if (!date) return;
     return new Date(date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })
 }
+
 export class Api {
     async getOne<T>(url: string, methodName: string, id: string | number): Promise<T> {
         try {
@@ -299,12 +302,12 @@ export class Api {
 const API = new Api();
 
 export const providers = {
-    alertMessage,
+    // alertMessage,
     API,
     navigateBetweenMonths,
     daysOfWeek,
-    filterDataOfAdministrationSection,
-    verifyRequireField,
+    // filterDataOfAdministrationSection,
+    // verifyRequireField,
     APIUrl,
     ImageUrl,
     reduceLengthOfText

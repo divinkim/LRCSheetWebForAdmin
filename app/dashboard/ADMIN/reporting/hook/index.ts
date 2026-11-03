@@ -6,6 +6,7 @@ import { providers } from "@/index";
 import HookComponentModal from "@/components/ComponentModal";
 import { SidebarHook } from "@/components/Layouts/sidebar/hook";
 import { Report, ReportResponseDto, ReportsResponseDto } from "@/types/global";
+import { useToast } from "@/components/toast";
 
 // --- TYPES ---
 export type UserInfo = {
@@ -68,13 +69,13 @@ export function RepportsListHook() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [adminReportCommentArray, setAdminReportCommentArray] = useState<Report[]>([]);
   const [loader, setLoader] = useState<boolean>(true);
-
+  const toast = useToast()
   // --- API HANDLERS ---
   const getAdminResponse = useCallback(async () => {
     try {
       const comments = await providers.API.getAll<ReportsResponseDto>(
         providers.APIUrl,
-        "repports",
+        "reports/comments",
         null
       );
       setAdminReportCommentArray(comments.data || []);
@@ -154,18 +155,15 @@ export function RepportsListHook() {
 
       if (!content.trim()) {
         setIsLoading(false);
-        return providers.alertMessage(
-          false,
-          "Champ invalide",
+        toast.error("Champ invalide",
           "Veuillez saisir un commentaire",
-          null
-        );
+        )
       }
 
       try {
-        const response = await providers.API.post(
+        await providers.API.post(
           providers.APIUrl,
-          "reports/admin",
+          "reports/comments",
           null,
           {
             UserId: userId,

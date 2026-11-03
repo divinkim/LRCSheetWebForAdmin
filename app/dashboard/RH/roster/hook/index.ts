@@ -40,18 +40,12 @@ export default function useGetUsersInPlanningOfWeek() {
             let EnterpriseId = (session?.user as any)?.EnterpriseId
 
             const res = await providers.API.getAll<UsersPlanningsResponseDto>(providers.APIUrl, "users-plannings", null);
-        
-            if (Number(EnterpriseId) === 1) {
-                const filterWeekDaysPlanningsByEnterpriseId = res.data.filter((item: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(item.EnterpriseId))
-                setWeekDaysPlannings(filterWeekDaysPlanningsByEnterpriseId);
-                setWeekDaysPlanningsSaved(filterWeekDaysPlanningsByEnterpriseId);
-                return;
-            }
-            const filterWeekDaysPlanningsByEnterpriseId = res.data.filter((item: { EnterpriseId: number }) => item.EnterpriseId === (Number(EnterpriseId)))
+
+            const filterWeekDaysPlanningsByEnterpriseId = res.data.filter(item => item.Enterprise.MainEnterpriseId === Number(EnterpriseId))
             setWeekDaysPlannings(filterWeekDaysPlanningsByEnterpriseId);
             setWeekDaysPlanningsSaved(filterWeekDaysPlanningsByEnterpriseId);
         })();
-    }, []);
+    }, [session]);
 
     // 🔎 Filtrer par recherche
     function onSearch(value: string) {

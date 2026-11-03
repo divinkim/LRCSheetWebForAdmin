@@ -137,7 +137,7 @@ export default function useAddUserInPlanningOfWeek() {
             setIsLoading(true);
 
             await providers.API.update(
-                "https://vps118934.serveur-vps.net:4001",
+                providers.APIUrl,
                 "users-plannings",
                 null,
                 datas,

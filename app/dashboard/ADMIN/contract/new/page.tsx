@@ -24,21 +24,38 @@ export default function AddContractType() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* En-tête / Fil d'Ariane */}
         {formElements.map((element, idx) => (
-          <div key={`header-${idx}`} className="space-y-4">
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+          <div key={idx} className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-800 dark:text-gray-100">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Ajouter un nouveau contrat
                 </h1>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                  Dashboard / ADMINISTRATION / Ajouter un contrat
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Renseignez les détails ci-dessous pour créer une nouvelle fiche de contrat.
                 </p>
               </div>
             </div>
-            <hr className="border-gray-200 dark:border-gray-800" />
+
+            {/* Action Links Bar */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {element.addOrEditContract.navigationsLinks.map((navItem, index) => {
+                // Masquer selon le rôle si nécessaire
+                if (index === 1 && adminRole !== "Super_Admin_Platform") return null;
+
+                return (
+                  <Link
+                    key={index}
+                    href={navItem.href}
+                    className="inline-flex items-center gap-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white active:scale-95"
+                  >
+                    <FontAwesomeIcon icon={navItem.icon} className="text-blue-600 dark:text-blue-400 text-sm" />
+                    <span>{navItem.title}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         ))}
-
         {/* Carte Principale du Formulaire */}
         <div className="mx-auto w-full max-w-4xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none sm:p-8">
           {/* Titre de la section du formulaire */}
@@ -48,7 +65,7 @@ export default function AddContractType() {
               className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm"
             >
               <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                {element.addContractUser.titleFormContract}
+                {element.addOrEditContract.titleFormContract}
               </h2>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 <span className="text-red-500">*</span> Champs obligatoires
@@ -74,7 +91,7 @@ export default function AddContractType() {
           {/* Grille de champs du formulaire */}
           <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
             {formElements.map((element) =>
-              element.addContractUser.inputs.map((e, index) => {
+              element.addOrEditContract.inputs.map((e, index) => {
                 const isHidden =
                   e.alias === "adminService" &&
                   ["Super-Admin", "Supervisor-Admin", "client", null].includes(
@@ -93,7 +110,7 @@ export default function AddContractType() {
                   >
                     <label
                       htmlFor={e.alias}
-                      className="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                      className="text-xs font-semibold text-gray-700 dark:text-gray-300"
                     >
                       {e.requireField && (
                         <span className="mr-1 text-red-500">*</span>
@@ -153,24 +170,6 @@ export default function AddContractType() {
                         value={inputs[e.alias] ?? ""}
                         onChange={(v) => {
                           const field = e.alias;
-                          if (e.alias === "status") {
-                            const value = v.target.value;
-                            const fieldValue = {
-                              ...inputs,
-                              [e.alias]:
-                                value === "Actif"
-                                  ? true
-                                  : value === "Inactif"
-                                    ? false
-                                    : null,
-                            };
-                            setInputs(fieldValue);
-                            localStorage.setItem(
-                              "inputMemoryOfAddContractPage",
-                              JSON.stringify(fieldValue)
-                            );
-                            return;
-                          }
                           const fieldValue = {
                             ...inputs,
                             [field]:

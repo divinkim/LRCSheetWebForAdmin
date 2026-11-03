@@ -1,0 +1,192 @@
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useEffect, useState, useMemo } from "react";
+import { providers } from "@/index";
+import { EnterprisesResponseDto, PostsResponseDto, SalaryResponseDto } from "@/types/global";
+import { useToast } from "@/components/toast";
+
+type InputsValue = {
+  grossSalary: string | number | null;
+  dailySalary: string | number | null;
+  netSalary: string | number | null;
+  EnterpriseId: number | null;
+  PostId: number | null;
+  Post: {
+    title: string;
+  };
+  Enterprise: {
+    name: string;
+  };
+  [key: string]: any;
+};
+
+const initialInputState: InputsValue = {
+  grossSalary: null,
+  dailySalary: null,
+  netSalary: null,
+  EnterpriseId: null,
+  PostId: null,
+  Post: { title: "" },
+  Enterprise: { name: "" },
+};
+
+export default function useAddSalary() {
+  const { data: session } = useSession();
+  const toast = useToast();
+
+  const [getEnterprises, setEnterprises] = useState<any[]>([]);
+  const [getPosts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [enterpriseIdOfAdmin, setEnterpriseIdOfAdmin] = useState<string | number | null>(null);
+
+  const [inputs, setInputs] = useState<InputsValue>(initialInputState);
+
+  // 1. Restauration de la mémoire du formulaire depuis LocalStorage au montage
+  useEffect(() => {
+    const savedInputs = localStorage.getItem("inputMemoryOfEditSalaryPage");
+    if (savedInputs) {
+      try {
+        setInputs(JSON.parse(savedInputs));
+      } catch (error) {
+        console.error("Erreur lors du parsing des inputs depuis le localStorage", error);
+      }
+    }
+  }, []);
+
+  // 2. Chargement des entreprises et récupération des rôles depuis la session
+  useEffect(() => {
+    const fetchEnterprises = async () => {
+      const AdminRole = (session?.user as any)?.adminRole ?? null;
+      const AdminEnterpriseId = (session?.user as any)?.EnterpriseId ?? null;
+
+      try {
+        const enterprisesData = await providers.API.getAll<EnterprisesResponseDto>(
+          providers.APIUrl,
+          "enterprises",
+          null
+        );
+
+        if (enterprisesData && Array.isArray(enterprisesData.data)) {
+          if (AdminRole !== "Super_Admin_Platform") {
+            const filtered = enterprisesData.data.filter(
+              (item) => item.id === Number(AdminEnterpriseId) || item.MainEnterpriseId === Number(AdminEnterpriseId)
+            );
+            setEnterprises(filtered);
+          } else {
+            setEnterprises(enterprisesData.data);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des entreprises:", error);
+      }
+
+      setAdminRole(AdminRole);
+      setEnterpriseIdOfAdmin(AdminEnterpriseId);
+    };
+
+    fetchEnterprises();
+  }, [session]);
+  useEffect(() => {
+    if (!inputs.EnterpriseId) {
+      setPosts([]);
+      return;
+    }
+
+    const fetchPosts = async () => {
+      try {
+        const postsData = await providers.API.getAll<PostsResponseDto>(
+          providers.APIUrl,
+          "posts",
+          null
+        );
+        if (postsData && Array.isArray(postsData.data)) {
+          const filteredPosts = postsData.data.filter(
+            (post) => post.EnterpriseId === Number(inputs.EnterpriseId)
+          );
+          setPosts(filteredPosts);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des postes:", error);
+      }
+    };
+
+    fetchPosts();
+  }, [inputs.EnterpriseId]);
+
+  // Options dynamiques pour les champs select
+  const dynamicArrayData = useMemo(
+    () => [
+      {
+        alias: "EnterpriseId",
+        arrayData: getEnterprises
+          .filter((item) => item?.id && item?.name)
+          .map((item) => ({ value: item.id, title: item.name })),
+      },
+      {
+        alias: "PostId",
+        arrayData: getPosts
+          .filter((item) => item?.id && item?.title)
+          .map((item) => ({ value: item.id, title: item.title })),
+      },
+    ],
+    [getEnterprises, getPosts]
+  );
+
+  const staticArrayData = [
+    {
+      alias: "",
+      arrayData: [{ title: "", value: "" }],
+    },
+  ];
+
+  const handleSubmit = async () => {
+    const requireFields = {
+      "Salaire brut": inputs.grossSalary,
+      // "Salaire journalier": inputs.dailySalary,
+      "Entreprise": inputs.EnterpriseId,
+      "Poste": inputs.PostId,
+    };
+
+    for (const [key, value] of Object.entries(requireFields)) {
+      if (!value) {
+        return toast.info("Champs invalides", `Le champ ${key} est obligatoire`);
+      }
+    }
+
+    setIsLoading(true);
+
+    try {
+      await providers.API.post<SalaryResponseDto>(
+        providers.APIUrl,
+        "salaries",
+        null,
+        {
+          ...inputs,
+          netSalary: inputs.grossSalary,
+        }
+      );
+      localStorage.removeItem("inputMemoryOfEditSalaryPage");
+      toast.success("Félicitations", "Nouveau salaire enregistré avec succès");
+    } catch (error) {
+      console.error("Erreur lors de la soumission du salaire:", error);
+      toast.error(
+        "Erreur",
+        error instanceof Error ? error.message : "Erreur au serveur lors de la connexion"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    dynamicArrayData,
+    staticArrayData,
+    handleSubmit,
+    inputs,
+    setInputs,
+    isLoading,
+    adminRole,
+  };
+}

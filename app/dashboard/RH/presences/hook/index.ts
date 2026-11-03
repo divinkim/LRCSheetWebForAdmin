@@ -1,42 +1,62 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { AttendancesResponseDto, UsersResponseDto, User, AttendanceDto, AttendanceListDto } from "@/types/global";
 
-type PresencesDatas = {
-    arrivalTime: string | null;
-    departureTime: string | null;
-    breakStartTime: string | null;
-    resumeTime: string | null;
-    UserId: number;
-    mounth: number | null;
-    day: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
-    status: string | null;
-    EnterpriseId: number;
-    SalaryId: number;
-    PlanningId: number;
-    User: {
-        firstname: string | null;
-        lastname: string | null;
-        photo: string | null;
-    };
-    Planning: {
-        startTime: string | null;
-        breakingStartTime: string | null;
-        resumeEndTime: string | null;
-        endTime: string | null;
-    };
-    Enterprise: {
-        name: string | null;
-        logo: string | null;
-        MainEnterpriseId?: number | null;
-    };
+// ==========================================
+// TRI : date + heure, du plus récent au plus ancien
+// ==========================================
+// Une présence est positionnée dans le temps grâce à :
+//  - arrivalTime : l'heure d'arrivée (ex: "08:10", "08:10:00" ou datetime ISO complet)
+//  - createdAt   : fournit le JOUR de la présence quand arrivalTime ne contient que l'heure
+// Si arrivalTime est vide (ex: absent), on se rabat sur createdAt.
+
+const parseTime = (value?: string | null) => {
+    if (!value) return null;
+    const m = String(value).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    return { h: +m[1], min: +m[2], s: m[3] ? +m[3] : 0 };
 };
 
+// Transforme une présence en timestamp (ms)
+const getAttendanceTimestamp = (item: AttendanceListDto): number => {
+    const arrival = item?.arrivalTime ? String(item.arrivalTime).trim() : "";
+    const createdMs = Date.parse(item?.createdAt ?? "");
+
+    // Cas 1 : arrivalTime est déjà un datetime complet (ex: 2026-11-02T08:10:00Z)
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{1,2}:\d{2}/.test(arrival)) {
+        const full = Date.parse(arrival.replace(" ", "T"));
+        if (!isNaN(full)) return full;
+    }
+
+    // Cas 2 : arrivalTime ne contient que l'heure -> on prend le jour de createdAt
+    const time = parseTime(arrival);
+    if (time && !isNaN(createdMs)) {
+        const day = new Date(createdMs);
+        return new Date(
+            day.getFullYear(),
+            day.getMonth(),
+            day.getDate(),
+            time.h,
+            time.min,
+            time.s
+        ).getTime();
+    }
+
+    // Cas 3 : pas d'heure d'arrivée exploitable -> createdAt seul
+    return isNaN(createdMs) ? 0 : createdMs;
+};
+
+// Tri décroissant : 08:10 passe avant 08:05, et les dates récentes avant les anciennes
+const sortByMostRecent = (list: AttendanceListDto[]): AttendanceListDto[] =>
+    [...list].sort((a, b) => {
+        const diff = getAttendanceTimestamp(b) - getAttendanceTimestamp(a);
+        if (diff !== 0) return diff;
+        // Égalité parfaite : l'enregistrement le plus récent (id le plus grand) d'abord
+        return (b.id ?? 0) - (a.id ?? 0);
+    });
 
 // --- HOOK ---
 export function PresencesListHookModal() {
@@ -60,6 +80,7 @@ export function PresencesListHookModal() {
             setAdminRole(user?.adminRole || "");
             setMainEnterpriseId(user?.MainEnterpriseId ? Number(user.MainEnterpriseId) : null);
             setEnterpriseId(user?.EnterpriseId ? Number(user.EnterpriseId) : null);
+            localStorage.removeItem("prencencesData")
         }
     }, [session, status]);
 
@@ -94,7 +115,7 @@ export function PresencesListHookModal() {
                 setUsersCloned(filteredUsers);
 
                 // Filtrage des Présences selon le Rôle
-                let filteredAttendances:AttendanceListDto[] = rawAttendances.data;
+                let filteredAttendances: AttendanceListDto[] = rawAttendances.data;
                 if (adminRole === "Super_Admin_Platform") {
                     filteredAttendances = rawAttendances.data;
                 } else if (adminRole === "Super_Admin_Enterprise") {
@@ -107,8 +128,11 @@ export function PresencesListHookModal() {
                     );
                 }
 
-                setPresencesList(filteredAttendances);
-                setPresencesListCloned(filteredAttendances);
+                // Tri : dates et heures les plus récentes en premier
+                const sortedAttendances = sortByMostRecent(filteredAttendances);
+
+                setPresencesList(sortedAttendances);
+                setPresencesListCloned(sortedAttendances);
             } catch (error) {
                 console.error("Erreur lors de la récupération des données :", error);
             } finally {
@@ -118,6 +142,13 @@ export function PresencesListHookModal() {
 
         fetchData();
     }, [adminRole, mainEnterpriseId, enterpriseId]);
+
+    // Garantit l'ordre décroissant, même si un composant modifie la liste
+    // via setPresencesListCloned (le tri est réappliqué à chaque changement)
+    const sortedPresencesListCloned = useMemo(
+        () => sortByMostRecent(presencesListCloned),
+        [presencesListCloned]
+    );
 
     // Recherche d'un utilisateur par prénom/nom
     const onSearch = (value: string) => {
@@ -152,7 +183,7 @@ export function PresencesListHookModal() {
     };
 
     return {
-        presencesListCloned,
+        presencesListCloned: sortedPresencesListCloned,
         adminRole,
         onSearch,
         onSelectAllUser,

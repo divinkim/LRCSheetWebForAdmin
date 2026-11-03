@@ -238,17 +238,17 @@ export const formElements = [
                         status: true
                     },
                 },
-                {
-                    label: "Planning",
-                    placeholder: "Sélectionnez un planning...",
-                    requireField: false,
-                    type: "number",
-                    selectedInput: true,
-                    dynamicOptions: {
-                        status: true
-                    },
-                    alias: "PlanningId"
-                },
+                // {
+                //     label: "Planning",
+                //     placeholder: "Sélectionnez un planning...",
+                //     requireField: false,
+                //     type: "number",
+                //     selectedInput: true,
+                //     dynamicOptions: {
+                //         status: true
+                //     },
+                //     alias: "PlanningId"
+                // },
                 {
                     label: "Type de contrat",
                     placeholder: "Sélectionnez un type de contrat...",
@@ -315,6 +315,17 @@ export const formElements = [
                         status: true
                     },
                     alias: "QuarterId"
+                },
+                {
+                    label: "Nombre de jour de travail / mois",
+                    placeholder: "Saisissezle nombre de jour",
+                    requireField: true,
+                    type: "number",
+                    selectedInput: false,
+                    // dynamicOptions: {
+                    //     status: true
+                    // },
+                    alias: "working_days_count"
                 },
             ],
         },
@@ -426,7 +437,7 @@ export const formElements = [
                     alias: "longitude"
                 },
                 {
-                    label: "Forme légale",
+                    label: "Forme juridique",
                     placeholder: "Sélectionnez une forme légale",
                     requireField: true,
                     type: "text",
@@ -480,16 +491,36 @@ export const formElements = [
                         status: true
                     }
                 },
+
                 {
                     label: "Status d'abonnement",
                     placeholder: "Sélectionner le status...",
-                    requireField: false,
+                    requireField: true,
                     type: "text",
                     selectedInput: true,
                     alias: "subscriptionStatus",
                     dynamicOptions: {
                         status: false
                     }
+                },
+                {
+                    label: "Fréquence de paiement",
+                    placeholder: "Sélectionner une option...",
+                    requireField: true,
+                    type: "text",
+                    selectedInput: true,
+                    alias: "paymentFrequency",
+                    dynamicOptions: {
+                        status: false
+                    }
+                },
+                {
+                    label: "Date d'expiration d'abonnement",
+                    placeholder: "Renseignez une date",
+                    requireField: false,
+                    type: "date",
+                    selectedInput: false,
+                    alias: "subscriptionExpiresAt",
                 },
                 {
                     label: "Temps sur retard toléré",
@@ -615,18 +646,18 @@ export const formElements = [
         },
 
         //Formulaire du contrat
-        addContractUser: {
+        addOrEditContract: {
             navigationsLinks: [
 
-                {
-                    title: "Ajouter un contrat",
-                    href: "/dashboard/ADMIN/addContrat"
-
-                },
+                // {
+                //     title: "Ajouter un contrat",
+                //     href: "/dashboard/ADMIN/addContrat",
+                //     icon: faFileContract
+                // },
 
                 {
                     title: "Liste des contrats",
-                    href: "/dashboard/ADMIN/contractsList",
+                    href: "/dashboard/ADMIN/contract/list",
                     icon: faFileContract
                 }
 
@@ -709,7 +740,7 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Liste de départements",
-                    href: "/dashboard/ADMIN/departmentsList",
+                    href: "/dashboard/ADMIN/department/list",
                     icon: faBuilding
                 },
             ],
@@ -753,9 +784,6 @@ export const formElements = [
                 },
 
             ],
-
-
-
         },
 
         addOrUpdateSalary: {
@@ -787,14 +815,14 @@ export const formElements = [
                     selectedInput: false,
                     alias: "grossSalary"
                 },
-                {
-                    label: "Salaire journalier",
-                    placeholder: "Entrez un montant ex:100000...",
-                    requireField: true,
-                    type: "text",
-                    selectedInput: false,
-                    alias: "dailySalary"
-                },
+                // {
+                //     label: "Salaire journalier",
+                //     placeholder: "Entrez un montant ex:100000...",
+                //     requireField: true,
+                //     type: "text",
+                //     selectedInput: false,
+                //     alias: "dailySalary"
+                // },
                 // ---- Select Inputs ----
                 {
                     label: "Entreprise",
@@ -902,12 +930,12 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Ajouter un arrondissement",
-                    href: "/dashboard/OTHERS/addDistrict",
+                    href: "/dashboard/OTHERS/quarter/new",
                     icon: faMap
                 },
                 {
                     title: "Ajouter une ville",
-                    href: "/dashboard/OTHERS/addCity",
+                    href: "/dashboard/OTHERS/city/new",
                     icon: faMapLocationDot
                 },
             ],
@@ -969,12 +997,12 @@ export const formElements = [
             navigationLinks: [
                 {
                     title: "Ajouter un pays",
-                    href: "/dashboard/OTHERS/addCountry",
+                    href: "/dashboard/OTHERS/country/new",
                     icon: faMap
                 },
                 {
                     title: "Ajouter une ville",
-                    href: "/dashboard/OTHERS/addCity",
+                    href: "/dashboard/OTHERS/city/new",
                     icon: faMapLocation
                 },
             ],

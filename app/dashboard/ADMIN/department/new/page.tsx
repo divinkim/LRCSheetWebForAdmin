@@ -37,10 +37,10 @@ export default function AddDepartment() {
             </div>
 
             {/* Action Links Bar */}
-            {/* <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {element.addOrEditDepartment.navigationLinks.map((link, index) => {
                 // Masquer selon le rôle si nécessaire
-                if (index === 1 && adminRole !== "Super-Admin") return null;
+                if (adminRole !== "Super_Admin_Platform") return null;
 
                 return (
                   <Link
@@ -53,7 +53,7 @@ export default function AddDepartment() {
                   </Link>
                 );
               })}
-            </div> */}
+            </div>
           </div>
         ))}
 
@@ -111,7 +111,7 @@ export default function AddDepartment() {
                       key={e.alias || index}
                       className={cn("flex flex-col gap-2", e.textarea && "md:col-span-2")}
                     >
-                      <label htmlFor={e.alias} className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      <label htmlFor={e.alias} className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                         {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                         {e.label}
                       </label>

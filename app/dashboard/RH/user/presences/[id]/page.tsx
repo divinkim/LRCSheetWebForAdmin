@@ -15,8 +15,6 @@ import {
   faWallet,
   faCreditCard,
   faBuilding,
-  faChevronCircleDown,
-  faUser,
   faChevronDown,
   faCheck,
   faMagnifyingGlass,
@@ -24,6 +22,7 @@ import {
 import { providers } from "@/index";
 import { AttendanceListDto, AttendancesResponseDto, User, UserResponseDto } from "@/types/global";
 import useUserProfile from "./hook";
+
 interface CalendarEvent extends EventInput {
   extendedProps: {
     calendar: string;
@@ -83,320 +82,282 @@ const STATUS_DOT: Record<string, string> = {
 const PILL_FALLBACK = "bg-rose-500/10 text-rose-700 dark:text-rose-400";
 const DOT_FALLBACK = "bg-rose-500";
 
-const CalendarPage = () => {
-  const [loading, setLoading] = useState(true);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [data, setData] = useState({
-    firstname: "",
-    lastname: "",
-    dailySalary: "0",
-    netSalary: "0",
-    photo: "",
-    poste: "",
-    Enterprise: { name: "", logo: "", id: 0 },
-  });
-  const { users } = useUserProfile();
-  const [userId, setUserId] = useState(Number(window.location.href.split('/').pop()));
-  const [presences, setPresences] = useState<number>(0);
-  const [lates, setLates] = useState<number>(0);
-  const [absences, setAbsences] = useState<number>(0);
-  const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);
-  const [totalSalary, setTotalSalary] = useState<string>("0");
-  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+/* Rôles utilisateur (valeur de user.data.role) */
+const ROLE_LABELS: Record<string, string> = {
+  Super_Admin_Platform: "Super admin plateforme",
+  Super_Admin_Enterprise: "Super admin entreprise",
+  Admin_Enterprise: "Admin entreprise",
+  Employee: "Employé",
+};
 
-  const calendarRef = useRef<FullCalendar>(null);
+const ROLE_BADGE: Record<string, string> = {
+  Super_Admin_Platform: "border-[#c9a24b]/60 bg-[#c9a24b]/20 text-[#f0d894]",
+  Super_Admin_Enterprise: "border-violet-400/40 bg-violet-400/15 text-violet-200",
+  Admin_Enterprise: "border-sky-400/40 bg-sky-400/15 text-sky-200",
+  Employee: "border-white/20 bg-white/10 text-white/80",
+};
+const ROLE_BADGE_FALLBACK = "border-white/20 bg-white/10 text-white/80";
 
-  /* ------------------------------------------------------
-    Calculs des statistiques et du salaire
-  ------------------------------------------------------ */
+/* =========================================================
+   FONCTIONS UTILITAIRES
+========================================================= */
 
-  const calculateMonthStats = useCallback(
-    (attendanceData: any[], monthIndex: number, year: number, dailySalaryVal: number) => {
-      const monthlyAttendances = attendanceData.filter((item: { createdAt: string }) => {
-        if (!item.createdAt) return false;
-        const date = new Date(item.createdAt);
-        return date.getMonth() === monthIndex && date.getFullYear() === year;
-      });
+/** Salaire journalier — renvoie toujours un nombre fini (jamais NaN / Infinity). */
+function computeDailySalary(
+  netSalary: string | number | undefined | null,
+  workingDays: number
+): number {
+  const net = Number(netSalary);
+  const days = Number(workingDays);
+  if (!Number.isFinite(net) || !Number.isFinite(days) || net <= 0 || days <= 0) return 0;
+  return net / days;
+}
 
-      const presCount = monthlyAttendances.filter((a) => a.status === "A temps").length;
-      const latesCount = monthlyAttendances.filter((a) => a.status === "En retard").length;
-      const absCount = monthlyAttendances.filter((a) => a.status === "Absent").length;
+/** Garde uniquement HH:mm (accepte "HH:mm", "HH:mm:ss", ou chaîne vide). */
+function toHHmm(value?: string | null, fallback = ""): string {
+  if (!value) return fallback;
+  return value.slice(0, 5);
+}
 
-      setPresences(presCount);
-      setLates(latesCount);
-      setAbsences(absCount);
+function getDeductionPercent(
+  status: string,
+  arrivalTime: string,
+  departureTime: string,
+  startTime: string,
+  endTime: string,
+  monthIndex: number
+): number {
+  if (status === "Absent") return 100;
 
-      let totalSalaryCalculated = 0;
+  const arrival = toHHmm(arrivalTime);
+  const departure = toHHmm(departureTime);
+  const start = toHHmm(startTime, "00:00");
+  const end = toHHmm(endTime, "00:00");
 
-      for (const attendance of monthlyAttendances) {
-        const status = attendance.status || "";
-        const arrivalTime = attendance.arrivalTime || "";
-        const departureTime = attendance.departureTime || "";
-        const startTime = attendance?.Planning?.startTime?.split("T")[1]?.slice(0, 5) || "00:00";
-        const endTime = attendance?.Planning?.endTime?.split("T")[1]?.slice(0, 5) || "00:00";
+  const minutes = Number(arrival.split(":")[1] || 0);
+  const startHour = start.slice(0, 2);
+  const limit = `${startHour}:30`;
 
-        const result = getData(
-          arrivalTime,
-          departureTime,
-          startTime,
-          endTime,
-          status,
-          dailySalaryVal,
-          monthIndex
-        );
+  if (status === "En retard") {
+    if (arrival > limit) return 50;
+    if (minutes <= 15) return 10;
+    return 15;
+  }
 
-        totalSalaryCalculated += result.dailySalary;
-      }
+  if (monthIndex >= 4 && status === "A temps" && (!departure || departure < end)) {
+    return 10;
+  }
 
-      setTotalSalary(String(totalSalaryCalculated));
-    },
-    []
+  return 0;
+}
+
+function getData(
+  arrivalTime: string,
+  departureTime: string,
+  startTime: string,
+  endTime: string,
+  status: string,
+  dailySalary: number,
+  monthIndex: number
+) {
+  const safeSalary = Number.isFinite(dailySalary) ? dailySalary : 0;
+
+  const deductionPercent = getDeductionPercent(
+    status,
+    arrivalTime,
+    departureTime,
+    startTime,
+    endTime,
+    monthIndex
   );
 
-  /* ------------------------------------------------------
-     Chargement global des données (Profil + Événements)
-  ------------------------------------------------------ */
-  const fetchEvents = async (userId: number) => {
-    try {
-      setLoading(true);
+  const deductionAmount = Math.round((deductionPercent / 100) * safeSalary);
 
-      const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", userId);
-      const response = await providers.API.getAll<AttendancesResponseDto>(providers.APIUrl, "attendances/me", userId);
+  return {
+    deductionAmount,
+    deductionPercent,
+    dailySalary: safeSalary - deductionAmount,
+  };
+}
 
-      const userDailySalary = user.data.Salary?.dailySalary || "0";
+/* ------------------------------------------------------
+   Carte d'événement du calendrier
+------------------------------------------------------ */
 
-      setData({
-        firstname: user.data.firstname,
-        lastname: user.data.lastname,
-        dailySalary: userDailySalary,
-        netSalary: user.data.Salary?.netSalary || "0",
-        photo: user.data.photo,
-        poste: user.data.Post?.title || "",
-        Enterprise: {
-          name: user.data.Enterprise?.name || "",
-          logo: user.data.Enterprise?.logo || "",
-          id: user.data.EnterpriseId || 0,
-        },
-      });
+const renderEventContent = (eventInfo: any, currentMonth: number) => {
+  const props = eventInfo.event.extendedProps;
 
-      const attendanceList = response || [];
-      setAttendances(attendanceList.data);
+  const arrivalTime = props.arrivalTime || "";
+  const departureTime = props.departureTime || "";
+  const endTime = props.endTime || "";
+  const status = props.status || "";
+  const startTime = props.startTime || "";
+  const dailySalary = Number(props.dailySalary) || 0;
 
-      const formatted: CalendarEvent[] = attendanceList.data
-        .filter((item: any) => new Date(item.createdAt).getDay() !== 0)
-        .map((item: any) => {
-          const { id, arrivalTime, departureTime, createdAt, status, User, Salary, Planning } = item;
+  const result = getData(
+    arrivalTime,
+    departureTime,
+    startTime,
+    endTime,
+    status,
+    dailySalary,
+    currentMonth
+  );
 
-          const dateOnly = createdAt.split("T")[0];
-          const start = `${dateOnly}T${arrivalTime || "00:00:00"}`;
-          const end = `${dateOnly}T${departureTime || "00:00:00"}`;
+  const arrival = ["00:00", ""].includes(toHHmm(arrivalTime)) ? "--" : toHHmm(arrivalTime);
 
-          let calendarColor = "Primary";
-          if (status === "A temps") calendarColor = "Success";
-          else if (status === "En retard") calendarColor = "Warning";
-          else if (status === "Absent") calendarColor = "Danger";
-          const startTime = Planning?.startTime?.split("T")[1]?.slice(0, 5);
-          const endTime = Planning?.endTime?.split("T")[1]?.slice(0, 5);
-          return {
-            id: id.toString(),
-            start,
-            end,
-            allDay: false,
-            extendedProps: {
-              calendar: calendarColor,
-              name: `${User?.lastname?.toUpperCase()} ${User?.firstname}`,
-              status: status || "",
-              arrivalTime: arrivalTime || "",
-              departureTime: departureTime || "",
-              dailySalary: Salary?.dailySalary || userDailySalary,
-              startTime,
-              endTime,
-            },
-          };
-        });
+  const rows: [string, string][] = [
+    ["Arrivée", arrival],
+    ["Départ", toHHmm(departureTime) || "--"],
+    ["Début", toHHmm(startTime) || "--"],
+    ["Fin", toHHmm(endTime) || "--"],
+  ];
 
-      setEvents(formatted);
+  return (
+    <div className="w-full rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_4px_16px_-8px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#14244f]">
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          STATUS_PILL[status] ?? PILL_FALLBACK
+        }`}
+      >
+        <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${STATUS_DOT[status] ?? DOT_FALLBACK}`} />
+        {status}
+      </span>
 
-      const now = new Date();
-      calculateMonthStats(attendanceList.data, now.getMonth(), now.getFullYear(), Number(userDailySalary));
-    } catch (error) {
-      console.error("Erreur événements :", error);
-    } finally {
-      setLoading(false);
+      <dl className="mt-3 space-y-1.5 text-xs">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between">
+            <dt className="text-slate-400">{label}</dt>
+            <dd className="font-medium text-slate-800 dark:text-white">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {currentMonth >= 4 && (
+        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs dark:border-white/10">
+          <span className="font-semibold text-rose-600 dark:text-rose-400">
+            {result.deductionAmount.toLocaleString("fr-FR")} XAF
+            <span className="ml-1 font-normal text-slate-400">({result.deductionPercent}%)</span>
+          </span>
+        </div>
+      )}
+
+      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-[#0b1530] px-3 py-2 text-xs text-white">
+        <span className="text-white/60">Solde</span>
+        <span className="font-semibold text-[#e3c47a]">
+          {/* ✅ Solde après déduction */}
+          {result.dailySalary.toLocaleString("fr-FR")} XAF
+        </span>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   COMPOSANTS — définis au niveau du module (état stable)
+========================================================= */
+
+function UserAvatar({ user, className = "h-10 w-10" }: { user: User; className?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  const initials = `${user?.lastname?.[0] ?? ""}${user?.firstname?.[0] ?? ""}`.toUpperCase();
+
+  if (user?.photo && !failed) {
+    return (
+      <img
+        src={`${providers.ImageUrl}/${user.photo}`}
+        alt=""
+        onError={() => setFailed(true)}
+        className={`${className} shrink-0 rounded-full object-cover ring-2 ring-[#c9a24b]/50`}
+      />
+    );
+  }
+
+  return (
+    <div
+      aria-hidden
+      className={`${className} flex shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[#0b1530] ring-2 ring-[#c9a24b]/50`}
+      style={{ background: GOLD }}
+    >
+      {initials || "?"}
+    </div>
+  );
+}
+
+interface EmployeeSelectProps {
+  users: User[];
+  value: number;
+  onChange: (id: number) => void;
+}
+
+function EmployeeSelect({ users, value, onChange }: EmployeeSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const selected = users.find((u) => Number(u.id) === Number(value)) ?? users[0];
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      `${u.lastname} ${u.firstname} ${u.firstname} ${u.lastname}`.toLowerCase().includes(q)
+    );
+  }, [users, query]);
+
+  // Fermer au clic extérieur
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  // Focus sur la recherche à l'ouverture, reset à la fermeture
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+    setQuery("");
+  }, [open]);
+
+  useEffect(() => setActive(0), [query]);
+
+  // Garder l'élément actif visible pendant la navigation clavier
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [active, open]);
+
+  const choose = (user: User) => {
+    onChange(Number(user.id));
+    setOpen(false);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setOpen(false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => Math.min(i + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filtered[active]) choose(filtered[active]);
     }
   };
 
-  useEffect(() => {
-    (() => {
-      if (userId) fetchEvents(Number(userId));
-    })()
-  }, [calculateMonthStats, userId]);
-  console.log(userId)
-  /* ------------------------------------------------------
-    Skeleton (chargement)
-  ------------------------------------------------------ */
-  if (loading) {
-    const bar = "bg-slate-200 dark:bg-white/10";
-    return (
-      <div className="min-h-screen animate-pulse space-y-7 bg-[#f5f6fa] p-4 dark:bg-[#070e20] sm:p-6 lg:p-8">
-        <div className="overflow-hidden rounded-3xl bg-[#0b1530] px-8 py-10">
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex items-center gap-6">
-              <div className="h-32 w-32 rounded-full bg-white/10" />
-              <div className="space-y-3">
-                <div className="h-8 w-56 rounded-lg bg-white/10" />
-                <div className="h-4 w-32 rounded-lg bg-white/10" />
-                <div className="mt-5 flex gap-3">
-                  <div className="h-16 w-40 rounded-2xl bg-white/10" />
-                  <div className="h-16 w-40 rounded-2xl bg-white/10" />
-                </div>
-              </div>
-            </div>
-            <div className="h-20 w-56 rounded-2xl bg-white/10" />
-          </div>
-        </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className={`${CARD} h-32 p-6`}>
-              <div className={`h-3 w-20 rounded ${bar}`} />
-              <div className={`mt-4 h-9 w-16 rounded ${bar}`} />
-            </div>
-          ))}
-        </div>
-        <div className={`${CARD} h-[560px] p-6`}>
-          <div className={`h-10 w-48 rounded-full ${bar}`} />
-          <div className="mt-6 h-[440px] w-full rounded-2xl bg-slate-100 dark:bg-white/5" />
-        </div>
-      </div>
-    );
-  }
+  if (!selected) return null;
 
-  const kpis = [
-    {
-      label: "Présences",
-      value: presences,
-      icon: faUserCheck,
-      tone: "text-emerald-600 bg-emerald-500/10 ring-emerald-500/25 dark:text-emerald-400",
-      valueTone: "text-emerald-700 dark:text-emerald-400",
-    },
-    {
-      label: "Retards",
-      value: lates,
-      icon: faClock,
-      tone: "text-amber-600 bg-amber-500/10 ring-amber-500/25 dark:text-amber-400",
-      valueTone: "text-amber-700 dark:text-amber-400",
-    },
-    {
-      label: "Absences",
-      value: absences,
-      icon: faUserXmark,
-      tone: "text-rose-600 bg-rose-500/10 ring-rose-500/25 dark:text-rose-400",
-      valueTone: "text-rose-700 dark:text-rose-400",
-    },
-  ];
-  
-  function UserAvatar({ user, className = "h-10 w-10" }: {user:User, className:string}) {
-    const [failed, setFailed] = useState(false);
-
-    const initials = `${user?.lastname?.[0] ?? ""}${user?.firstname?.[0] ?? ""}`.toUpperCase();
-
-    if (user?.photo && !failed) {
-      return (
-        <img
-          src={`${providers.ImageUrl}/${user.photo}`}
-          alt=""
-          onError={() => setFailed(true)}
-          className={`${className} shrink-0 rounded-full object-cover ring-2 ring-[#c9a24b]/50`}
-        />
-      );
-    }
-
-    return (
-      <div
-        aria-hidden
-        className={`${className} flex shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[#0b1530] ring-2 ring-[#c9a24b]/50`}
-        style={{ background: GOLD }}
-      >
-        {initials || "?"}
-      </div>
-    );
-  }
-
-  interface EmployeeSelectProps {
-    users: User[];
-    value: number;
-    onChange: (id: number) => void;
-  }
-
-  function EmployeeSelect({ users, value, onChange }: EmployeeSelectProps) {
-    const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState("");
-    const [active, setActive] = useState(0);
-
-    const rootRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const listRef = useRef<HTMLUListElement>(null);
-
-    const selected = users.find((u) => Number(u.id) === Number(value)) ?? users[0];
-
-    const filtered = useMemo(() => {
-      const q = query.trim().toLowerCase();
-      if (!q) return users;
-      return users.filter((u) =>
-        `${u.lastname} ${u.firstname} ${u.firstname} ${u.lastname}`.toLowerCase().includes(q)
-      );
-    }, [users, query]);
-
-    // Fermer au clic extérieur
-    useEffect(() => {
-      const onDown = (e: MouseEvent) => {
-        if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-      };
-      document.addEventListener("mousedown", onDown);
-      return () => document.removeEventListener("mousedown", onDown);
-    }, []);
-
-    // Focus sur la recherche à l'ouverture, reset à la fermeture
-    useEffect(() => {
-      if (open) {
-        const t = setTimeout(() => inputRef.current?.focus(), 0);
-        return () => clearTimeout(t);
-      }
-      setQuery("");
-    }, [open]);
-
-    useEffect(() => setActive(0), [query]);
-
-    // Garder l'élément actif visible pendant la navigation clavier
-    useEffect(() => {
-      if (!open) return;
-      listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
-    }, [active, open]);
-
-    const choose = (user: User) => {
-      onChange(Number(user.id));
-      setOpen(false);
-    };
-
-    const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActive((i) => Math.min(i + 1, filtered.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActive((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        if (filtered[active]) choose(filtered[active]);
-      }
-    };
-
-    if (!selected) return null;
-
-     return (
+  return (
     <div ref={rootRef} className="relative w-full">
       {/* Bouton */}
       <button
@@ -468,8 +429,6 @@ const CalendarPage = () => {
                     i === active ? "bg-white/10" : ""
                   } ${isSelected ? "bg-[#c9a24b]/15" : ""}`}
                 >
-                  {/* <UserAvatar user={user} className="" /> */}
-
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">
                     {user.lastname} {user.firstname}
                   </span>
@@ -485,7 +444,245 @@ const CalendarPage = () => {
       )}
     </div>
   );
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+const CalendarPage = () => {
+  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [data, setData] = useState({
+    firstname: "",
+    lastname: "",
+    dailySalary: "0",
+    workingDaysCount: 0,
+    netSalary: "0",
+    photo: "",
+    poste: "",
+    role: "",
+    Enterprise: { name: "", logo: "", id: 0 },
+  });
+  const { users } = useUserProfile();
+  const [userId, setUserId] = useState<number>();
+  const [presences, setPresences] = useState<number>(0);
+  const [lates, setLates] = useState<number>(0);
+  const [absences, setAbsences] = useState<number>(0);
+  const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);
+  const [totalSalary, setTotalSalary] = useState<string>("0");
+  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+
+  const calendarRef = useRef<FullCalendar>(null);
+
+  /* ------------------------------------------------------
+    Calculs des statistiques et du salaire
+  ------------------------------------------------------ */
+
+  const calculateMonthStats = useCallback(
+    (attendanceData: any[], monthIndex: number, year: number, dailySalaryVal: number) => {
+      const monthlyAttendances = attendanceData.filter((item: { createdAt: string }) => {
+        if (!item.createdAt) return false;
+        const date = new Date(item.createdAt);
+        return date.getMonth() === monthIndex && date.getFullYear() === year;
+      });
+
+      const presCount = monthlyAttendances.filter((a) => a.status === "A temps").length;
+      const latesCount = monthlyAttendances.filter((a) => a.status === "En retard").length;
+      const absCount = monthlyAttendances.filter((a) => a.status === "Absent").length;
+
+      setPresences(presCount);
+      setLates(latesCount);
+      setAbsences(absCount);
+
+      let totalSalaryCalculated = 0;
+
+      for (const attendance of monthlyAttendances) {
+        const status = attendance.status || "";
+        const arrivalTime = attendance.arrivalTime || "";
+        const departureTime = attendance.departureTime || "";
+        const startTime = attendance?.Planning?.startTime?.split("T")[1]?.slice(0, 5) || "00:00";
+        const endTime = attendance?.Planning?.endTime?.split("T")[1]?.slice(0, 5) || "00:00";
+
+        const result = getData(
+          arrivalTime,
+          departureTime,
+          startTime,
+          endTime,
+          status,
+          dailySalaryVal,
+          monthIndex
+        );
+
+        totalSalaryCalculated += result.dailySalary;
+      }
+
+      setTotalSalary(String(totalSalaryCalculated));
+    },
+    []
+  );
+
+  /* ------------------------------------------------------
+     Chargement global des données (Profil + Événements)
+  ------------------------------------------------------ */
+  const fetchEvents = async (id: number) => {
+    try {
+      setLoading(true);
+
+      const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", id);
+      const response = await providers.API.getAll<AttendancesResponseDto>(
+        providers.APIUrl,
+        "attendances/me",
+        id
+      );
+
+      const userDailySalary = computeDailySalary(
+        user?.data?.Salary?.netSalary,
+        Number(user?.data?.working_days_count)
+      );
+
+      setData({
+        firstname: user.data.firstname,
+        lastname: user.data.lastname,
+        dailySalary: String(userDailySalary),
+        workingDaysCount: Number(user.data.working_days_count) || 0,
+        netSalary: user.data.Salary?.netSalary || "0",
+        photo: user.data.photo,
+        poste: user.data.Post?.title || "",
+        role: user.data.role || "",
+        Enterprise: {
+          name: user.data.Enterprise?.name || "",
+          logo: user.data.Enterprise?.logo || "",
+          id: user.data.EnterpriseId || 0,
+        },
+      });
+
+      const attendanceList = response?.data || [];
+      setAttendances(attendanceList);
+
+      const formatted: CalendarEvent[] = attendanceList.map((item: any) => {
+          const { id: attendanceId, arrivalTime, departureTime, createdAt, status, User, Planning } =
+            item;
+
+          const dateOnly = createdAt.split("T")[0];
+          const start = `${dateOnly}T${arrivalTime || "00:00:00"}`;
+          const end = `${dateOnly}T${departureTime || "00:00:00"}`;
+
+          let calendarColor = "Primary";
+          if (status === "A temps") calendarColor = "Success";
+          else if (status === "En retard") calendarColor = "Warning";
+          else if (status === "Absent") calendarColor = "Danger";
+
+          const startTime = Planning?.startTime?.split("T")[1]?.slice(0, 5);
+          const endTime = Planning?.endTime?.split("T")[1]?.slice(0, 5);
+
+          return {
+            id: attendanceId.toString(),
+            start,
+            end,
+            allDay: false,
+            extendedProps: {
+              calendar: calendarColor,
+              name: `${User?.lastname?.toUpperCase() ?? ""} ${User?.firstname ?? ""}`,
+              status: status || "",
+              arrivalTime: arrivalTime || "",
+              departureTime: departureTime || "",
+              // Le salaire journalier est celui de l'utilisateur sélectionné
+              dailySalary: String(userDailySalary),
+              startTime,
+              endTime,
+            },
+          };
+        });
+
+      setEvents(formatted);
+
+      // Le calendrier est remonté après le chargement : il s'affiche sur le mois courant.
+      const now = new Date();
+      setCurrentMonth(now.getMonth());
+      setCurrentYear(now.getFullYear());
+      calculateMonthStats(attendanceList, now.getMonth(), now.getFullYear(), userDailySalary);
+    } catch (error) {
+      console.error("Erreur événements :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const idFromUrl = window.location.href.split("/").pop();
+    setUserId(Number(idFromUrl));
+  }, []);
+
+  useEffect(() => {
+    if (userId) fetchEvents(Number(userId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculateMonthStats, userId]);
+
+  /* ------------------------------------------------------
+    Skeleton (chargement)
+  ------------------------------------------------------ */
+  if (loading) {
+    const bar = "bg-slate-200 dark:bg-white/10";
+    return (
+      <div className="min-h-screen animate-pulse space-y-7 bg-[#f5f6fa] p-4 dark:bg-[#070e20] sm:p-6 lg:p-8">
+        <div className="overflow-hidden rounded-3xl bg-[#0b1530] px-8 py-10">
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-6">
+              <div className="h-32 w-32 rounded-full bg-white/10" />
+              <div className="space-y-3">
+                <div className="h-8 w-56 rounded-lg bg-white/10" />
+                <div className="h-4 w-32 rounded-lg bg-white/10" />
+                <div className="mt-5 flex gap-3">
+                  <div className="h-16 w-40 rounded-2xl bg-white/10" />
+                  <div className="h-16 w-40 rounded-2xl bg-white/10" />
+                </div>
+              </div>
+            </div>
+            <div className="h-20 w-56 rounded-2xl bg-white/10" />
+          </div>
+        </div>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={`${CARD} h-32 p-6`}>
+              <div className={`h-3 w-20 rounded ${bar}`} />
+              <div className={`mt-4 h-9 w-16 rounded ${bar}`} />
+            </div>
+          ))}
+        </div>
+        <div className={`${CARD} h-[560px] p-6`}>
+          <div className={`h-10 w-48 rounded-full ${bar}`} />
+          <div className="mt-6 h-[440px] w-full rounded-2xl bg-slate-100 dark:bg-white/5" />
+        </div>
+      </div>
+    );
   }
+
+  const kpis = [
+    {
+      label: "Présences",
+      value: presences,
+      icon: faUserCheck,
+      tone: "text-emerald-600 bg-emerald-500/10 ring-emerald-500/25 dark:text-emerald-400",
+      valueTone: "text-emerald-700 dark:text-emerald-400",
+    },
+    {
+      label: "Retards",
+      value: lates,
+      icon: faClock,
+      tone: "text-amber-600 bg-amber-500/10 ring-amber-500/25 dark:text-amber-400",
+      valueTone: "text-amber-700 dark:text-amber-400",
+    },
+    {
+      label: "Absences",
+      value: absences,
+      icon: faUserXmark,
+      tone: "text-rose-600 bg-rose-500/10 ring-rose-500/25 dark:text-rose-400",
+      valueTone: "text-rose-700 dark:text-rose-400",
+    },
+  ];
+
   /* ------------------------------------------------------
      Rendu
   ------------------------------------------------------ */
@@ -536,20 +733,42 @@ const CalendarPage = () => {
                   {data.lastname} {data.firstname}
                 </h1>
 
-                <p className="mt-1.5 text-sm text-[#e3c47a]">{data.poste}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-[#e3c47a]">{data.poste}</p>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {data.role && (
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                        ROLE_BADGE[data.role] ?? ROLE_BADGE_FALLBACK
+                      }`}
+                    >
+                      {ROLE_LABELS[data.role] ?? data.role.replace(/_/g, " ")}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3.5 backdrop-blur">
+                    <p className="text-xs text-white/55">Jours travaillés par mois</p>
+                    <p className="mt-1 text-lg font-semibold">
+                      {data.workingDaysCount}{" "}
+                      <span className="text-sm font-normal text-white/60">
+                        {data.workingDaysCount > 1 ? "jours" : "jour"}
+                      </span>
+                    </p>
+                  </div>
+
                   <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3.5 backdrop-blur">
                     <p className="text-xs text-white/55">Salaire journalier</p>
                     <p className="mt-1 text-lg font-semibold">
-                      {Number(data.dailySalary).toLocaleString("fr-FR")} FCFA
+                      {Math.round(Number(data.dailySalary) || 0).toLocaleString("fr-FR")} FCFA
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3.5 backdrop-blur">
                     <p className="text-xs text-white/55">Salaire net</p>
                     <p className="mt-1 text-lg font-semibold">
-                      {Number(data.netSalary).toLocaleString("fr-FR")} FCFA
+                      {Number(data.netSalary || 0).toLocaleString("fr-FR")} FCFA
                     </p>
                   </div>
                 </div>
@@ -585,7 +804,7 @@ const CalendarPage = () => {
               Sélectionnez un collaborateur
             </label>
 
-            <EmployeeSelect users={users} value={userId} onChange={setUserId} />
+            <EmployeeSelect users={users} value={userId ?? 0} onChange={setUserId} />
           </div>
         </section>
 
@@ -628,7 +847,7 @@ const CalendarPage = () => {
                 className="mt-1.5 truncate text-3xl font-medium tracking-tight"
                 style={{ fontFamily: SERIF }}
               >
-                {Math.round(Number(totalSalary)).toLocaleString("fr-FR")}
+                {Math.round(Number(totalSalary) || 0).toLocaleString("fr-FR")}
                 <span className="ml-1.5 text-sm font-normal text-[#c9a24b]">FCFA</span>
               </p>
             </div>
@@ -667,7 +886,7 @@ const CalendarPage = () => {
               right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             events={events}
-            hiddenDays={data.Enterprise.id === 2 ? [] : [0]}
+            hiddenDays={[]}
             datesSet={() => {
               const calendarApi = calendarRef.current?.getApi();
               if (!calendarApi) return;
@@ -678,145 +897,15 @@ const CalendarPage = () => {
               setCurrentMonth(month);
               setCurrentYear(year);
 
-              calculateMonthStats(attendances, month, year, Number(data.dailySalary));
+              calculateMonthStats(
+                attendances,
+                month,
+                year,
+                computeDailySalary(data.netSalary, data.workingDaysCount)
+              );
             }}
           />
         </div>
-      </div>
-    </div>
-  );
-};
-
-/* ------------------------------------------------------
-   Fonctions utilitaires (logique inchangée)
------------------------------------------------------- */
-
-function getDeductionPercent(
-  status: string,
-  arrivalTime: string,
-  departureTime: string,
-  startTime: string,
-  endTime: string,
-  monthIndex: number
-): number {
-  if (status === "Absent") return 100;
-
-  const parts = arrivalTime.split(":");
-  const minutes = Number(parts[1] || 0);
-  const startHour = startTime.slice(0, 2);
-
-  if (status === "En retard") {
-    if (minutes <= 15 && arrivalTime < `${startHour}:30`) return 10;
-    if (minutes > 15 && arrivalTime < `${startHour}:30`) return 15;
-    if (arrivalTime > `${startHour}:30`) return 50;
-  }
-
-  if (
-    monthIndex >= 4 &&
-    status === "A temps" &&
-    (!departureTime || departureTime < endTime?.slice(0, 5))
-  ) {
-    return 10;
-  }
-  return 0;
-}
-
-function getData(
-  arrivalTime: string,
-  departureTime: string,
-  startTime: string,
-  endTime: string,
-  status: string,
-  dailySalary: number,
-  monthIndex: number
-) {
-  let deductionPercent = getDeductionPercent(
-    status,
-    arrivalTime,
-    departureTime,
-    startTime,
-    endTime,
-    monthIndex
-  );
-
-  const deductionAmount = Math.round((deductionPercent / 100) * dailySalary);
-
-  return {
-    deductionAmount,
-    deductionPercent,
-    dailySalary: dailySalary - deductionAmount,
-  };
-}
-
-/* ------------------------------------------------------
-   Carte d'événement du calendrier
------------------------------------------------------- */
-
-const renderEventContent = (eventInfo: any, currentMonth: number) => {
-  const props = eventInfo.event.extendedProps;
-
-  const arrivalTime = props.arrivalTime || "";
-  const departureTime = props.departureTime || "";
-  const endTime = props.endTime || "";
-  const status = props.status || "";
-  const startTime = props.startTime || "";
-  const dailySalary = Number(props.dailySalary) || 0;
-
-  const result = getData(
-    arrivalTime,
-    departureTime,
-    startTime,
-    endTime,
-    status,
-    dailySalary,
-    currentMonth
-  );
-
-  const arrival = ["00:00", "00:00:00", ""].includes(arrivalTime?.slice(0, 5))
-    ? "--"
-    : arrivalTime?.slice(0, 5);
-
-  const rows: [string, string][] = [
-    ["Arrivée", arrival],
-    ["Départ", departureTime?.slice(0, 5) || "--"],
-    ["Début", startTime?.slice(0, 5) || "--"],
-    ["Fin", endTime?.slice(0, 5) || "--"],
-  ];
-
-  return (
-    <div className="w-full rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_4px_16px_-8px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#14244f]">
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_PILL[status] ?? PILL_FALLBACK
-          }`}
-      >
-        <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${STATUS_DOT[status] ?? DOT_FALLBACK}`} />
-        {status}
-      </span>
-
-      <dl className="mt-3 space-y-1.5 text-xs">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex justify-between">
-            <dt className="text-slate-400">{label}</dt>
-            <dd className="font-medium text-slate-800 dark:text-white">{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {currentMonth >= 4 && (
-        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs dark:border-white/10">
-          {/* <span className="text-slate-400">Déduction</span> */}
-          <span className="font-semibold text-rose-600 dark:text-rose-400">
-            {result.deductionAmount.toLocaleString("fr-FR")} XAF
-            <span className="ml-1 font-normal text-slate-400">({result.deductionPercent}%)</span>
-          </span>
-        </div>
-      )}
-
-      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-[#0b1530] px-3 py-2 text-xs text-white">
-        <span className="text-white/60">Solde</span>
-        <span className="font-semibold text-[#e3c47a]">
-          {result.dailySalary.toLocaleString("fr-FR")} XAF
-        </span>
       </div>
     </div>
   );

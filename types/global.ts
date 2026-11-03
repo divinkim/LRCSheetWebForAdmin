@@ -1,11 +1,3 @@
-type getAllRepportsByUserId = {
-    title: string,
-    content: string,
-    monthIndice: number,
-    UserId: number,
-    files: string,
-    createdAt: string
-}
 
 export type AttendancesResponseDto = {
     data: AttendanceListDto[]
@@ -69,16 +61,50 @@ export type Enterprise = {
     legalForm: string;
     rccm: string;
     nui: string | null;
-    subscriptionType: string;
-    subscriptionStatus: string;
+    subscriptionType: string | "STARTER" | "PREMIUM" | "PRO";
+    paymentFrequency: string | "MONTHLY" | "QUARTERLY" | "SEMI_ANNUAL" | "ANNUAL",
+    subscriptionStatus: string | "ACTIVE" | "INACTIVE" | "WAITING";
     EnterpriseId: number | null;
     toleranceTime: string;
     pourcentageOfHourlyDeduction: string;
     maxToleranceTime: string;
     maxPourcentageOfHourlyDeduction: string;
     MainEnterpriseId: number | null;
+    subscriptionExpiresAt: Date | null
     City: City;
     Country: Country
+    [key: string]: any
+};
+
+export type EnterpriseDto = {
+    CityId: number;
+    CountryId: number;
+    createdAt: string;
+    updatedAt: string;
+    name: string;
+    description: string;
+    logo: string;
+    activityDomain: string;
+    phone: string;
+    email: string;
+    address: string;
+    website: string;
+    latitude: string;
+    longitude: string;
+    legalForm: string;
+    rccm: string;
+    nui: string | null;
+    subscriptionType: string | "STARTER" | "PREMIUM" | "PRO";
+    paymentFrequency: string | "MONTHLY" | "QUARTERLY" | "SEMI_ANNUAL" | "ANNUAL",
+    subscriptionStatus: string | "ACTIVE" | "INACTIVE" | "WAITING";
+    EnterpriseId: number | null;
+    toleranceTime: string;
+    pourcentageOfHourlyDeduction: string;
+    maxToleranceTime: string;
+    maxPourcentageOfHourlyDeduction: string;
+    MainEnterpriseId: number | null;
+    subscriptionExpiresAt: string | null
+    [key: string]: any
 };
 
 export type EnterprisesResponseDto = {
@@ -142,6 +168,7 @@ export type AttendanceEnterprise = {
 
 // Type d'un élément individuel de présence (le contenu de `data`)
 export type AttendanceListDto = {
+    id: number,
     arrivalTime: string;
     subscriptionStatus: string;
     subscriptionType: string;
@@ -161,6 +188,10 @@ export type AttendanceListDto = {
     createdAt: string
 };
 
+export type AttendancesListDto = {
+    data: AttendanceListDto[]
+}
+
 
 export type DepartmentPost = {
     id: number;
@@ -169,6 +200,7 @@ export type DepartmentPost = {
     createdAt: string;
     updatedAt: string;
     EnterpriseId: number;
+    Enterprise: Enterprise
 };
 
 export type DepartmentsPostResponseDto = {
@@ -241,7 +273,7 @@ export type User = {
     ContractId: number;
     role: string;
     adminService: string;
-
+    working_days_count: number | null,
     // Relations
     Enterprise: Enterprise;
     DepartmentPost: DepartmentPost;
@@ -255,6 +287,7 @@ export type User = {
     City: City;
     District: District;
     Quarter: Quarter;
+
 };
 
 // Structure globale de la réponse API
@@ -356,6 +389,7 @@ export type AppointmentListDto = {
     User: {
         lastname: string,
         firstname: string
+        photo: string
     }
 };
 
@@ -516,7 +550,8 @@ export interface Contract {
     EnterpriseId: number | null;
     createdAt: string;
     updatedAt: string;
-    ContracType: ContractType;
+    ContractType: ContractType;
+    status: 'ACTIVE' | 'INACTIVE';
     Enterprise: Enterprise;
     User: User[];
 }
@@ -600,13 +635,13 @@ export interface Post {
 
 export type PostResponseDto = {
     message: string,
-    data: Post[]
+    data: Post
 }
 
 
 export type PotsResponseDto = {
     message: string,
-    data: Post
+    data: Post[]
 }
 
 export interface ChatDto {

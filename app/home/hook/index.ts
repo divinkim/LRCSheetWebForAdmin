@@ -87,23 +87,21 @@ export default function HomeComponent() {
   }
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.user) return;
-
-    const userEnterpriseId = Number((session.user as any).EnterpriseId);
-    const userId = Number(session.user.id);
-    const MainEnterpriseId = Number((session.user as any).MainEnterpriseId);
-    const adminRole = (session.user as any).adminRole;
-
     (async () => {
+      const adminEnterpriseId = Number((session?.user as any)?.EnterpriseId);
+      const userId = Number(session?.user.id);
+      const MainEnterpriseId = Number((session?.user as any)?.MainEnterpriseId);
+      const adminRole = (session?.user as any)?.adminRole;
+      
       try {
         setLoader(true);
         const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
-       
+
         let filteredUsers: User[] = users.data;
-      
+
         if (adminRole !== "Super_Admin_Platform" && adminRole !== "Super_Admin_Enterprise") {
           filteredUsers = users.data.filter(
-            (u: { EnterpriseId: number }) => u.EnterpriseId === userEnterpriseId
+            (u: { EnterpriseId: number }) => u.EnterpriseId === adminEnterpriseId
           );
         } else if (adminRole === "Super_Admin_Enterprise") {
           filteredUsers = users.data.filter(u => u.MainEnterpriseId === MainEnterpriseId
@@ -129,7 +127,7 @@ export default function HomeComponent() {
         }));
 
         const fcmToken = localStorage.getItem("adminFcmToken");
-    
+
         if (fcmToken) {
           const res = await providers.API.update(
             providers.APIUrl,
@@ -137,7 +135,8 @@ export default function HomeComponent() {
             null,
             {
               UserId: userId,
-              UserEnterpriseId: userEnterpriseId,
+              AdminEnterpriseId: adminEnterpriseId,
+              adminRole: adminRole,
               fcmToken,
             },
             null
@@ -155,8 +154,8 @@ export default function HomeComponent() {
 
         if (adminRole === "Super_Admin_Platform") {
           filteredAttendances = allAttendances.data.filter(
-            (a: { EnterpriseId: number; mounth: number; createdAt: string }) =>
-              a.EnterpriseId === userEnterpriseId &&
+            a =>
+              a.EnterpriseId === adminEnterpriseId &&
               a.mounth === monthValue &&
               new Date(a.createdAt).getFullYear() === currentYear
           );
@@ -170,11 +169,11 @@ export default function HomeComponent() {
 
         setAttendances(filteredAttendances);
 
-        if (userEnterpriseId) {
+        if (adminEnterpriseId) {
           const enterpriseRes = await providers.API.getOne<AttendanceSingleResponseDto>(
             providers.APIUrl,
             "enterprises",
-            userEnterpriseId
+            adminEnterpriseId
           );
 
           setEnterprise({
@@ -187,8 +186,9 @@ export default function HomeComponent() {
       } finally {
         setLoader(false);
       }
-    })();
-  }, [status, session, monthValue]);
+    })()
+
+  }, [session]);
 
   const cardComponent = [
     {

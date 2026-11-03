@@ -13,7 +13,7 @@ const FIELD_BASE =
   "w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-medium text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700/80 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:bg-slate-800";
 
 export default function AddUser() {
-  const { dynamicOptions, staticOptions, inputs, setInputs, isLoading, handleSubmit, adminRole } =
+  const { dynamicOptions, staticOptions, inputs, setInputs, isLoading, handleSubmit, adminRole, LOCAL_KEY } =
     AddUserHookModal();
 
   return (
@@ -118,8 +118,8 @@ export default function AddUser() {
                         isUserAdminRole && e.alias === "adminService"
                           ? "flex flex-col gap-2"
                           : !isUserAdminRole && e.alias === "adminService"
-                          ? "hidden"
-                          : "flex flex-col gap-2"
+                            ? "hidden"
+                            : "flex flex-col gap-2"
                       }
                     >
                       <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
@@ -149,32 +149,39 @@ export default function AddUser() {
                                   null,
                                   { file }
                                 );
-                                setInputs({
+                                const data = {
                                   ...inputs,
                                   [e.alias]: response.filename,
-                                });
+                                }
+                                setInputs(data);
+                                localStorage.setItem(LOCAL_KEY, JSON.stringify(data))
                               }
                               return;
                             }
-                            setInputs({
+                            const value = e.type === "number" ? Number(v.target.value) : v.target.value
+                            const data = {
                               ...inputs,
-                              [e.alias]: v.target.value,
-                            });
+                              [e.alias]: value,
+                            }
+                            setInputs(data);
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(data))
                           }}
                           className={cn(
                             FIELD_BASE,
                             e.type === "file" &&
-                              "cursor-pointer file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-blue-600 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                            "cursor-pointer file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-blue-600 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
                           )}
                         />
                       ) : (
                         <select
                           value={(inputs[e.alias] ?? "") as string | number}
                           onChange={(v) => {
-                            setInputs({
+                            const data = {
                               ...inputs,
                               [e.alias]: e.type === "number" ? parseInt(v.target.value) || 0 : v.target.value,
-                            });
+                            }
+                            setInputs(data);
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(data))
                           }}
                           className={cn(FIELD_BASE, "cursor-pointer")}
                         >
@@ -183,33 +190,33 @@ export default function AddUser() {
                           </option>
                           {e.dynamicOptions?.status
                             ? dynamicOptions
-                                .find((item) => item.alias === e.alias)
-                                ?.arrayData?.map((option) => (
-                                  <option
-                                    key={option.value}
-                                    value={option.value}
-                                    className="text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                  >
-                                    {option.title}
-                                  </option>
-                                ))
+                              .find((item) => item.alias === e.alias)
+                              ?.arrayData?.map((option) => (
+                                <option
+                                  key={option.value}
+                                  value={option.value}
+                                  className="text-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                >
+                                  {option.title}
+                                </option>
+                              ))
                             : staticOptions
-                                .find((item) => item.alias === e.alias)
-                                ?.arrayData.map((option) => (
-                                  <option
-                                    key={option.value}
-                                    value={option.value}
-                                    className={
-                                      e.alias === "role" && option?.status
-                                        ? "text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                        : e.alias === "role" && !option.status
+                              .find((item) => item.alias === e.alias)
+                              ?.arrayData.map((option) => (
+                                <option
+                                  key={option.value}
+                                  value={option.value}
+                                  className={
+                                    e.alias === "role" && option?.status
+                                      ? "text-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                      : e.alias === "role" && !option.status
                                         ? "hidden"
                                         : "text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                    }
-                                  >
-                                    {option.title}
-                                  </option>
-                                ))}
+                                  }
+                                >
+                                  {option.title}
+                                </option>
+                              ))}
                         </select>
                       )}
                     </div>

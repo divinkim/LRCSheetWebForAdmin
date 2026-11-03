@@ -137,6 +137,7 @@ export function useAppointment() {
                 date: inputs.date,
                 reason: inputs.reason,
             }
+            
             let isValid = true
 
             for (const [key, value] of Object.entries(fields)) {
@@ -168,12 +169,12 @@ export function useAppointment() {
             toast.success("Bravo", "Rendez-vous enregistré");
             await providers.API.post(
                 providers.APIUrl,
-                "sendNotificationPush",
+                "notification-push",
                 null,
                 {
                     senderId: String(adminId),
                     receiverId: String(inputs.UserId),
-                    messagingType: "general",
+                    messagingType: "appointment",
                     title: "Demande de visite",
                     content: `Vous avez une demande en cours de la part de ${inputs.fullName} à ${inputs.time}. Veuillez consulter la liste des rendez-vous au niveau de votre profil.`
                 }

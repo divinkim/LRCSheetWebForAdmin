@@ -70,7 +70,7 @@ export default function UpdateUser() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 <FontAwesomeIcon icon={faUserPen} className="text-sm" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-md font-bold text-slate-900 dark:text-white">
                 {currentFormElement?.addOrUpdateUser.updateUserTitleForm}
               </h2>
             </div>
@@ -104,14 +104,14 @@ export default function UpdateUser() {
             {/* Grille des Champs */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {currentFormElement?.addOrUpdateUser.inputs.map((e, index) => {
-                
+
                 const isUserAdminRole = ["Super_Admin_Platform",
                   "Super_Admin_Enterprise", "Enterprise_Admin"
                 ].includes(String(inputs.role))
 
                 return (
                   <div key={e.alias || index} className={isUserAdminRole && e.alias === "adminService" ? "flex flex-col gap-2" : !isUserAdminRole && e.alias === "adminService" ? "hidden" : "flex flex-col gap-2"}>
-                    <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                       {e.requireField && <span className="mr-1 text-amber-500 font-bold">*</span>}
                       {e.label}
                     </label>
@@ -146,9 +146,10 @@ export default function UpdateUser() {
                             }
                             return;
                           }
+                          const value = e.type === "number" ? Number(v.target.value) : v.target.value
                           setInputs({
                             ...inputs,
-                            [e.alias]: v.target.value,
+                            [e.alias]: value,
                           });
                         }}
                         className={cn(

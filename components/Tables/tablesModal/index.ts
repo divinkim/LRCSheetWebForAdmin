@@ -19,6 +19,9 @@ export const tablesModal = [
                     { title: "Noms & prénoms", alias: "" },
                     { title: "Emails", alias: "" },
                     { title: "Genres", alias: "" },
+                    { title: "Début et fin de contrat", alias: "" },
+                    { title: "Jour de travail", alias: "" },
+                    { title: "Genres", alias: "" },
                     { title: "Entreprises", alias: "" },
                     { title: "Status", alias: "" },
                     { title: "Actions", alias: "" },
@@ -110,7 +113,7 @@ export const tablesModal = [
         },
         postsList: {
             pageTitle: "Liste des postes enregistrés",
-            path: "Dashboard/ADMININISTRATION/Liste des poqtes",
+            path: "Dashboard/ADMININISTRATION/Liste des postes",
             links: [
                 {
                     title: "Ajouter un poste",
@@ -135,7 +138,7 @@ export const tablesModal = [
             links: [
                 {
                     title: "Ajouter un département",
-                    href: "/dashboard/ADMIN/addDepartment",
+                    href: "/dashboard/ADMIN/department/new",
                     icon: faCalendarPlus
 
                 }

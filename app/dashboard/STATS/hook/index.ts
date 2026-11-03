@@ -2,14 +2,14 @@
 import { providers } from "@/index";
 import { AttendanceListDto, AttendancesResponseDto, User, UsersResponseDto } from "@/types/global";
 import { useEffect, useState } from "react";
-
+import { useSession } from "next-auth/react";
 export function AnnualGainHook() {
     const [totalDeductionByMonth, setTotalDeductionByMonth] = useState(0);
     const [attendances, setAttendances] = useState<AttendanceListDto[]>([]);
-    const [EnterpriseId, setEnterpriseId] = useState<string | null>(null);
+    const [EnterpriseId, setEnterpriseId] = useState(0);
     const [adminRole, setAdminRole] = useState<string | null>(null);
     const [MonthlyLimit, setMonthlyLimit] = useState(0);
-
+    const { data: session } = useSession();
     function getDuductionByMonth(attendances: AttendanceListDto[], monthIndice: number) {
         const fullYear = new Date().getFullYear();
 
@@ -77,26 +77,22 @@ export function AnnualGainHook() {
     //Récuoération de toutes les horaires et filtrage en fonction de l'entreprise
     useEffect(() => {
         (async () => {
-            const EnterpriseId = window?.localStorage.getItem("EnterpriseId");
-            const adminRole = window?.localStorage.getItem("adminRole");
+            const MainEnterpriseId = Number((session?.user as any)?.MainEnterpriseId);
+            const adminRole = String((session?.user as any)?.adminRole);
             const attendances = await providers.API.getAll<AttendancesResponseDto>(providers.APIUrl, "attendances", null);
-            const filtered = Number(EnterpriseId) !== 1
-                ? attendances.data.filter((a: { EnterpriseId: number }) => a.EnterpriseId === parseInt(EnterpriseId ?? ""))
-                : attendances.data.filter((a: { EnterpriseId: number }) => [1, 2, 3, 4, null].includes(a.EnterpriseId));
+            const filtered = attendances.data.filter(a => a.EnterpriseId === MainEnterpriseId);
             setAttendances(filtered);
-            setEnterpriseId(EnterpriseId);
+            setEnterpriseId(MainEnterpriseId);
             setAdminRole(adminRole);
         })();
-    }, []);
-
+    }, [session]);
+    
     //Récupération et filtrage des utilisateurs en fonction de l'entreprise
     useEffect(() => {
         (async () => {
             let total = 0;
             const users = await providers.API.getAll<UsersResponseDto>(providers.APIUrl, "users", null);
-            const usersByEnterprisesId = Number(EnterpriseId) !== 1 ?
-                users.data.filter(user => user.EnterpriseId === Number(EnterpriseId))
-                : users.data.filter(user => [1, 2, 3, 4, null].includes(Number(user.EnterpriseId)));
+            const usersByEnterprisesId = users.data.filter(user => user.EnterpriseId === EnterpriseId);
 
             for (const user of usersByEnterprisesId) {
                 let dailySalary = Number(user?.Salary?.dailySalary || 0);
@@ -108,7 +104,6 @@ export function AnnualGainHook() {
     }, [attendances]);
 
     // console.log("la putain de limit par mois", MonthlyLimit);
-
     useEffect(() => {
         (() => {
             let totalSalary = 0;

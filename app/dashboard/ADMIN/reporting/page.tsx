@@ -47,7 +47,7 @@ export default function Repports() {
       setIsLoading(true);
       const adminId = localStorage.getItem("UserId") || "0";
 
-      await adminReportComment(
+      const res = await adminReportComment(
         adminResponse,
         repport.id,
         repport.User.email,
@@ -62,14 +62,14 @@ export default function Repports() {
         senderId: String(adminId)
       });
 
-      await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendMail", null, {
-        senderEmail: "lrcsheet@gmail.com",
-        subject: "Notification entrante",
-        content: "Veuillez consulter votre messagerie sur l'espace LRCSheet Web https://vps118934.serveur-vps.net:4000/Dashboard/NOTIF/chat",
-        emails: [repport.User.email]
-      });
+      // await providers.API.post(providers.APIUrl, "mail/send", null, {
+      //   senderEmail: "lrcsheet@gmail.com",
+      //   subject: "Notification entrante",
+      //   content: "Veuillez consulter votre messagerie",
+      //   emails: [repport.User.email]
+      // });
 
-      await providers.API.post("https://vps118934.serveur-vps.net:4001", "sendNotificationPush", null, {
+      await providers.API.post(providers.APIUrl, "notification-push", null, {
         path: "/dashboard/NOTIF/chat",
         EnterpriseId: String(repport.EnterpriseId ?? EnterpriseId),
         adminSectionIndex: "0",
@@ -78,14 +78,14 @@ export default function Repports() {
         receiverId: String(repport.UserId)
       });
 
-      await providers.API.post(providers.APIUrl, "createChatMessage", null, {
-        content: adminResponse,
-        receiverId: repport.UserId,
-        senderId: parseInt(adminId),
-        EnterpriseId: parseInt(EnterpriseId ?? "1"),
-        file: "",
-        role: "Super-Admin"
-      });
+      // await providers.API.post(providers.APIUrl, "chats", null, {
+      //   content: adminResponse,
+      //   receiverId: repport.UserId,
+      //   senderId: parseInt(adminId),
+      //   EnterpriseId: parseInt(EnterpriseId ?? "1"),
+      //   file: "",
+      //   role: "Super-Admin"
+      // });
 
       getAdminResponse();
       setAdminResponse("");
@@ -202,151 +202,148 @@ export default function Repports() {
               </div>
             ))
           ) : currentMonthReports.length > 0 ? (
-            currentMonthReports
-              .slice()
-              .reverse()
-              .map((repport, index) => {
-                const isExpanded = itemIndex === index && isVisible;
+            currentMonthReports.filter(item => new Date(item.createdAt).getFullYear() === new Date().getFullYear()).map((repport, index) => {
+              const isExpanded = itemIndex === index && isVisible;
 
-                return (
-                  <article
-                    key={repport.id ?? index}
-                    className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
-                  >
-                    {/* Header de la carte */}
-                    <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700/40">
-                      <div className="flex items-center gap-3.5">
-                        <img
-                          src={
-                            repport.User?.photo
-                              ? `${providers.APIUrl}/images/${repport.User.photo}`
-                              : "/images/clientProfile.png"
-                          }
-                          alt="Photo utilisateur"
-                          className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
-                        />
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-white text-base">
-                            {repport.User?.lastname} {repport.User?.firstname}
-                          </h3>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {new Date(repport.createdAt).toLocaleDateString("fr-FR", {
-                              day: "2-digit",
-                              month: "long",
-                              year: "numeric",
-                              weekday: "short"
-                            })} à {new Date(repport.createdAt).toLocaleTimeString([], {
-                              minute: "2-digit",
-                              hour: "2-digit"
-                            })}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setItemIndex(index);
-                          setIsVisible(!isVisible);
-                        }}
-                        className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors"
-                      >
-                        <span>{isExpanded ? "Réduire" : "Déplier"}</span>
-                        <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="text-sm" />
-                      </button>
-                    </div>
-
-                    {/* Corps du rapport */}
-                    <div className="p-5 space-y-4">
+              return (
+                <article
+                  key={repport.id ?? index}
+                  className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+                >
+                  {/* Header de la carte */}
+                  <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700/40">
+                    <div className="flex items-center gap-3.5">
+                      <img
+                        src={
+                          repport.User?.photo
+                            ? `${providers.ImageUrl}/${repport.User.photo}`
+                            : "/images/clientProfile.png"
+                        }
+                        alt="Photo utilisateur"
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
+                      />
                       <div>
-                        <span className="text-sm font-bold uppercase tracking-wider text-amber-500 dark:text-amber-400">
-                          Objet
-                        </span>
-                        <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
-                          {repport.title}
-                        </h4>
+                        <h3 className="font-semibold text-slate-900 dark:text-white text-base">
+                          {repport.User?.lastname} {repport.User?.firstname}
+                        </h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {new Date(repport.createdAt).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                            weekday: "short"
+                          })} à {new Date(repport.createdAt).toLocaleTimeString([], {
+                            minute: "2-digit",
+                            hour: "2-digit"
+                          })}
+                        </p>
                       </div>
-
-                      <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed border-t border-slate-100 dark:border-slate-700/50 pt-4">
-                        <p
-                          dangerouslySetInnerHTML={{
-                            __html: isExpanded
-                              ? repport.content ?? ""
-                              : providers.reduceLengthOfText(repport.content, 255) ?? ""
-                          }}
-                          className="[&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_li]:mb-1 [&_p]:mb-3"
-                        />
-                      </div>
-
-                      {/* Zone interactive (Dépliée) */}
-                      {isExpanded && (
-                        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 space-y-4">
-
-                          {/* Commentaires existants */}
-                          {adminReportCommentArray.length > 0 &&
-                            adminReportCommentArray.map(
-                              item => (
-                                <div key={item.id}>
-                                  {item.UserId === repport.UserId && (
-                                    <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-sm flex gap-3">
-                                      <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 text-amber-500" />
-                                      <div>
-                                        <p className="font-semibold text-sm text-amber-800 dark:text-amber-400 uppercase tracking-wide">
-                                          Commentaire Administrateur
-                                        </p>
-                                        <p className="mt-1">{item.content}</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            )}
-
-                          {/* Saisie de réponse */}
-                          <div className="space-y-3">
-                            <label className="block text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                              Répondre au rapport
-                            </label>
-                            <textarea
-                              value={itemIndexOnWriting === index ? adminResponse : ""}
-                              onChange={(e) => {
-                                setAdminResponse(e.target.value);
-                                setItemIndexOnWriting(index);
-                              }}
-                              placeholder="Rédigez une observation ou un retour..."
-                              className="w-full p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition-all resize-none"
-                              rows={3}
-                            />
-
-                            <button
-                              onClick={() => handleSendResponse(repport)}
-                              type="button"
-                              disabled={isLoading}
-                              className="inline-flex items-center justify-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-all duration-200 disabled:opacity-50"
-                            >
-                              {isLoading ? <ClipLoader size={16} color="#fff" /> : "Envoyer le retour"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pièces jointes */}
-                      {repport.files && (
-                        <div className="pt-2">
-                          <a
-                            href={`${providers.APIUrl}/images/${repport.files}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium transition-colors border border-slate-200 dark:border-slate-600"
-                          >
-                            <FontAwesomeIcon icon={faPaperclip} className="text-slate-500" />
-                            <span>Consulter la pièce jointe</span>
-                          </a>
-                        </div>
-                      )}
                     </div>
-                  </article>
-                );
-              })
+
+                    <button
+                      onClick={() => {
+                        setItemIndex(index);
+                        setIsVisible(!isVisible);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors"
+                    >
+                      <span>{isExpanded ? "Réduire" : "Déplier"}</span>
+                      <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="text-sm" />
+                    </button>
+                  </div>
+
+                  {/* Corps du rapport */}
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <span className="text-sm font-bold uppercase tracking-wider text-amber-500 dark:text-amber-400">
+                        Objet
+                      </span>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+                        {repport.title}
+                      </h4>
+                    </div>
+
+                    <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                      <p
+                        dangerouslySetInnerHTML={{
+                          __html: isExpanded
+                            ? repport.content ?? ""
+                            : providers.reduceLengthOfText(repport.content, 255) ?? ""
+                        }}
+                        className="[&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_li]:mb-1 [&_p]:mb-3"
+                      />
+                    </div>
+
+                    {/* Zone interactive (Dépliée) */}
+                    {isExpanded && (
+                      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 space-y-4">
+
+                        {/* Commentaires existants */}
+                        {adminReportCommentArray.length > 0 &&
+                          adminReportCommentArray.map(
+                            item => (
+                              <div key={item.id}>
+                                {item.id === repport.UserId && (
+                                  <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-sm flex gap-3">
+                                    <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 text-amber-500" />
+                                    <div>
+                                      <p className="font-semibold text-sm text-amber-800 dark:text-amber-400 uppercase tracking-wide">
+                                        Commentaire Administrateur
+                                      </p>
+                                      <p className="mt-1">{item.content}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          )}
+
+                        {/* Saisie de réponse */}
+                        <div className="space-y-3">
+                          <label className="block text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Répondre au rapport
+                          </label>
+                          <textarea
+                            value={itemIndexOnWriting === index ? adminResponse : ""}
+                            onChange={(e) => {
+                              setAdminResponse(e.target.value);
+                              setItemIndexOnWriting(index);
+                            }}
+                            placeholder="Rédigez une observation ou un retour..."
+                            className="w-full p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition-all resize-none"
+                            rows={3}
+                          />
+
+                          <button
+                            onClick={() => handleSendResponse(repport)}
+                            type="button"
+                            disabled={isLoading}
+                            className="inline-flex items-center justify-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-all duration-200 disabled:opacity-50"
+                          >
+                            {isLoading ? <ClipLoader size={16} color="#fff" /> : "Envoyer le retour"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pièces jointes */}
+                    {repport.files && (
+                      <div className="pt-2">
+                        <a
+                          href={`${providers.ImageUrl}/${repport.files}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium transition-colors border border-slate-200 dark:border-slate-600"
+                        >
+                          <FontAwesomeIcon icon={faPaperclip} className="text-slate-500" />
+                          <span>Consulter la pièce jointe</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })
           ) : (
             /* Empty State */
             <div className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/60 p-12 text-center">

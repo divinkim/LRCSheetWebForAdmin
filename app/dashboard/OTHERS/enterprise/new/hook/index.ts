@@ -4,60 +4,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
-import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, EnterpriseResponseDto, EnterprisesResponseDto } from "@/types/global";
-export type InputsValue = {
-  name: string;
-  description: string;
-  logo: string;
-  activityDomain: string;
-  phone: string;
-  toleranceTime: string | null;
-  maxToleranceTime: string | null;
-  pourcentageOfHourlyDeduction: string | null;
-  maxPourcentageOfHourlyDeduction: string | null;
-  email: string;
-  address: string;
-  website: string | null;
-  latitude: string;
-  longitude: string;
-  CityId: number | null;
-  City: { name: string };
-  CountryId: number | null;
-  Country: { name: string };
-  legalForm: string;
-  rccm: string | null;
-  nui: string | null;
-  subscriptionType: string;
-  subscriptionStatus: string;
-  EnterpriseId?: number | null;
-  [key: string]: any;
-};
+import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, Enterprise, EnterpriseDto, EnterpriseResponseDto, EnterprisesResponseDto } from "@/types/global";
 
-const INITIAL_INPUTS: InputsValue = {
-  name: "",
-  description: "",
-  logo: "",
-  activityDomain: "",
-  phone: "",
-  toleranceTime: null,
-  maxToleranceTime: null,
-  pourcentageOfHourlyDeduction: null,
-  maxPourcentageOfHourlyDeduction: null,
-  email: "",
-  address: "",
-  website: null,
-  latitude: "",
-  longitude: "",
-  CityId: null,
-  City: { name: "" },
-  CountryId: null,
-  Country: { name: "" },
-  legalForm: "",
-  rccm: null,
-  nui: null,
-  subscriptionType: "",
-  subscriptionStatus: "",
-};
 
 export default function useAddEnterprise() {
   // Authentification & Session NextAuth
@@ -66,16 +14,18 @@ export default function useAddEnterprise() {
   const enterpriseIdOfAdmin = (session?.user as any)?.EnterpriseId || null;
   const toast = useToast();
   // États des données
-  const [inputs, setInputs] = useState<InputsValue>(INITIAL_INPUTS);
+  const [inputs, setInputs] = useState<EnterpriseDto>();
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
   const [getDepartmentPosts, setDepartmentPosts] = useState<any[]>([]);
   const [getCountry, setCountry] = useState<any[]>([]);
   const [getCity, setCity] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const LOCAL_KEY = "inputMemoryOfAddEnterprisePage"
+
   // Charger la sauvegarde locale au montage
   useEffect(() => {
-    const savedInputs = localStorage.getItem("inputMemoryOfAddEnterprisePage");
+    const savedInputs = localStorage.getItem(LOCAL_KEY);
     if (savedInputs) {
       try {
         setInputs(JSON.parse(savedInputs));
@@ -106,7 +56,7 @@ export default function useAddEnterprise() {
 
   // 3️⃣ Récupération des départements filtrés par EnterpriseId
   useEffect(() => {
-    if (!inputs.EnterpriseId) {
+    if (!inputs?.EnterpriseId) {
       setDepartmentPosts([]);
       return;
     }
@@ -124,11 +74,11 @@ export default function useAddEnterprise() {
     };
 
     fetchDepartmentPosts();
-  }, [inputs.EnterpriseId]);
+  }, [inputs?.EnterpriseId]);
 
   // 4️⃣ Récupération des villes filtrées par CountryId
   useEffect(() => {
-    if (!inputs.CountryId) {
+    if (!inputs?.CountryId) {
       setCity([]);
       return;
     }
@@ -146,7 +96,7 @@ export default function useAddEnterprise() {
     };
 
     fetchCities();
-  }, [inputs.CountryId]);
+  }, [inputs?.CountryId]);
 
   // 📊 Options dynamiques pour les champs <select>
   const dynamicArrayData = [
@@ -182,72 +132,116 @@ export default function useAddEnterprise() {
     },
   ];
 
-  // 📋 Options statiques
+  //Options statiques
   const staticArrayData = [
     {
       alias: "subscriptionStatus",
       arrayData: [
-        { title: "En cours", value: "onGoing" },
-        { title: "Expiré", value: "expired" },
+        { title: "Actif", value: "ACTIVE" },
+        { title: "En attente", value: "WAITING" },
+        { title: "Expiré", value: "INACTIVE" },
+      ],
+    },
+    {
+      alias: "legalForm",
+      arrayData: [
+        { title: "SARL", value: "SARL" },
+        { title: "SARLU", value: "SARLU" },
+        { title: "SA", value: "SA" },
+        { title: "ETS", value: "ETS" },
       ],
     },
     {
       alias: "subscriptionType",
       arrayData: [
-        { title: "Premium", value: "premium" },
-        { title: "Pro", value: "pro" },
-        { title: "Standard", value: "standard" },
+        { title: "Starter", value: "STARTER" },
+        { title: "PREMIUM", value: "PREMIUM" },
+        { title: "PRO", value: "PRO" },
+      ],
+    },
+    {
+      alias: "paymentFrequency",
+      arrayData: [
+        { title: "Mensuel", value: "MONTHLY" },
+        { title: "Trimestriel", value: "QUARTERLY" },
+        { title: "Semestriel", value: "SEMI_ANNUAL" },
+        { title: "Annuel", value: "ANNUAL" },
+
       ],
     },
   ];
 
-  // 🚀 Soumission du formulaire
   const handleSubmit = async () => {
-    const requiredFields = {
-      name: inputs.name,
-      description: inputs.description,
-      logo: inputs.logo,
-      activityDomain: inputs.activityDomain,
-      phone: inputs.phone,
-      CityId: inputs.CityId,
-      CountryId: inputs.CountryId,
-      latitude: inputs.latitude,
-      longitude: inputs.longitude,
-    };
-
-    // Validation des champs obligatoires
-    for (const [key, value] of Object.entries(requiredFields)) {
-      if (!value) {
-        toast.error("Champs invalides",
-          "Veuillez renseigner tous les champs obligatoires."
-        )
-        return
-      }
-    }
-
-    setIsLoading(true);
-
     try {
-      providers.API.post<EnterpriseResponseDto>(
+      if (!inputs) return;
+      const requiredFields = {
+        'Nom': inputs.name,
+        'Description': inputs.description,
+        'Logo': inputs.logo,
+        "Domaine d'activité": inputs.activityDomain,
+        "Statut d'abonnement": inputs.subscriptionStatus,
+        "Type d'abonnement": inputs.subscriptionType,
+        'Téléphone': inputs.phone,
+        'Villes': inputs.CityId,
+        'Pays': inputs.CountryId,
+        'Latitude': inputs.latitude,
+        'Longitude': inputs.longitude,
+        'fréquence de paiement': inputs.longitude,
+      };
+
+      for (const [key, value] of Object.entries(requiredFields)) {
+        if (!value) {
+          return toast.error("Champs invalides", `Veuillez renseigner le champs ${key}`)
+        }
+      }
+
+      setIsLoading(true);
+
+      await providers.API.post<EnterpriseResponseDto>(
         providers.APIUrl,
         "enterprises",
         null,
-        inputs
+        {
+          name: inputs.name,
+          description: inputs.description,
+          logo: inputs.logo,
+          activityDomain: inputs.activityDomain,
+          phone: inputs.phone,
+          email: inputs.email,
+          address: inputs.address,
+          website: inputs.website,
+          latitude: inputs.latitude,
+          longitude: inputs.longitude,
+          legalForm: inputs.legalForm,
+          rccm: inputs.rccm,
+          nui: inputs.nui,
+          subscriptionType: inputs.subscriptionType,
+          subscriptionStatus: inputs.subscriptionStatus,
+          toleranceTime: inputs.toleranceTime,
+          pourcentageOfHourlyDeduction: inputs.pourcentageOfHourlyDeduction,
+          maxToleranceTime: inputs.maxToleranceTime,
+          maxPourcentageOfHourlyDeduction: inputs.maxPourcentageOfHourlyDeduction,
+          paymentFrequency: inputs.paymentFrequency,
+          paymentMode: inputs.paymentMode,
+          paymentCurrency: inputs.paymentCurrency,
+          paymentMethod: inputs.paymentMethod,
+          subscriptionAmount: inputs.subscriptionAmount,
+          subscribeCurrency: inputs.subscribeCurrency,
+          subscriptionExpiresAt: inputs.subscriptionExpiresAt
+            ? new Date(inputs.subscriptionExpiresAt).toISOString()
+            : null,
+        },
       );
 
-      localStorage.removeItem("inputMemoryOfAddEnterprisePage");
-      toast.success(
-        "Bravo",
-        "Entreprise enregistrée avec succès."
-      )
+      localStorage.removeItem(LOCAL_KEY);
+      toast.success("Bravo", "Opération effectuée avec succès.")
+
     } catch (error) {
-      console.log(error);
-      toast.error('Erreur',
-        error instanceof Error ? error.message : "Erreur survenue."
-      )
+      toast.error("Erreur", error instanceof Error ? error.message : "Erreur réseau")
     } finally {
       setIsLoading(false);
     }
+
   };
 
   return {
@@ -259,5 +253,6 @@ export default function useAddEnterprise() {
     isLoading,
     adminRole,
     enterpriseIdOfAdmin,
+    LOCAL_KEY
   };
 }

@@ -16,7 +16,7 @@ export default function New() {
         addEditUserPlanningOfWeek,
         weekDays = [],
         plannings = [],
-        isLoading ,
+        isLoading,
         datas = [],
         getFormatTime,
         handleToggleUser,
@@ -127,7 +127,7 @@ export default function New() {
                                             <div className="flex items-center gap-3.5">
                                                 <div className="relative">
                                                     <img
-                                                        src={user.photo ? `${providers.APIUrl}/images/${user.photo}` : "/images/clientProfile.png"}
+                                                        src={user.photo ? `${providers.ImageUrl}/${user.photo}` : "/images/clientProfile.png"}
                                                         alt={`${user.firstname} ${user.lastname}`}
                                                         className="h-11 w-11 rounded-full border-2 border-slate-200 dark:border-slate-700 object-cover group-hover:border-amber-500 transition-colors"
                                                     />

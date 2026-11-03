@@ -44,7 +44,7 @@ export default function useAddUserInPlanningOfWeek() {
 
     // Le state contient maintenant la liste des utilisateurs sélectionnés avec leurs données respectives
     const [datas, setDatas] = useState<Datas[]>([]);
-
+    console.log(users)
     useEffect(() => {
         (() => {
             try {
@@ -151,7 +151,7 @@ export default function useAddUserInPlanningOfWeek() {
 
             // Envoi du tableau d'objets `datas` à l'API
             await providers.API.post(
-                "https://vps118934.serveur-vps.net:4001",
+                providers.APIUrl,
                 "users-plannings",
                 null,
                 datas

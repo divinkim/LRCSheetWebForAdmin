@@ -48,7 +48,7 @@ export default function useAddDepartment() {
         }
       }
 
-      const AdminRole = (session?.user as any)?.role;
+      const AdminRole = (session?.user as any)?.adminRole;
       const AdminEnterpriseId = (session?.user as any)?.EnterpriseId;
 
       try {
