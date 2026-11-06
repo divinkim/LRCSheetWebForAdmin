@@ -235,7 +235,7 @@ export default function ViewEnterprise() {
     enterprise?.paymentFrequency ??
     "Non définie";
 
-  const daysLeft = getDaysLeft(enterprise?.subscriptionExpiresAt);
+  const daysLeft = getDaysLeft(String(enterprise?.subscriptionExpiresAt));
   const isExpired = daysLeft !== null && daysLeft < 0;
   const isExpiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
 
@@ -494,7 +494,7 @@ export default function ViewEnterprise() {
                       Date d'expiration
                     </span>
                     <span className="font-semibold text-right">
-                      {formatDate(enterprise?.subscriptionExpiresAt)}
+                      {formatDate(String(enterprise?.subscriptionExpiresAt))}
                     </span>
                   </div>
                   {daysLeft !== null && (

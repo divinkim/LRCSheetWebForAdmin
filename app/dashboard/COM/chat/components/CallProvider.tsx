@@ -57,8 +57,9 @@ const configuration: RTCConfiguration = {
 /**
  * Sonnerie d'appel entrant : fichier audio en boucle, avec repli sur des bips
  * si le navigateur bloque la lecture (pas d'interaction préalable avec la page).
+ * Exportée : réutilisée par GroupCallProvider pour les invitations de groupe.
  */
-const useRingtone = (active: boolean) => {
+export const useRingtone = (active: boolean) => {
   useEffect(() => {
     if (!active) return;
     let audio: HTMLAudioElement | null = null;

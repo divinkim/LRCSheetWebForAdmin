@@ -6,13 +6,16 @@ import {
   User, Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Video, Paperclip, Send, XCircle,
   ArrowLeft, Mic, FileText, ExternalLink, Search,
   Wifi, WifiOff, ChevronDown, Clock, Check, CheckCheck, AlertCircle, MessageCircle,
-  Sun, Moon, Pencil,
+  Sun, Moon, Pencil, Users,
 } from 'lucide-react';
 import { useToast } from '@/components/toast';
 import { providers } from '@/index';
 import { SidebarHook } from '@/components/Layouts/sidebar/hook';
 import { useCollaboratorsChat, ChatMessage } from './hook';
 import { useCallContext } from '@/app/dashboard/COM/chat/components/CallProvider';
+// ⚠️ On n'importe QUE le hook : le GroupCallProvider est déjà monté dans app/layout.tsx.
+// Un second provider ici créerait un état séparé de celui lu par <GroupCallModal />.
+import { useGroupCall } from '@/app/dashboard/COM/chat/components/GroupCallProvider';
 import { useVoiceRecorder, RecordingBar, VoicePlayer, fmtMs, VOICE_MIN_MS } from './components/VoiceNote';
 import { getFileKind, resolveFileUrl } from './config/fileUrl';
 
@@ -200,7 +203,7 @@ MessageBubble.displayName = 'MessageBubble';
 /* ------------------------------------------------------------------ */
 type Filter = 'all' | 'unread' | 'online';
 
-export default function ChatPage() {
+function ChatPageContent() {
   const {
     collaborators, onlineUserIds, conversations, selectedCollaborator, selectCollaborator,
     messages, inputText, setInputText, selectedFile, setSelectedFile,
@@ -243,6 +246,15 @@ export default function ChatPage() {
   /* ---------------- Appels (état global, modal rendu par CallProvider) ---------------- */
   const call = useCallContext();
   const { callState } = call;
+
+  /* ---------------- Visioconférence de groupe (popup + modal rendus par GroupCallModal dans le layout) ---------------- */
+  const group = useGroupCall();
+
+  // Ouvre le sélecteur de participants ; le collaborateur ouvert (s'il y en a un) est présélectionné
+  const openGroupPicker = () => {
+    const pre = selectedCollaborator ? [Number(selectedCollaborator.id)] : [];
+    group.openPicker('start', pre.filter((n) => Number.isFinite(n)));
+  };
 
   // Rafraîchit l'historique quand un appel vient d'être journalisé
   useEffect(() => call.subscribeCallLogged(bumpHistory), [call.subscribeCallLogged, bumpHistory]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -358,7 +370,9 @@ export default function ChatPage() {
   const partnerTyping = partnerWriting === 'typing';
   const partnerRecording = partnerWriting === 'recording';
   const inCallWithThis = !!callState && callState.partner.id === selectedCollaborator?.id;
-  const callsDisabled = !!callState || !connected;
+  const inGroupCall = !!group.room;
+  // Pas de nouvel appel pendant un appel 1-1, une visio de groupe ou une coupure réseau
+  const callsDisabled = !!callState || !connected || inGroupCall;
   const hasDraft = !!inputText.trim() || !!selectedFile;
 
   const headerBtn =
@@ -392,6 +406,17 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {/* Nouvelle visioconférence de groupe : ouvre le popup de sélection */}
+              <button
+                type="button"
+                disabled={callsDisabled}
+                title="Visioconférence de groupe"
+                aria-label="Visioconférence de groupe"
+                onClick={openGroupPicker}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+              >
+                <Users className="h-4 w-4" />
+              </button>
               <button type="button" onClick={toggleTheme}
                 aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
                 title={isDark ? 'Mode clair' : 'Mode sombre'}
@@ -576,6 +601,13 @@ export default function ChatPage() {
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">
                   <Video className="h-4 w-4" />
                 </button>
+                {/* Visioconférence de groupe : ce collaborateur est présélectionné */}
+                <button type="button" disabled={callsDisabled} title="Visioconférence de groupe"
+                  aria-label="Visioconférence de groupe"
+                  onClick={openGroupPicker}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">
+                  <Users className="h-4 w-4" />
+                </button>
               </div>
             </div>
             {!connected && (
@@ -662,7 +694,7 @@ export default function ChatPage() {
                     <Send className="h-4 w-4" />
                   </button>
                 ) : (
-                  <button type="button" onClick={voice.start} disabled={!!callState || !connected}
+                  <button type="button" onClick={voice.start} disabled={!!callState || inGroupCall || !connected}
                     aria-label="Enregistrer une note vocale" title="Enregistrer une note vocale"
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950">
                     <Mic className="h-[18px] w-[18px]" />
@@ -683,8 +715,11 @@ export default function ChatPage() {
           </p>
         </div>
       )}
-
-      {/* Le modal d'appel est rendu globalement par <CallProvider /> dans le layout */}
     </div>
   );
+}
+
+// Le GroupCallProvider et le GroupCallModal sont montés une seule fois dans app/layout.tsx.
+export default function ChatPage() {
+  return <ChatPageContent />;
 }

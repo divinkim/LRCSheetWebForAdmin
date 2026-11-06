@@ -156,13 +156,13 @@ export default function ListEnterprise() {
         "enterprises",
         null
       );
-      const rawEnterprises: Enterprise[] = Array.isArray(res)
+      const rawEnterprises = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
           ? res.data
           : [];
 
-      let filtered: Enterprise[] = [];
+      let filtered = [];
 
       if (adminRole === "Super_Admin_Platform") {
         filtered = rawEnterprises;
