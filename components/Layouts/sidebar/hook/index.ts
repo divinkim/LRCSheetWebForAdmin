@@ -37,6 +37,9 @@ import {
   faGears,
   faBuildingFlag,
   faBriefcaseClock,
+  faCalendarCheck,
+  faFolderPlus,
+  faFolderOpen,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useSession } from "next-auth/react";
@@ -148,7 +151,7 @@ export function useNotifications() {
       bc.onmessage = (e) => {
         if (e.data?.type === "NOTIF_SAVED") sync();
       };
-    } catch {}
+    } catch { }
 
     sync();
     document.addEventListener("visibilitychange", onVisible);
@@ -283,6 +286,10 @@ export function SidebarHook() {
           { title: "Présences", href: "/dashboard/RH/presences", icon: faUserCheck, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau planning", href: "/dashboard/RH/planning/new", icon: faCalendarPlus, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Plannings horaires", href: "/dashboard/RH/roster", icon: faCalendarDays, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+          { title: "Ajouter un congé", href: "/dashboard/RH/leave/new", icon: faCalendarCheck, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Liste des congés", href: "/dashboard/RH/leave/list", icon: faClipboardList, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
+          { title: "ajouter un type de congé", href: "/dashboard/RH/leave-type/new", icon: faFolderPlus, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "Liste des types de congés", href: "/dashboard/RH/leave-type/list", icon: faFolderOpen, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin", "Reception_Admin"]) },
         ],
       },
       {
@@ -290,7 +297,7 @@ export function SidebarHook() {
         ItemLists: [
           { title: "Rapports", href: "/dashboard/ADMIN/reporting", icon: faFileLines, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau contrat", href: "/dashboard/ADMIN/contract/new", icon: faFileContract, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
-          { title: "List des contrats", href: "/dashboard/ADMIN/contract/list", icon: faFileContract, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
+          { title: "List des contrats", href: "/dashboard/ADMIN/contract/list", icon: faFileLines, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau Département", href: "/dashboard/ADMIN/department/new", icon: faBuilding, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "liste des Départements", href: "/dashboard/ADMIN/department/list", icon: faBuildingFlag, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },
           { title: "Nouveau Poste", href: "/dashboard/ADMIN/post/new", icon: faBriefcase, access: accessToPage(["Super_Admin_Platform", "Super_Admin_Enterprise"]) },

@@ -12,7 +12,9 @@ import {
     faMap,
     faMapLocation,
     faMapLocationDot,
-    faFileSignature
+    faFileSignature,
+    faUser,
+    faFolder
 } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { title } from "process";
@@ -920,6 +922,82 @@ export const formElements = [
                     type: "text",
                     selectedInput: false,
                     alias: "description"
+                },
+            ],
+        },
+
+        addOrEditLeave: {
+            navigationLinks: [
+                {
+                    title: "Liste des congés",
+                    href: "/dashboard/RH/leave/list",
+                    icon: faIdBadge
+                },
+                {
+                    title: "Ajouter un type de congé",
+                    href: "/dashboard/RH/leave-type/new",
+                    icon: faFolder
+                },
+                {
+                    title: "Ajouter un employé",
+                    href: "/dashboard/RH/user/new",
+                    icon: faUser
+                },
+            ],
+
+            addPostTitlePage: "Ajouter un congé",
+            updatePostTitlePage: "Modifier un congé",
+
+            titleForm: "Formulaire d'ajout d'un congé",
+
+            inputs: [
+                // ---- Inputs classiques ----
+                {
+
+                    label: "Type de congé",
+                    placeholder: "Sélectionnez un type de congé",
+                    requireField: true,
+                    type: "number",
+                    selectedInput: true,
+                    textarea: false,
+                    dynamicOptions: {
+                        status: true
+                    },
+                    alias: "LeaveTypeId"
+                },
+
+                // ---- Select Inputs ----
+                {
+
+                    label: "collaborateurs",
+                    placeholder: "Sélectionnez un collaborateur",
+                    requireField: true,
+                    type: "number",
+                    selectedInput: true,
+                    textarea: false,
+                    dynamicOptions: {
+                        status: true
+                    },
+                    alias: "UserId"
+                },
+
+                {
+                    label: "Date de début",
+                    placeholder: "Veuillez saisir une date",
+                    requireField: true,
+                    textarea: false,
+                    type: "date",
+                    selectedInput: false,
+                    alias: "startDate"
+                },
+                {
+                    label: "Date de fin",
+                    placeholder: "Veuillez saisir une date",
+                    requireField: true,
+                    textarea: false,
+                    type: "date",
+                    selectedInput: false,
+                    alias: "endDate"
                 },
             ],
         },

@@ -682,3 +682,67 @@ export type NotificationsResponseDto = {
     message: string,
     data: NotificationDto[]
 }
+
+export type Status = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+
+export type LeaveDto = {
+    LeaveTypeId: number;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    status: Status;
+    rejectedReason: string | null;
+    UserId: number;
+    [key: string]: string | number | null
+};
+
+
+export type LeaveListDto = {
+    id: number;
+    LeaveTypeId: number;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    status: Status;
+    User: User;
+    LeaveType: LeaveTypeDto;
+    rejectedReason?: string | null;
+    UserId: number;
+    [key: string]: undefined | string | number | null | any;
+}
+
+export type LeaveListResponseDto = {
+    message: string,
+    data: LeaveListDto
+}
+
+export type LeaveListsResponseDto = {
+    message: string,
+    data: LeaveListDto[]
+}
+
+export type LeaveTypeDto = {
+    title: string;
+    description: string;
+    EnterpriseId: number;
+    [key: string]: string | number | null;
+};
+
+export type LeaveTypeListDto = {
+    id: number;
+    title: string;
+    description: string;
+    EnterpriseId: number;
+    Enterprise: EnterpriseDto;
+    [key: string]: undefined | string | number | null | any;
+};
+
+export type LeaveTypeListResponseDto = {
+    message: string;
+    data: LeaveTypeListDto;
+};
+
+export type LeaveTypeListsResponseDto = {
+    message: string;
+    data: LeaveTypeListDto[];
+};

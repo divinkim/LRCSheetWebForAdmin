@@ -276,7 +276,7 @@ export default function WeekDaysPlanningsList() {
         </div>
 
         {/* Action Toolbar */}
-        <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm backdrop-blur-md">
+        <div className="flex flex-col lg:flex-row flex-wrap gap-4 items-stretch lg:items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm backdrop-blur-md">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
             {/* Champ de recherche */}
             <div className="relative flex-1 max-w-md">
@@ -315,7 +315,7 @@ export default function WeekDaysPlanningsList() {
           </div>
 
           {/* Export & Redirections */}
-          <div className="flex items-center gap-2.5 justify-end">
+          <div className="flex flex-wrap flex-row items-center gap-2.5">
             <button
               onClick={exportToCSV}
               disabled={filteredPlannings.length === 0}
