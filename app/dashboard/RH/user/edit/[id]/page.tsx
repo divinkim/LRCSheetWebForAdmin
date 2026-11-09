@@ -8,6 +8,7 @@ import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import { UpdateUserHookModal } from "./hook";
 import { UploadFileResponseDto } from "@/types/global";
+import SearchableSelect from "@/components/SearchAbaleSelect";
 
 export default function UpdateUser() {
   const {
@@ -17,6 +18,7 @@ export default function UpdateUser() {
     inputs,
     handleSubmit,
     isLoading,
+    LOCAL_KEY,
     adminRole,
   } = UpdateUserHookModal();
 
@@ -159,38 +161,25 @@ export default function UpdateUser() {
                       />
                     ) : (
                       /* Select input */
-                      <select
+                      <SearchableSelect
                         value={(inputs[e.alias] ?? "") as string | number}
-                        onChange={(v) => {
-                          setInputs({
+                        placeholder={e.placeholder}
+                        options={
+                          e.dynamicOptions?.status
+                            ? dynamicOptions.find((item) => item.alias === e.alias)?.arrayData ?? []
+                            : (staticOptions.find((item) => item.alias === e.alias)?.arrayData ?? []).filter(
+                              (option) => e.alias !== "role" || option?.status
+                            )
+                        }
+                        onChange={(val) => {
+                          const data = {
                             ...inputs,
-                            [e.alias]:
-                              e.type === "number"
-                                ? parseInt(v.target.value) || 0
-                                : v.target.value,
-                          });
+                            [e.alias]: e.type === "number" ? Number(val) || 0 : val,
+                          };
+                          setInputs(data);
+                          localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
                         }}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                      >
-                        <option value="" disabled className="text-slate-400 dark:bg-slate-900">
-                          {e.placeholder}
-                        </option>
-                        {e.dynamicOptions?.status
-                          ? dynamicOptions
-                            .find((item) => item.alias === e.alias)
-                            ?.arrayData?.map((option) => (
-                              <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                {option.title}
-                              </option>
-                            ))
-                          : staticOptions
-                            .find((item) => item.alias === e.alias)
-                            ?.arrayData.map((option) => (
-                              <option key={option.value} value={option.value} className={e.alias === "role" && option?.status ? "text-slate-800 dark:bg-slate-900 dark:text-slate-200" : e.alias === "role" && !option.status ? "hidden" : "text-slate-800 dark:bg-slate-900 dark:text-slate-200"}>
-                                {option.title}
-                              </option>
-                            ))}
-                      </select>
+                      />
                     )}
                   </div>
                 );

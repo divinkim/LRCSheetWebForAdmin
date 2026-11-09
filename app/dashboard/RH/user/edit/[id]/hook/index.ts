@@ -88,7 +88,7 @@ export function UpdateUserHookModal() {
     status: null,
     working_days_count: null,
   });
-
+  const LOCAL_KEY = "inputMemoryOfEditUserPage"
   // 1. Initialisation : Chargement des entreprises & pays
   useEffect(() => {
     if (sessionStatus === "loading") return;
@@ -122,12 +122,15 @@ export function UpdateUserHookModal() {
 
     (async () => {
       try {
+        const data = localStorage.getItem(LOCAL_KEY);
+        if (data) setInputs(JSON.parse(data))
         const getUser = await providers.API.getOne<UserResponseDto>(
           providers.APIUrl,
           "users",
           userId
         );
         setInputs({
+          ...inputs,
           firstname: getUser.data.firstname ?? null,
           lastname: getUser.data.lastname ?? null,
           birthDate: getUser.data.birthDate
@@ -543,5 +546,6 @@ export function UpdateUserHookModal() {
     isLoading,
     setIsLoading,
     adminRole,
+    LOCAL_KEY
   };
 }

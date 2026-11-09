@@ -8,6 +8,7 @@ import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import AddUserHookModal from "./hook";
 import { UploadFileResponseDto } from "@/types/global";
+import SearchableSelect from "@/components/SearchAbaleSelect";
 
 const FIELD_BASE =
   "w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-medium text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700/80 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:bg-slate-800";
@@ -173,51 +174,25 @@ export default function AddUser() {
                           )}
                         />
                       ) : (
-                        <select
+                        <SearchableSelect
                           value={(inputs[e.alias] ?? "") as string | number}
-                          onChange={(v) => {
+                          placeholder={e.placeholder}
+                          options={
+                            e.dynamicOptions?.status
+                              ? dynamicOptions.find((item) => item.alias === e.alias)?.arrayData ?? []
+                              : (staticOptions.find((item) => item.alias === e.alias)?.arrayData ?? []).filter(
+                                (option) => e.alias !== "role" || option?.status
+                              )
+                          }
+                          onChange={(val) => {
                             const data = {
                               ...inputs,
-                              [e.alias]: e.type === "number" ? parseInt(v.target.value) || 0 : v.target.value,
-                            }
+                              [e.alias]: e.type === "number" ? Number(val) || 0 : val,
+                            };
                             setInputs(data);
-                            localStorage.setItem(LOCAL_KEY, JSON.stringify(data))
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
                           }}
-                          className={cn(FIELD_BASE, "cursor-pointer")}
-                        >
-                          <option value="" disabled className="text-slate-400 dark:bg-slate-900">
-                            {e.placeholder}
-                          </option>
-                          {e.dynamicOptions?.status
-                            ? dynamicOptions
-                              .find((item) => item.alias === e.alias)
-                              ?.arrayData?.map((option) => (
-                                <option
-                                  key={option.value}
-                                  value={option.value}
-                                  className="text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                >
-                                  {option.title}
-                                </option>
-                              ))
-                            : staticOptions
-                              .find((item) => item.alias === e.alias)
-                              ?.arrayData.map((option) => (
-                                <option
-                                  key={option.value}
-                                  value={option.value}
-                                  className={
-                                    e.alias === "role" && option?.status
-                                      ? "text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                      : e.alias === "role" && !option.status
-                                        ? "hidden"
-                                        : "text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                  }
-                                >
-                                  {option.title}
-                                </option>
-                              ))}
-                        </select>
+                        />
                       )}
                     </div>
                   );

@@ -6,6 +6,7 @@ import { faSpinner, faUserClock, faArrowLeft } from "@fortawesome/free-solid-svg
 import { formElements } from "@/components/FormElements/forms";
 import { useAppointment } from "./hook";
 import { useEffect, useState } from "react";
+import SearchableSelect from "@/components/SearchAbaleSelect";
 export default function AddAppointment() {
     const {
         dynamicArrayData,
@@ -134,26 +135,16 @@ export default function AddAppointment() {
 
                                         {/* Select (Choix de l'interlocuteur UserId, statut, etc.) */}
                                         {e.selectedInput && (
-                                            <select
+                                            <SearchableSelect
                                                 value={value}
-                                                onChange={(v) => {
-                                                    const val = e.type === "number" ? parseInt(v.target.value, 10) : v.target.value;
-                                                    handleInputChange(e.alias, val);
-                                                }}
-                                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                                            >
-                                                <option value="" disabled className="text-slate-400 dark:bg-slate-900">
-                                                    {e.placeholder}
-                                                </option>
-                                                {e.dynamicOptions?.status &&
-                                                    dynamicArrayData
-                                                        ?.find((item: any) => item.alias === e.alias)
-                                                        ?.arrayData?.map((option: any, oIdx: number) => (
-                                                            <option key={oIdx} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                                                {option.title}
-                                                            </option>
-                                                        ))}
-                                            </select>
+                                                placeholder={e.placeholder}
+                                                options={
+                                                    e.dynamicOptions?.status
+                                                        ? dynamicArrayData?.find((item: any) => item.alias === e.alias)?.arrayData ?? []
+                                                        : []
+                                                }
+                                                onChange={(val) => handleInputChange(e.alias, e.type === "number" ? Number(val) : val)}
+                                            />
                                         )}
                                         <p className={requireFields[e.alias] ? "text-xs  text-red-500" : "hidden"}>
                                             {requireFields[e.alias]}

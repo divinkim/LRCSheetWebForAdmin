@@ -672,6 +672,7 @@ export interface NotificationDto {
     EnterpriseId: number;
     UserId: number;
     createdAt: string;
+    status: "unread "| "read";
     updatedAt: string;
     User: User;
     Enterprise: Enterprise;
