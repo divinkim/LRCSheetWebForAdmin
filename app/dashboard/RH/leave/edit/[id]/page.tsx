@@ -7,7 +7,7 @@ import { ClipLoader } from "react-spinners";
 import { formElements } from "@/components/FormElements/forms";
 import { providers } from "@/index";
 import { cn } from "@/lib/utils";
-import useAddLeave from "./hook";
+import useEditLeave from "./hook";
 
 /* -------------------------------------------------------------------------- */
 /*  SearchableSelect : select avec barre de recherche                          */
@@ -272,7 +272,7 @@ export default function AddLeave() {
     handleSubmit,
     adminRole,
     LOCAL_KEY
-  } = useAddLeave();
+  } = useEditLeave();
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
@@ -342,8 +342,8 @@ export default function AddLeave() {
                   // Options du select (dynamiques ou statiques)
                   const selectOptions: SelectOption[] = e.selectedInput
                     ? ((e.dynamicOptions?.status ? dynamicArrayData : staticArrayData).find(
-                        (item: any) => item.alias === e.alias
-                      )?.arrayData ?? [])
+                      (item: any) => item.alias === e.alias
+                    )?.arrayData ?? [])
                     : [];
 
                   return (
@@ -379,7 +379,7 @@ export default function AddLeave() {
                             //     return;
                             //   }
                             // }
-                           
+
                             const updatedInputs = {
                               ...inputs,
                               [field]: v.target.value
@@ -403,7 +403,7 @@ export default function AddLeave() {
                           searchPlaceholder="Rechercher..."
                           emptyMessage="Aucun résultat"
                           onChange={(raw) => {
-                            
+
                             let field = e.alias;
                             const fieldValue = {
                               ...inputs,
