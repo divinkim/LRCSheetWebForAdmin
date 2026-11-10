@@ -18,6 +18,9 @@ export interface Collaborator {
   Post?: { title: string };
 }
 
+// Valeurs du champ `status` en base
+export type MessageStatus = 'unread' | 'read' | 'deleted';
+
 export interface ChatMessage {
   id: number;
   senderId: number;
@@ -28,7 +31,7 @@ export interface ChatMessage {
   localUrl?: string;                      // blob local conservé côté expéditeur (lecture fiable)
   createdAt: string;
   status?: 'sending' | 'sent' | 'failed'; // envoi optimiste (local)
-  readStatus?: 'unread' | 'read';         // champ `status` de la base
+  readStatus?: MessageStatus;             // champ `status` de la base
   voiceDurationMs?: number;
   isVoice?: boolean;
   callDuration?: number | null;
@@ -39,7 +42,7 @@ export interface ConversationState {
   lastMessage?: string;
   lastMessageDate?: string;
   lastSenderId?: number;
-  lastReadStatus?: 'unread' | 'read';
+  lastReadStatus?: MessageStatus;
   unreadCount: number;
   isOnline: boolean;
 }
@@ -68,6 +71,10 @@ const decodeVoiceTitle = (title?: string | null) => {
   const m = title ? VOICE_TITLE.exec(title) : null;
   return m ? Number(m[1]) : undefined;
 };
+
+// Statut "supprimé" (valeur stockée dans le champ `status` en base)
+const DELETED_STATUS: MessageStatus = 'deleted';
+export const DELETED_LABEL = 'Ce message a été supprimé';
 
 // Durée d'affichage "écrit..." sans nouvel évènement (ms)
 const WRITING_TIMEOUT = 3500;
@@ -157,7 +164,10 @@ export const useCollaboratorsChat = () => {
           if (!partnerId) return;
 
           const isCall = msg.callDuration !== undefined && msg.callDuration !== null;
-          const readStatus: 'unread' | 'read' = msg.status === 'unread' ? 'unread' : 'read';
+          const isDeleted = msg.status === DELETED_STATUS;
+          const readStatus: MessageStatus = isDeleted
+            ? 'deleted'
+            : msg.status === 'unread' ? 'unread' : 'read';
           // non lu pour moi = message reçu, encore unread (appels réussis exclus)
           const countsAsUnread =
             rId === currentUserId && readStatus === 'unread' && (!isCall || msg.callStatus === false);
@@ -166,10 +176,11 @@ export const useCollaboratorsChat = () => {
 
           (grouped[partnerId] ||= []).push({
             id: msg.id, senderId: sId, receiverId: rId,
-            content: msg.content || '',
-            file: msg.file || undefined,
-            isVoice: isAudioFile(msg.file),
-            voiceDurationMs: voiceMs,
+            // un message supprimé ne garde ni texte ni fichier
+            content: isDeleted ? '' : msg.content || '',
+            file: isDeleted ? undefined : msg.file || undefined,
+            isVoice: !isDeleted && isAudioFile(msg.file),
+            voiceDurationMs: isDeleted ? undefined : voiceMs,
             createdAt: msg.createdAt,
             status: 'sent',
             readStatus,
@@ -179,9 +190,11 @@ export const useCollaboratorsChat = () => {
 
           latest[partnerId] = new Date(msg.createdAt).getTime();
           convs[partnerId] = {
-            lastMessage: isCall
-              ? (msg.callStatus === false ? '📞 Appel manqué' : '📞 Appel')
-              : previewOf(msg.content, msg.file),
+            lastMessage: isDeleted
+              ? DELETED_LABEL
+              : isCall
+                ? (msg.callStatus === false ? '📞 Appel manqué' : '📞 Appel')
+                : previewOf(msg.content, msg.file),
             lastMessageDate: msg.createdAt,
             lastSenderId: sId,
             lastReadStatus: readStatus,
@@ -228,8 +241,9 @@ export const useCollaboratorsChat = () => {
     }));
     setMessages((p) => ({
       ...p,
+      // `=== 'unread'` : ne jamais écraser un message supprimé
       [partnerId]: (p[partnerId] || []).map((m) =>
-        m.senderId === partnerId && m.readStatus !== 'read' ? { ...m, readStatus: 'read' } : m),
+        m.senderId === partnerId && m.readStatus === 'unread' ? { ...m, readStatus: 'read' } : m),
     }));
 
     // 3. base de données
@@ -242,6 +256,86 @@ export const useCollaboratorsChat = () => {
       console.warn('mark-read impossible', e);
     }
   }, [socket, currentUserId, serverUrl]);
+
+  // ------------------------------------------------------------ Suppression de messages
+  // Passe des messages à "supprimé" en local (expéditeur ET destinataire).
+  // `messages` est un Record par conversation : on parcourt chaque liste.
+  const markAsDeleted = useCallback((ids: number[]) => {
+    setMessages((prev) => {
+      let changed = false;
+      const next: Record<number, ChatMessage[]> = { ...prev };
+
+      for (const key of Object.keys(prev)) {
+        const partnerId = Number(key);
+        const list = prev[partnerId];
+        if (!list?.some((m) => ids.includes(m.id))) continue; // conversation non concernée
+
+        changed = true;
+        next[partnerId] = list.map((m) =>
+          ids.includes(m.id)
+            ? {
+              ...m,
+              readStatus: DELETED_STATUS,
+              content: '',
+              file: undefined,
+              localUrl: undefined,
+              fileName: undefined,
+              isVoice: false,
+              voiceDurationMs: undefined,
+            }
+            : m
+        );
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  // Annulation ciblée si la requête échoue (ne touche pas aux messages arrivés entre-temps)
+  const restoreMessages = useCallback((originals: ChatMessage[]) => {
+    setMessages((prev) => {
+      const next: Record<number, ChatMessage[]> = { ...prev };
+      for (const key of Object.keys(prev)) {
+        const partnerId = Number(key);
+        next[partnerId] = prev[partnerId].map(
+          (m) => originals.find((o) => o.id === m.id) ?? m
+        );
+      }
+      return next;
+    });
+  }, []);
+
+  // Suppression côté expéditeur : mise à jour optimiste, puis requête update, puis socket
+  const deleteMessages = useCallback(
+    async (ids: number[]) => {
+      if (!ids.length || !selectedCollaborator) return;
+
+      const originals = Object.values(messages).flat().filter((m) => ids.includes(m.id));
+      markAsDeleted(ids);
+
+      try {
+        // Requête update : status -> "deleted" pour chaque id
+        await Promise.all(
+          ids.map((id) =>
+            providers.API.update(serverUrl, 'chats', null, { status: DELETED_STATUS }, id)
+          )
+        );
+
+        // Prévient le destinataire en temps réel (le serveur doit relayer cet évènement)
+        socket?.emit('messages_deleted', {
+          ids,
+          senderId: currentUserId,
+          receiverId: selectedCollaborator.id,
+        });
+
+        // Resynchronise l'aperçu de la liste des discussions
+        loadHistory();
+      } catch (err) {
+        restoreMessages(originals); // annulation
+        throw err; // la page affiche l'erreur
+      }
+    },
+    [messages, selectedCollaborator, socket, currentUserId, serverUrl, markAsDeleted, restoreMessages, loadHistory]
+  );
 
   // ------------------------------------------------------------ Temps réel
   useEffect(() => {
@@ -300,11 +394,14 @@ export const useCollaboratorsChat = () => {
       if (!partnerId) return;
       setMessages((p) => ({
         ...p,
+        // `=== 'unread'` : ne jamais écraser un message supprimé
         [partnerId]: (p[partnerId] || []).map((m) =>
-          m.senderId === currentUserId && m.readStatus !== 'read' ? { ...m, readStatus: 'read' } : m),
+          m.senderId === currentUserId && m.readStatus === 'unread' ? { ...m, readStatus: 'read' } : m),
       }));
       setConversations((p) =>
-        p[partnerId] ? { ...p, [partnerId]: { ...p[partnerId], lastReadStatus: 'read' } } : p);
+        p[partnerId] && p[partnerId].lastReadStatus !== 'deleted'
+          ? { ...p, [partnerId]: { ...p[partnerId], lastReadStatus: 'read' } }
+          : p);
     };
 
     // Évènement serveur 'writing' => { from: idDeLExpediteur, message: 'typing' | 'recording' | 'stop' }
@@ -326,15 +423,25 @@ export const useCollaboratorsChat = () => {
       writingTimers.current[from] = setTimeout(() => clearWriting(from), WRITING_TIMEOUT);
     };
 
+    // L'expéditeur a supprimé des messages => 'messages_deleted' { ids }
+    const onDeleted = (d: any) => {
+      const ids: number[] = Array.isArray(d?.ids) ? d.ids.map(Number) : [];
+      if (!ids.length) return;
+      markAsDeleted(ids);
+      loadHistory(); // aperçu + ids réels si le message local avait un id temporaire
+    };
+
     socket.on('getChatData', onChat);
     socket.on('messagesRead', onRead);
     socket.on('writing', onWriting);
+    socket.on('messages_deleted', onDeleted);
     return () => {
       socket.off('getChatData', onChat);
       socket.off('messagesRead', onRead);
       socket.off('writing', onWriting);
+      socket.off('messages_deleted', onDeleted);
     };
-  }, [socket, currentUserId, markAsRead, clearWriting]);
+  }, [socket, currentUserId, markAsRead, clearWriting, markAsDeleted, loadHistory]);
 
   // ------------------------------------------------------------ Envoi
   const patchMessage = useCallback((partnerId: number, id: number, changes: Partial<ChatMessage>) => {
@@ -379,7 +486,7 @@ export const useCollaboratorsChat = () => {
 
       // 1. Enregistrement en base d'abord (le message existe avant que le
       //    destinataire puisse le marquer comme lu)
-      await providers.API.post(serverUrl, 'chats', null, {
+      const saved: any = await providers.API.post(serverUrl, 'chats', null, {
         title: msg.isVoice ? encodeVoiceTitle(msg.voiceDurationMs) : '',
         senderId: currentUserId,
         receiverId: partnerId,
@@ -389,7 +496,14 @@ export const useCollaboratorsChat = () => {
         callDuration: null,
         callStatus: null,
       });
-      patchMessage(partnerId, msg.id, { status: 'sent' });
+
+      // Remplace l'id temporaire par l'id réel de la base : indispensable pour pouvoir
+      // supprimer le message juste après l'envoi (adaptez le chemin si votre API répond autrement)
+      const realId = Number(saved?.data?.id ?? saved?.id);
+      patchMessage(partnerId, msg.id, {
+        status: 'sent',
+        ...(Number.isFinite(realId) && realId > 0 ? { id: realId } : {}),
+      });
 
       // 2. Émission socket temps réel ensuite
       if (!emittedRef.current.has(msg.id)) {
@@ -512,6 +626,7 @@ export const useCollaboratorsChat = () => {
     sendMessage,
     sendVoiceNote,
     retryMessage,
+    deleteMessages,
     emitWriting,
     writing,
     markAsRead,

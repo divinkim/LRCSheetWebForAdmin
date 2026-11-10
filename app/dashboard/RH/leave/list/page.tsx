@@ -343,7 +343,7 @@ export default function LeaveList() {
                     await providers.API.post(providers.APIUrl, "notification-push", null, {
                         senderId: "40",
                         receiverId: String(leave.UserId),
-                        messagingType: "general",
+                        messagingType: "leave",
                         title: notification.title,
                         content: notification.content,
                     });

@@ -107,7 +107,7 @@ export default function useAddLeave() {
         {
           senderId: "40",
           receiverId: String(inputs.UserId),
-          messagingType: "general",
+          messagingType: "leave",
           title: "Autorisation Congé validé",
           content: `Vous avez été autorisé par l'administration pour une période de congé, allant du ${formattedStart} au ${formattedEnd}.`
         }

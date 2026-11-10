@@ -1,5 +1,5 @@
-const APIUrl = "https://vps118934.serveur-vps.net:8102";
-const ImageUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/images";
+export const APIUrl = "https://vps118934.serveur-vps.net:8102";
+export const ImageUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/images";
 export const OthersUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/others";
 export const AudioUrl = "https://vps118934.serveur-vps.net:8102/api/media/uploads/audios";
 
