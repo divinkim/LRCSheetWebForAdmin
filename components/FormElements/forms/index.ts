@@ -1002,6 +1002,63 @@ export const formElements = [
             ],
         },
 
+        addOrEditLeaveType: {
+            navigationLinks: [
+                {
+                    title: "Liste des types de congé",
+                    href: "/dashboard/RH/leave-type/list",
+                    icon: faIdBadge
+                },
+                {
+                    title: "Ajouter une entreprise",
+                    href: "/dashboard/OTHERS/enterprise/new",
+                    icon: faFolder
+                },
+            ],
+
+            addLeaveTypeTitlePage: "Ajouter un type de congé",
+            updateLeaveTypePostTitlePage: "Modifier un type de congé",
+
+            titleForm: "Formulaire d'ajout d'un type de congé",
+
+            inputs: [
+                {
+
+                    label: "Entreprises",
+                    placeholder: "Sélectionnez une entreprise",
+                    requireField: true,
+                    type: "number",
+                    selectedInput: true,
+                    textarea: false,
+                    dynamicOptions: {
+                        status: true
+                    },
+                    alias:"EnterpriseId"
+                },
+
+                // ---- Select Inputs ----
+                
+                {
+                    label: "titre",
+                    placeholder: "Veuillez saisir un titre",
+                    requireField: true,
+                    textarea: false,
+                    type: "text",
+                    selectedInput: false,
+                    alias: "title"
+                },
+                {
+                    label: "Description",
+                    placeholder: "Veuillez saisir une description",
+                    requireField: true,
+                    textarea: false,
+                    type: "text",
+                    selectedInput: false,
+                    alias: "description"
+                },
+            ],
+        },
+
         addQuarter: {
 
             titleForm: "Formulaire d'enregistrement d'un quartier",

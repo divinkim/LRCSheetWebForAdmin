@@ -72,7 +72,7 @@ export function useAppointment() {
             arrayData: users.filter((item) => item.id
                 && item.firstname
                 && item.lastname
-                && [1, 2, 3, 4].includes(Number(sessionEnterpriseId)))
+                && item.Enterprise.MainEnterpriseId === sessionEnterpriseId)
                 .map((item) => ({
                     value: item.id,
                     title: `${item.firstname} ${item.lastname}`
@@ -137,7 +137,7 @@ export function useAppointment() {
                 date: inputs.date,
                 reason: inputs.reason,
             }
-            
+
             let isValid = true
 
             for (const [key, value] of Object.entries(fields)) {
