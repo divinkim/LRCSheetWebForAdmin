@@ -61,19 +61,21 @@ export type Enterprise = {
     legalForm: string;
     rccm: string;
     nui: string | null;
-    subscriptionType: string | "STARTER" | "PREMIUM" | "PRO";
+    paymentMode: "AUTO" | "MANUAL";
     paymentFrequency: string | "MONTHLY" | "QUARTERLY" | "SEMI_ANNUAL" | "ANNUAL",
     subscriptionStatus: string | "ACTIVE" | "INACTIVE" | "WAITING";
+    SubscriptionTypeId: number | null,
     EnterpriseId: number | null;
     toleranceTime: string;
     pourcentageOfHourlyDeduction: string;
     maxToleranceTime: string;
     maxPourcentageOfHourlyDeduction: string;
     MainEnterpriseId: number | null;
-    subscriptionExpiresAt: Date | null
+    subscriptionExpiresAt: Date | null | string | undefined
     City: City;
     Country: Country
-    [key: string]: any
+    SusbcriptionType: ListSubscribeTypeDto
+    [key: string]: string | null | number | Date | undefined | Country | City | ListSubscribeTypeDto | any
 };
 
 export type EnterpriseDto = {
@@ -94,7 +96,7 @@ export type EnterpriseDto = {
     legalForm: string;
     rccm: string;
     nui: string | null;
-    subscriptionType: string | "STARTER" | "PREMIUM" | "PRO";
+    paymentMode: "AUTO" | "MANUAL";
     paymentFrequency: string | "MONTHLY" | "QUARTERLY" | "SEMI_ANNUAL" | "ANNUAL",
     subscriptionStatus: string | "ACTIVE" | "INACTIVE" | "WAITING";
     EnterpriseId: number | null;
@@ -103,6 +105,7 @@ export type EnterpriseDto = {
     maxToleranceTime: string;
     maxPourcentageOfHourlyDeduction: string;
     MainEnterpriseId: number | null;
+    SubscriptionTypeId: number | null,
     subscriptionExpiresAt: string | null
     [key: string]: any
 };
@@ -672,7 +675,7 @@ export interface NotificationDto {
     EnterpriseId: number;
     UserId: number;
     createdAt: string;
-    status: "unread "| "read";
+    status: "unread " | "read";
     updatedAt: string;
     User: User;
     Enterprise: Enterprise;
@@ -747,3 +750,27 @@ export type LeaveTypeListsResponseDto = {
     message: string;
     data: LeaveTypeListDto[];
 };
+
+export type CreateSubscribeTypeDto = {
+    title: string;
+    price: string;
+    status: string;
+}
+
+export type ListSubscribeTypeDto = {
+    id: number;
+    title: string;
+    price: string;
+    status: string;
+    Enterprise: Enterprise;
+}
+
+export type SubscribeListTypeResponseDto = {
+    title: string;
+    data: ListSubscribeTypeDto;
+}
+
+export type SubscribeListTypesResponseDto = {
+    title: string;
+    data: ListSubscribeTypeDto[];
+}

@@ -22,6 +22,8 @@ import {
   faCompass,
   faCalendarAlt,
   faRepeat,
+  faTag,
+  faCreditCard,
 } from "@fortawesome/free-solid-svg-icons";
 import { providers } from "@/index";
 import { Enterprise, EnterpriseResponseDto } from "@/types/global";
@@ -53,23 +55,29 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const PLAN_LABELS: Record<string, string> = {
-  STARTER: "Starter",
-  PREMIUM: "Premium",
-  PRO: "Pro",
-};
-
 const FREQUENCY_LABELS: Record<string, string> = {
-  MONTHLY: "Mensuelle",
-  QUARTERLY: "Trimestrielle",
-  SEMI_ANNUAL: "Semestrielle",
-  ANNUAL: "Annuelle",
+  MONTHLY: "Mensuel",
+  QUARTERLY: "Trimestriel",
+  SEMI_ANNUAL: "Semestriel",
+  ANNUAL: "Annuel",
 };
 
-const formatDate = (value?: string | null): string => {
-  if (!value) return "Non définie";
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return "Non définie";
+const PAYMENT_MODE_LABELS: Record<string, string> = {
+  AUTO: "Automatique",
+  MANUAL: "Manuel",
+};
+
+type DateInput = Date | string | null | undefined;
+
+const toDate = (value: DateInput): Date | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+const formatDate = (value: DateInput): string => {
+  const date = toDate(value);
+  if (!date) return "Non définie";
   return date.toLocaleDateString("fr-FR", {
     day: "2-digit",
     month: "long",
@@ -78,13 +86,17 @@ const formatDate = (value?: string | null): string => {
 };
 
 // Jours restants avant expiration (négatif si expiré, null si pas de date)
-const getDaysLeft = (value?: string | null): number | null => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return null;
+const getDaysLeft = (value: DateInput): number | null => {
+  const date = toDate(value);
+  if (!date) return null;
   return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 };
 
+const formatPrice = (value: unknown): string => {
+  if (!value) return "—"
+  const price = Number(value);
+  return `${price.toLocaleString("fr-FR")} XAF`;
+};
 // ==========================================
 // Composant Skeleton (Pendant le chargement)
 // ==========================================
@@ -138,7 +150,10 @@ function EnterpriseSkeleton() {
               <div className="h-5 w-56 bg-slate-200 dark:bg-slate-800 rounded-md"></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[...Array(2)].map((_, i) => (
-                  <div key={i} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2"
+                  >
                     <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded"></div>
                     <div className="h-6 w-16 bg-slate-200 dark:bg-slate-800 rounded-md"></div>
                     <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
@@ -152,7 +167,10 @@ function EnterpriseSkeleton() {
               <div className="h-5 w-60 bg-slate-200 dark:bg-slate-800 rounded-md"></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div
+                    key={i}
+                    className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2"
+                  >
                     <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded"></div>
                     <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
                   </div>
@@ -167,8 +185,11 @@ function EnterpriseSkeleton() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
               <div className="h-5 w-44 bg-slate-200 dark:bg-slate-800 rounded-md"></div>
               <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-12 w-full bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-12 w-full bg-slate-200 dark:bg-slate-800 rounded-xl"
+                  ></div>
                 ))}
               </div>
             </div>
@@ -222,12 +243,13 @@ export default function ViewEnterprise() {
   }
 
   // --- Données d'abonnement calculées ---
+  const subscription = enterprise?.SubscriptionType;
+
   const statusKey = enterprise?.subscriptionStatus?.toUpperCase() ?? "";
   const statusCfg = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.INACTIVE;
 
-  const planKey = enterprise?.subscriptionType?.toUpperCase() ?? "";
-  const planLabel =
-    PLAN_LABELS[planKey] ?? enterprise?.subscriptionType ?? "Non définie";
+  const planLabel = subscription?.title || "Non définie";
+  const priceLabel = formatPrice(subscription?.price);
 
   const frequencyKey = enterprise?.paymentFrequency?.toUpperCase() ?? "";
   const frequencyLabel =
@@ -235,7 +257,11 @@ export default function ViewEnterprise() {
     enterprise?.paymentFrequency ??
     "Non définie";
 
-  const daysLeft = getDaysLeft(String(enterprise?.subscriptionExpiresAt));
+  const paymentModeLabel = enterprise?.paymentMode
+    ? PAYMENT_MODE_LABELS[enterprise.paymentMode] ?? enterprise.paymentMode
+    : "Non défini";
+
+  const daysLeft = getDaysLeft(enterprise?.subscriptionExpiresAt);
   const isExpired = daysLeft !== null && daysLeft < 0;
   const isExpiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
 
@@ -248,7 +274,7 @@ export default function ViewEnterprise() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-200">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Titre & Fil d'Ariane */}
+        {/* Titre */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -264,12 +290,15 @@ export default function ViewEnterprise() {
             <div className="relative w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
               {enterprise?.logo ? (
                 <img
-                  src={`${providers.APIUrl}/images/${enterprise.logo}`}
+                  src={`${providers.ImageUrl}/${enterprise.logo}`}
                   alt={enterprise.name}
                   className="w-full h-full object-contain p-2"
                 />
               ) : (
-                <FontAwesomeIcon icon={faBuilding} className="text-3xl text-slate-400 dark:text-slate-500" />
+                <FontAwesomeIcon
+                  icon={faBuilding}
+                  className="text-3xl text-slate-400 dark:text-slate-500"
+                />
               )}
             </div>
 
@@ -278,11 +307,17 @@ export default function ViewEnterprise() {
                 {enterprise?.name || "Nom non spécifié"}
               </h2>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-                <FontAwesomeIcon icon={faBriefcase} className="text-slate-400 dark:text-slate-500" />
+                <FontAwesomeIcon
+                  icon={faBriefcase}
+                  className="text-slate-400 dark:text-slate-500"
+                />
                 {enterprise?.activityDomain || "Secteur d'activité non renseigné"}
               </p>
               <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1.5">
-                <FontAwesomeIcon icon={faFileContract} className="text-slate-400 dark:text-slate-500" />
+                <FontAwesomeIcon
+                  icon={faFileContract}
+                  className="text-slate-400 dark:text-slate-500"
+                />
                 Forme juridique : {enterprise?.legalForm || "Non précisée"}
               </p>
             </div>
@@ -292,7 +327,7 @@ export default function ViewEnterprise() {
           <div className="flex items-center gap-3">
             <Link
               href={`/dashboard/OTHERS/enterprise/edit/${enterprise?.id}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all shadow-md shadow-blue-600/10 active:scale-95"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all shadow-md shadow-amber-500/20 active:scale-95"
             >
               <FontAwesomeIcon icon={faPen} />
               <span>Modifier</span>
@@ -316,56 +351,90 @@ export default function ViewEnterprise() {
             {/* Carte Informations Générales & Contacts */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-6 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
-                <FontAwesomeIcon icon={faBuilding} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Informations Générales</h3>
+                <FontAwesomeIcon
+                  icon={faBuilding}
+                  className="text-blue-600 dark:text-blue-500 text-sm"
+                />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Informations Générales
+                </h3>
               </div>
 
               <div className="space-y-4 text-sm">
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Description</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Description
+                  </p>
                   <p className="text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
-                    {enterprise?.description || "Aucune description renseignée pour cette entreprise."}
+                    {enterprise?.description ||
+                      "Aucune description renseignée pour cette entreprise."}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Téléphone</p>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Téléphone
+                    </p>
                     <p className="font-semibold text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-2">
-                      <FontAwesomeIcon icon={faPhone} className="text-slate-400 dark:text-slate-500" />
+                      <FontAwesomeIcon
+                        icon={faPhone}
+                        className="text-slate-400 dark:text-slate-500"
+                      />
                       {enterprise?.phone || "—"}
                     </p>
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">E-mail</p>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      E-mail
+                    </p>
                     <p className="font-semibold text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-2 break-all">
-                      <FontAwesomeIcon icon={faEnvelope} className="text-slate-400 dark:text-slate-500" />
+                      <FontAwesomeIcon
+                        icon={faEnvelope}
+                        className="text-slate-400 dark:text-slate-500"
+                      />
                       {enterprise?.email || "—"}
                     </p>
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Site Web</p>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Site Web
+                    </p>
                     {enterprise?.website ? (
                       <a
-                        href={enterprise.website.startsWith("http") ? enterprise.website : `https://${enterprise.website}`}
+                        href={
+                          enterprise.website.startsWith("http")
+                            ? enterprise.website
+                            : `https://${enterprise.website}`
+                        }
                         target="_blank"
                         rel="noreferrer"
                         className="font-semibold text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-2 hover:underline break-all"
                       >
-                        <FontAwesomeIcon icon={faGlobe} className="text-slate-400 dark:text-slate-500" />
+                        <FontAwesomeIcon
+                          icon={faGlobe}
+                          className="text-slate-400 dark:text-slate-500"
+                        />
                         {enterprise.website}
                       </a>
                     ) : (
-                      <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">—</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">
+                        —
+                      </p>
                     )}
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Adresse</p>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Adresse
+                    </p>
                     <p className="font-medium text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2">
-                      <FontAwesomeIcon icon={faMapMarkerAlt} className="text-slate-400 dark:text-slate-500" />
+                      <FontAwesomeIcon
+                        icon={faMapMarkerAlt}
+                        className="text-slate-400 dark:text-slate-500"
+                      />
                       {enterprise?.address || "Non communiquée"}
                     </p>
                   </div>
@@ -376,32 +445,52 @@ export default function ViewEnterprise() {
             {/* Carte Règles de Tolérance & Règlements */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-6 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
-                <FontAwesomeIcon icon={faClock} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Tolérances & Retenues Horaire</h3>
+                <FontAwesomeIcon
+                  icon={faClock}
+                  className="text-blue-600 dark:text-blue-500 text-sm"
+                />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Tolérances & Retenues Horaire
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
                   <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 uppercase">
-                    <FontAwesomeIcon icon={faClock} className="text-slate-400" /> Temps de tolérance
+                    <FontAwesomeIcon icon={faClock} className="text-slate-400" />{" "}
+                    Temps de tolérance
                   </p>
                   <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                    {enterprise?.toleranceTime ? `${enterprise.toleranceTime} min` : "0 min"}
+                    {enterprise?.toleranceTime
+                      ? `${enterprise.toleranceTime} min`
+                      : "0 min"}
                   </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Max : {enterprise?.maxToleranceTime ? `${enterprise.maxToleranceTime} min` : "Non défini"}
+                    Max :{" "}
+                    {enterprise?.maxToleranceTime
+                      ? `${enterprise.maxToleranceTime} min`
+                      : "Non défini"}
                   </p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
                   <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 uppercase">
-                    <FontAwesomeIcon icon={faPercentage} className="text-slate-400" /> Déduction horaire
+                    <FontAwesomeIcon
+                      icon={faPercentage}
+                      className="text-slate-400"
+                    />{" "}
+                    Déduction horaire
                   </p>
                   <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                    {enterprise?.pourcentageOfHourlyDeduction ? `${enterprise.pourcentageOfHourlyDeduction} %` : "0 %"}
+                    {enterprise?.pourcentageOfHourlyDeduction
+                      ? `${enterprise.pourcentageOfHourlyDeduction} %`
+                      : "0 %"}
                   </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Max : {enterprise?.maxPourcentageOfHourlyDeduction ? `${enterprise.maxPourcentageOfHourlyDeduction} %` : "Non défini"}
+                    Max :{" "}
+                    {enterprise?.maxPourcentageOfHourlyDeduction
+                      ? `${enterprise.maxPourcentageOfHourlyDeduction} %`
+                      : "Non défini"}
                   </p>
                 </div>
               </div>
@@ -410,37 +499,60 @@ export default function ViewEnterprise() {
             {/* Carte Localisation Géographique */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
-                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Localisation & Coordonnées GPS</h3>
+                <FontAwesomeIcon
+                  icon={faMapMarkerAlt}
+                  className="text-blue-600 dark:text-blue-500 text-sm"
+                />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Localisation & Coordonnées GPS
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faGlobe} className="text-slate-400" /> Pays
+                    <FontAwesomeIcon icon={faGlobe} className="text-slate-400" />{" "}
+                    Pays
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{enterprise?.Country?.name || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {enterprise?.Country?.name || "—"}
+                  </p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faCity} className="text-slate-400" /> Ville
+                    <FontAwesomeIcon icon={faCity} className="text-slate-400" />{" "}
+                    Ville
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{enterprise?.City?.name || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {enterprise?.City?.name || "—"}
+                  </p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faCompass} className="text-slate-400" /> Latitude
+                    <FontAwesomeIcon
+                      icon={faCompass}
+                      className="text-slate-400"
+                    />{" "}
+                    Latitude
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 break-all">{enterprise?.latitude || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 break-all">
+                    {enterprise?.latitude || "—"}
+                  </p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faCompass} className="text-slate-400" /> Longitude
+                    <FontAwesomeIcon
+                      icon={faCompass}
+                      className="text-slate-400"
+                    />{" "}
+                    Longitude
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 break-all">{enterprise?.longitude || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 break-all">
+                    {enterprise?.longitude || "—"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -451,14 +563,21 @@ export default function ViewEnterprise() {
             {/* Carte Abonnement & Statut */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
-                <FontAwesomeIcon icon={faCheckCircle} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Statut de l'abonnement</h3>
+                <FontAwesomeIcon
+                  icon={faCheckCircle}
+                  className="text-blue-600 dark:text-blue-500 text-sm"
+                />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Statut de l'abonnement
+                </h3>
               </div>
 
               <div className="space-y-3 text-sm">
                 {/* Statut */}
                 <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">Statut</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">
+                    Statut
+                  </span>
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold border whitespace-nowrap ${statusCfg.classes}`}
                   >
@@ -469,20 +588,50 @@ export default function ViewEnterprise() {
 
                 {/* Formule */}
                 <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between gap-3">
-                  <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">Formule d'abonnement</span>
-                  <span className="text-base font-extrabold text-blue-600 dark:text-blue-400">
+                  <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
+                    Formule d'abonnement
+                  </span>
+                  <span className="text-base font-extrabold text-blue-600 dark:text-blue-400 text-right">
                     {planLabel}
+                  </span>
+                </div>
+
+                {/* Prix */}
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2">
+                    <FontAwesomeIcon icon={faTag} className="text-slate-400 text-xs" />
+                    Prix
+                  </span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                    {priceLabel}
                   </span>
                 </div>
 
                 {/* Fréquence de paiement */}
                 <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
                   <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2">
-                    <FontAwesomeIcon icon={faRepeat} className="text-slate-400 text-xs" />
-                    Fréquence de paiement
+                    <FontAwesomeIcon
+                      icon={faRepeat}
+                      className="text-slate-400 text-xs"
+                    />
+                    Fréquence
                   </span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
                     {frequencyLabel}
+                  </span>
+                </div>
+
+                {/* Mode de paiement */}
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2">
+                    <FontAwesomeIcon
+                      icon={faCreditCard}
+                      className="text-slate-400 text-xs"
+                    />
+                    Mode de paiement
+                  </span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {paymentModeLabel}
                   </span>
                 </div>
 
@@ -490,11 +639,14 @@ export default function ViewEnterprise() {
                 <div className={`p-3 rounded-xl border ${expirationClasses}`}>
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium flex items-center gap-2 opacity-80">
-                      <FontAwesomeIcon icon={faCalendarAlt} className="text-xs" />
+                      <FontAwesomeIcon
+                        icon={faCalendarAlt}
+                        className="text-xs"
+                      />
                       Date d'expiration
                     </span>
                     <span className="font-semibold text-right">
-                      {formatDate(String(enterprise?.subscriptionExpiresAt))}
+                      {formatDate(enterprise?.subscriptionExpiresAt)}
                     </span>
                   </div>
                   {daysLeft !== null && (
@@ -513,22 +665,31 @@ export default function ViewEnterprise() {
             {/* Carte Identifiants Légal & Administratifs */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
-                <FontAwesomeIcon icon={faFileContract} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Registre & Fiscalité</h3>
+                <FontAwesomeIcon
+                  icon={faFileContract}
+                  className="text-blue-600 dark:text-blue-500 text-sm"
+                />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Registre & Fiscalité
+                </h3>
               </div>
 
               <div className="space-y-3 text-sm">
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">N° RCCM</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                    N° RCCM
+                  </p>
                   <p className="font-bold text-slate-800 dark:text-slate-200 break-all">
                     {enterprise?.rccm || "Non renseigné"}
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">N° NUI / NIU</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                    N° NUI
+                  </p>
                   <p className="font-bold text-slate-800 dark:text-slate-200 break-all">
-                    {enterprise?.nui || enterprise?.niu || "Non renseigné"}
+                    {enterprise?.nui || "Non renseigné"}
                   </p>
                 </div>
               </div>

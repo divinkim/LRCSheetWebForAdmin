@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
-import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, Enterprise, EnterpriseDto, EnterpriseResponseDto, EnterprisesResponseDto } from "@/types/global";
+import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, Enterprise, EnterpriseDto, EnterpriseResponseDto, EnterprisesResponseDto, ListSubscribeTypeDto, SubscribeListTypesResponseDto } from "@/types/global";
 
 
 export default function useAddEnterprise() {
@@ -16,6 +16,7 @@ export default function useAddEnterprise() {
   // États des données
   const [inputs, setInputs] = useState<EnterpriseDto>();
   const [getEnterprises, setEnterprises] = useState<any[]>([]);
+  const [subscriptionTypes, setSubscriptionTypes] = useState<ListSubscribeTypeDto[]>([])
   const [getDepartmentPosts, setDepartmentPosts] = useState<any[]>([]);
   const [getCountry, setCountry] = useState<any[]>([]);
   const [getCity, setCity] = useState<any[]>([]);
@@ -35,17 +36,19 @@ export default function useAddEnterprise() {
     }
   }, []);
 
-  // 2️⃣ Récupération des entreprises et des pays au montage
+  //Récupération des entreprises et des pays au montage
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [enterprisesData, countriesData] = await Promise.all([
+        const [enterprisesData, countriesData, subscriptionTypes] = await Promise.all([
           providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null),
           providers.API.getAll<CountryResponseDto>(providers.APIUrl, "countries", null),
+          providers.API.getAll<SubscribeListTypesResponseDto>(providers.APIUrl, "subscribe-types", null),
         ]);
 
         setEnterprises(enterprisesData.data || []);
         setCountry(countriesData.data || []);
+        setSubscriptionTypes(subscriptionTypes.data)
       } catch (error) {
         console.error("Erreur lors de la récupération des données initiales:", error);
       }
@@ -54,7 +57,7 @@ export default function useAddEnterprise() {
     fetchInitialData();
   }, []);
 
-  // 3️⃣ Récupération des départements filtrés par EnterpriseId
+  //Récupération des départements filtrés par EnterpriseId
   useEffect(() => {
     if (!inputs?.EnterpriseId) {
       setDepartmentPosts([]);
@@ -76,7 +79,7 @@ export default function useAddEnterprise() {
     fetchDepartmentPosts();
   }, [inputs?.EnterpriseId]);
 
-  // 4️⃣ Récupération des villes filtrées par CountryId
+  //Récupération des villes filtrées par CountryId
   useEffect(() => {
     if (!inputs?.CountryId) {
       setCity([]);
@@ -98,13 +101,21 @@ export default function useAddEnterprise() {
     fetchCities();
   }, [inputs?.CountryId]);
 
+  console.log(subscriptionTypes)
+
   // 📊 Options dynamiques pour les champs <select>
-  const dynamicArrayData = [
+  const dynamicOptions = [
     {
       alias: "EnterpriseId",
       arrayData: getEnterprises
         .filter((item) => item.id && item.name)
         .map((item) => ({ value: item.id, title: item.name })),
+    },
+    {
+      alias: "SubscriptionTypeId",
+      arrayData: subscriptionTypes
+        .filter((item) => item.id && item.title)
+        .map((item) => ({ value: item.id, title: item.title })),
     },
     {
       alias: "MainEnterpriseId",
@@ -133,12 +144,12 @@ export default function useAddEnterprise() {
   ];
 
   //Options statiques
-  const staticArrayData = [
+  const staticOptions = [
     {
       alias: "subscriptionStatus",
       arrayData: [
         { title: "Actif", value: "ACTIVE" },
-        { title: "En attente", value: "WAITING" },
+        { title: "En attente", value: "PENDING" },
         { title: "Expiré", value: "INACTIVE" },
       ],
     },
@@ -152,14 +163,6 @@ export default function useAddEnterprise() {
       ],
     },
     {
-      alias: "subscriptionType",
-      arrayData: [
-        { title: "Starter", value: "STARTER" },
-        { title: "PREMIUM", value: "PREMIUM" },
-        { title: "PRO", value: "PRO" },
-      ],
-    },
-    {
       alias: "paymentFrequency",
       arrayData: [
         { title: "Mensuel", value: "MONTHLY" },
@@ -167,6 +170,22 @@ export default function useAddEnterprise() {
         { title: "Semestriel", value: "SEMI_ANNUAL" },
         { title: "Annuel", value: "ANNUAL" },
 
+      ],
+    },
+    {
+      alias: "paymentMode",
+      arrayData: [
+        { title: "Automatique", value: "AUTO" },
+        { title: "Manuel", value: "MANUAL" },
+      ],
+    },
+    {
+      alias: "paymentfrequency",
+      arrayData: [
+        { title: "Mensuel", value: "MONTHLY" },
+        { title: "Trimestriel", value: "QUARTERLY" },
+        { title: "Semestriel", value: "SEMI_ANNUAL" },
+        { title: "Annuel", value: "ANNUAL" },
       ],
     },
   ];
@@ -180,7 +199,7 @@ export default function useAddEnterprise() {
         'Logo': inputs.logo,
         "Domaine d'activité": inputs.activityDomain,
         "Statut d'abonnement": inputs.subscriptionStatus,
-        "Type d'abonnement": inputs.subscriptionType,
+        "Type d'abonnement": inputs.SubscriptionTypeId,
         'Téléphone': inputs.phone,
         'Villes': inputs.CityId,
         'Pays': inputs.CountryId,
@@ -215,7 +234,7 @@ export default function useAddEnterprise() {
           legalForm: inputs.legalForm,
           rccm: inputs.rccm,
           nui: inputs.nui,
-          subscriptionType: inputs.subscriptionType,
+          SubscriptionTypeId: inputs.SubscriptionTypeId,
           subscriptionStatus: inputs.subscriptionStatus,
           toleranceTime: inputs.toleranceTime,
           pourcentageOfHourlyDeduction: inputs.pourcentageOfHourlyDeduction,
@@ -245,8 +264,8 @@ export default function useAddEnterprise() {
   };
 
   return {
-    dynamicArrayData,
-    staticArrayData,
+    dynamicOptions,
+    staticOptions,
     handleSubmit,
     inputs,
     setInputs,

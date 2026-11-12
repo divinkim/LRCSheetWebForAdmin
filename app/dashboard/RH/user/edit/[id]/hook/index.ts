@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
-import { CitiesResponseDto, ContractsResponseDto, ContractTypesResponseDto, CountryResponseDto, DepartmentsResponseDto, DistrictResponseDto, EnterprisesResponseDto, PlanningsResponseDto, PostsResponseDto, QuarterResponseDto, QuartersResponseDto, SalariesResponseDto, UserResponseDto } from "@/types/global";
+import { CitiesResponseDto, ContractsResponseDto, ContractTypesResponseDto, CountryResponseDto, DepartmentsResponseDto, DistrictResponseDto, EnterprisesResponseDto, LeaveListDto, LeaveListsResponseDto, PlanningsResponseDto, PostsResponseDto, QuarterResponseDto, QuartersResponseDto, SalariesResponseDto, UserResponseDto } from "@/types/global";
 import { dateFormat } from "@/index";
 export type InputsValue = {
   firstname: string | null;
@@ -60,7 +60,6 @@ export function UpdateUserHookModal() {
   const [getDistrict, setDistrict] = useState<any[]>([]);
   const [getQuarter, setQuarter] = useState<any[]>([]);
   const [getPlannings, setPlannings] = useState<any[]>([]);
-
   // État du formulaire
   const [inputs, setInputs] = useState<InputsValue>({
     firstname: null,
@@ -123,40 +122,42 @@ export function UpdateUserHookModal() {
     (async () => {
       try {
         const data = localStorage.getItem(LOCAL_KEY);
+        const [user] = await Promise.all([
+          providers.API.getOne<UserResponseDto>(
+            providers.APIUrl,
+            "users",
+            userId
+          ),
+        ])
         if (data) setInputs(JSON.parse(data))
-        const getUser = await providers.API.getOne<UserResponseDto>(
-          providers.APIUrl,
-          "users",
-          userId
-        );
         setInputs({
           ...inputs,
-          firstname: getUser.data.firstname ?? null,
-          lastname: getUser.data.lastname ?? null,
-          birthDate: getUser.data.birthDate
-            ? new Date(getUser.data.birthDate).toISOString().split("T")[0]
+          firstname: user.data.firstname ?? null,
+          lastname: user.data.lastname ?? null,
+          birthDate: user.data.birthDate
+            ? new Date(user.data.birthDate).toISOString().split("T")[0]
             : null,
-          gender: getUser.data.gender ?? null,
-          email: getUser.data.email ?? null,
-          password: getUser.data.password ?? null,
-          phone: getUser.data.phone.slice(4) ?? null,
-          EnterpriseId: getUser.data.EnterpriseId ?? null,
-          PostId: getUser.data.PostId ?? null,
-          SalaryId: getUser.data.SalaryId ?? null,
-          ContractTypeId: getUser.data.ContractTypeId ?? null,
-          ContractId: getUser.data.ContractId ?? null,
-          CountryId: getUser.data.CountryId ?? null,
-          PlanningId: getUser.data.PlanningId ?? null,
-          CityId: getUser.data.CityId ?? null,
-          DistrictId: getUser.data.DistrictId ?? null,
-          QuarterId: getUser.data.QuarterId ?? null,
-          photo: getUser.data.photo ?? null,
-          role: getUser.data.role ?? null,
-          DepartmentPostId: getUser.data.DepartmentPostId ?? null,
-          marialStatus: getUser.data.marialStatus ?? null,
-          adminService: getUser.data.adminService ?? null,
-          status: getUser.data.status ? "Actif" : "Inactif",
-          working_days_count: getUser.data.working_days_count,
+          gender: user.data.gender ?? null,
+          email: user.data.email ?? null,
+          password: user.data.password ?? null,
+          phone: user.data.phone.slice(4) ?? null,
+          EnterpriseId: user.data.EnterpriseId ?? null,
+          PostId: user.data.PostId ?? null,
+          SalaryId: user.data.SalaryId ?? null,
+          ContractTypeId: user.data.ContractTypeId ?? null,
+          ContractId: user.data.ContractId ?? null,
+          CountryId: user.data.CountryId ?? null,
+          PlanningId: user.data.PlanningId ?? null,
+          CityId: user.data.CityId ?? null,
+          DistrictId: user.data.DistrictId ?? null,
+          QuarterId: user.data.QuarterId ?? null,
+          photo: user.data.photo ?? null,
+          role: user.data.role ?? null,
+          DepartmentPostId: user.data.DepartmentPostId ?? null,
+          marialStatus: user.data.marialStatus ?? null,
+          adminService: user.data.adminService ?? null,
+          status: user.data.status ? "Actif" : "Inactif",
+          working_days_count: user.data.working_days_count,
         });
       } catch (error) {
         console.error("Erreur lors de la récupération de l'utilisateur :", error);
