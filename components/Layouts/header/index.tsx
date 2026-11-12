@@ -6,7 +6,8 @@ import { useSidebarContext } from "../sidebar/sidebar-context";
 import { MenuIcon } from "./icons";
 import { ThemeToggleSwitch } from "./theme-toggle";
 import { UserInfo } from "./user-info";
-import { providers } from "@/index";
+import { ImageUrl, providers } from "@/index";
+import { useSession } from "next-auth/react";
 
 type User = {
   image: string | null;
@@ -15,9 +16,15 @@ type User = {
 
 function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return "Bonjour";
-  if (hour < 18) return "Bon après-midi";
-  return "Bonsoir";
+  if (hour < 12) return "☀️ Bonjour";
+  if (hour < 18) return "🌤️ Bon après-midi";
+  return "🌙 Bonsoir";
+}
+
+function getAdminRole(adminRole: string): string {
+  if (adminRole === "Super_Admin_Platform") return "Super Administrateur LRCSheet";
+  if (adminRole === "Super_Admin_Enterprise") return "Super Administrateur";
+  return "Administrateur"
 }
 
 function getInitials(name: string | null) {
@@ -38,22 +45,18 @@ export function Header() {
   });
   const [imageFailed, setImageFailed] = useState(false);
   const [greeting, setGreeting] = useState("Bonjour");
+  const { data: session } = useSession();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const lastname = localStorage.getItem("lastname") || "";
-    const firstname = localStorage.getItem("firstname") || "";
-    const photo = localStorage.getItem("photo");
-
-    const fullName = `${lastname} ${firstname}`.trim();
-
+    const adminRole = String((session?.user as any)?.adminRole)
+    const image = session?.user.image || null
+    console.log(session)
     setUserInfo({
-      image: photo && photo !== "null" ? photo : null,
-      fullName: fullName || "Administrateur",
+      image,
+      fullName: getAdminRole(adminRole),
     });
     setGreeting(getGreeting());
-  }, []);
+  }, [session]);
 
   const showPhoto = userInfo.image && !imageFailed;
 
@@ -93,7 +96,7 @@ export function Header() {
               <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-white dark:bg-slate-900 dark:ring-slate-900">
                 {showPhoto ? (
                   <img
-                    src={`${providers}/images/${userInfo.image}`}
+                    src={`${ImageUrl}/${userInfo.image}`}
                     alt={`Photo de ${userInfo.fullName}`}
                     className="h-full w-full object-cover"
                     onError={() => setImageFailed(true)}
@@ -118,7 +121,7 @@ export function Header() {
               <span className="text-[15px] font-semibold tracking-tight text-slate-800 dark:text-white">
                 {greeting}, {userInfo.fullName || "Service Admin"}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm shadow-amber-500/30">
+              {/* <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm shadow-amber-500/30">
                 <svg
                   viewBox="0 0 20 20"
                   fill="currentColor"
@@ -128,7 +131,7 @@ export function Header() {
                   <path d="M10 1.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L10 13.9 4.99 16.6l1.2-5.5L2 7.3l5.6-.6L10 1.5z" />
                 </svg>
                 PRO
-              </span>
+              </span> */}
             </div>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Espace de gestion et d&apos;administration

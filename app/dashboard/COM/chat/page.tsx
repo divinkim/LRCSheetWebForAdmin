@@ -6,12 +6,12 @@ import {
   User, Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Video, Paperclip, Send, XCircle,
   ArrowLeft, Mic, FileText, ExternalLink, Search,
   Wifi, WifiOff, ChevronDown, Clock, Check, CheckCheck, AlertCircle, MessageCircle,
-  Sun, Moon, Pencil, Users,
+  Sun, Moon, Pencil, Users, Trash2, Ban,
 } from 'lucide-react';
 import { useToast } from '@/components/toast';
 import { providers } from '@/index';
 import { SidebarHook } from '@/components/Layouts/sidebar/hook';
-import { useCollaboratorsChat, ChatMessage } from './hook';
+import { useCollaboratorsChat, ChatMessage, DELETED_LABEL } from './hook';
 import { useCallContext } from '@/app/dashboard/COM/chat/components/CallProvider';
 // ⚠️ On n'importe QUE le hook : le GroupCallProvider est déjà monté dans app/layout.tsx.
 // Un second provider ici créerait un état séparé de celui lu par <GroupCallModal />.
@@ -101,8 +101,13 @@ const CollaboratorsSkeleton = () => (
 /* Bulle de message                                                    */
 /* ------------------------------------------------------------------ */
 const MessageBubble = React.memo(({
-  item, isMe, onRetry,
-}: { item: ChatMessage; isMe: boolean; onRetry: (m: ChatMessage) => void }) => {
+  item, isMe, onRetry, onDelete,
+}: {
+  item: ChatMessage;
+  isMe: boolean;
+  onRetry: (m: ChatMessage) => void;
+  onDelete: (m: ChatMessage) => void;
+}) => {
   const time = formatHour(item.createdAt);
   const isCall = item.callDuration !== undefined && item.callDuration !== null;
 
@@ -127,14 +132,37 @@ const MessageBubble = React.memo(({
     );
   }
 
+  // ---- Message supprimé (style WhatsApp)
+  if (item.readStatus === 'deleted') {
+    return (
+      <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+        <div className="flex max-w-[85%] items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3.5 py-2 text-sm italic text-slate-500 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-400 md:max-w-[65%]">
+          <Ban className="h-3.5 w-3.5 shrink-0" />
+          <span>{DELETED_LABEL}</span>
+          <span className="text-[10px] not-italic tabular-nums text-slate-400">{time}</span>
+        </div>
+      </div>
+    );
+  }
+
   const kind = item.file ? getFileKind(item.fileName || item.file, !!item.isVoice) : null;
   const audio = kind === 'audio';
   const image = kind === 'image';
   const fileUrl = item.file ? resolveFileUrl(item.file, !!item.isVoice, item.fileName) : '';
   const html = containsHtml(item.content ?? '');
+  // Seuls mes messages déjà enregistrés en base peuvent être supprimés
+  const canDelete = isMe && item.status === 'sent';
 
   return (
-    <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+    <div className={`group flex items-center gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
+      {canDelete && (
+        <button type="button" onClick={() => onDelete(item)}
+          aria-label="Supprimer le message" title="Supprimer"
+          className="shrink-0 rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:hover:bg-slate-700 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
+
       <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm md:max-w-[65%] ${isMe ? 'rounded-tr-none bg-blue-600 text-white'
         : 'rounded-tl-none border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
         } ${item.status === 'failed' ? 'ring-1 ring-red-400' : ''}`}>
@@ -207,7 +235,7 @@ function ChatPageContent() {
   const {
     collaborators, onlineUserIds, conversations, selectedCollaborator, selectCollaborator,
     messages, inputText, setInputText, selectedFile, setSelectedFile,
-    sendMessage, sendVoiceNote, retryMessage, emitWriting, writing,
+    sendMessage, sendVoiceNote, retryMessage, deleteMessages, emitWriting, writing,
     bumpHistory, connected, loader, currentUserId,
   } = useCollaboratorsChat();
 
@@ -225,6 +253,8 @@ function ChatPageContent() {
   const [filter, setFilter] = useState<Filter>('all');
   const [showFab, setShowFab] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ChatMessage | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -258,6 +288,31 @@ function ChatPageContent() {
 
   // Rafraîchit l'historique quand un appel vient d'être journalisé
   useEffect(() => call.subscribeCallLogged(bumpHistory), [call.subscribeCallLogged, bumpHistory]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ---------------- Suppression de message ---------------- */
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteMessages([pendingDelete.id]);
+    } catch {
+      toast.info('Suppression', 'Impossible de supprimer le message. Réessayez.');
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
+  };
+
+  // Échap ferme la modale de confirmation
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !deleting) setPendingDelete(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pendingDelete, deleting]);
+
+  // Change de conversation : on ferme la confirmation en cours
+  useEffect(() => { setPendingDelete(null); }, [selectedCollaborator?.id]);
 
   /* ---------------- Notes vocales ---------------- */
   const handleVoiceSend = async () => {
@@ -474,6 +529,7 @@ function ChatPageContent() {
             const unread = getUnread(item.id);
             const conv = conversations[item.id];
             const lastIsMine = conv?.lastSenderId === currentUserId;
+            const lastDeleted = conv?.lastReadStatus === 'deleted';
             const isSelected = selectedCollaborator?.id === item.id;
             const itemWriting = writing[item.id];
             return (
@@ -514,13 +570,14 @@ function ChatPageContent() {
                         </span>
                       </span>
                     ) : (
-                      <p className={`flex min-w-0 items-center gap-1 text-xs ${unread > 0 ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
-                        {/* coches seulement si le dernier message est le mien */}
-                        {lastIsMine && (
+                      <p className={`flex min-w-0 items-center gap-1 text-xs ${lastDeleted ? 'italic' : ''} ${unread > 0 ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {/* coches seulement si le dernier message est le mien (et pas supprimé) */}
+                        {lastIsMine && !lastDeleted && (
                           conv?.lastReadStatus === 'read'
                             ? <CheckCheck className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-label="Lu" />
                             : <Check className="h-3 w-3 shrink-0 text-emerald-500" aria-label="Envoyé" />
                         )}
+                        {lastDeleted && <Ban className="h-3 w-3 shrink-0" />}
                         <span className="truncate">{info.text}</span>
                       </p>
                     )}
@@ -626,7 +683,8 @@ function ChatPageContent() {
                     </span>
                   </div>
                   {g.items.map((item) => (
-                    <MessageBubble key={item.id} item={item} isMe={item.senderId === currentUserId} onRetry={retryMessage} />
+                    <MessageBubble key={item.id} item={item} isMe={item.senderId === currentUserId}
+                      onRetry={retryMessage} onDelete={setPendingDelete} />
                   ))}
                 </div>
               ))}
@@ -713,6 +771,33 @@ function ChatPageContent() {
           <p className="mt-1 max-w-xs text-sm text-slate-500 dark:text-slate-400">
             Sélectionnez un collaborateur pour écrire, envoyer une note vocale ou l'appeler.
           </p>
+        </div>
+      )}
+
+      {/* ============ CONFIRMATION DE SUPPRESSION ============ */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !deleting && setPendingDelete(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
+            <h3 id="delete-title" className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              Supprimer ce message ?
+            </h3>
+            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+              Il sera remplacé par « {DELETED_LABEL} » pour vous et pour votre interlocuteur.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" disabled={deleting} onClick={() => setPendingDelete(null)}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:text-slate-300 dark:hover:bg-slate-800">
+                Annuler
+              </button>
+              <button type="button" disabled={deleting} onClick={confirmDelete} autoFocus
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-60 dark:focus-visible:ring-offset-slate-900">
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
