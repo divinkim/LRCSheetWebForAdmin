@@ -1,17 +1,18 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
-import { AttendancesResponseDto, UsersResponseDto, User, AttendanceDto, AttendanceListDto } from "@/types/global";
+import { AttendancesResponseDto, UsersResponseDto, User, AttendanceListDto } from "@/types/global";
 
 // ==========================================
-// TRI : date + heure, du plus récent au plus ancien
+// TRI : date + heure d'enregistrement, du plus récent au plus ancien
 // ==========================================
-// Une présence est positionnée dans le temps grâce à :
-//  - arrivalTime : l'heure d'arrivée (ex: "08:10", "08:10:00" ou datetime ISO complet)
-//  - createdAt   : fournit le JOUR de la présence quand arrivalTime ne contient que l'heure
-// Si arrivalTime est vide (ex: absent), on se rabat sur createdAt.
+// - Présent (A temps / En retard) avec une heure d'arrivée valide :
+//     on utilise l'heure d'arrivée (+ le jour de createdAt si c'est juste une heure)
+// - Absent (ou heure d'arrivée vide / 00:00) :
+//     on utilise l'heure d'enregistrement (createdAt), pour que l'absence
+//     apparaisse à sa vraie place dans la liste, et non tout en bas.
 
 const parseTime = (value?: string | null) => {
     if (!value) return null;
@@ -20,10 +21,28 @@ const parseTime = (value?: string | null) => {
     return { h: +m[1], min: +m[2], s: m[3] ? +m[3] : 0 };
 };
 
+const PRESENT_STATUSES = ["A temps", "En retard"];
+
+// Une heure d'arrivée vide ou à minuit n'est pas une vraie arrivée
+const hasRealArrival = (item: AttendanceListDto): boolean => {
+    const arrival = item?.arrivalTime ? String(item.arrivalTime).trim() : "";
+    if (!arrival) return false;
+    if (["00:00", "00:00:00"].includes(arrival)) return false;
+    return true;
+};
+
 // Transforme une présence en timestamp (ms)
 const getAttendanceTimestamp = (item: AttendanceListDto): number => {
-    const arrival = item?.arrivalTime ? String(item.arrivalTime).trim() : "";
     const createdMs = Date.parse(item?.createdAt ?? "");
+    const createdOrZero = isNaN(createdMs) ? 0 : createdMs;
+
+    // Absence ou pas d'arrivée exploitable -> heure d'enregistrement
+    const isPresent = PRESENT_STATUSES.includes(String(item?.status ?? ""));
+    if (!isPresent || !hasRealArrival(item)) {
+        return createdOrZero;
+    }
+
+    const arrival = String(item.arrivalTime).trim();
 
     // Cas 1 : arrivalTime est déjà un datetime complet (ex: 2026-11-02T08:10:00Z)
     if (/^\d{4}-\d{2}-\d{2}[T ]\d{1,2}:\d{2}/.test(arrival)) {
@@ -45,11 +64,11 @@ const getAttendanceTimestamp = (item: AttendanceListDto): number => {
         ).getTime();
     }
 
-    // Cas 3 : pas d'heure d'arrivée exploitable -> createdAt seul
-    return isNaN(createdMs) ? 0 : createdMs;
+    // Cas 3 : fallback
+    return createdOrZero;
 };
 
-// Tri décroissant : 08:10 passe avant 08:05, et les dates récentes avant les anciennes
+// Tri décroissant : les enregistrements les plus récents d'abord
 const sortByMostRecent = (list: AttendanceListDto[]): AttendanceListDto[] =>
     [...list].sort((a, b) => {
         const diff = getAttendanceTimestamp(b) - getAttendanceTimestamp(a);
@@ -73,18 +92,18 @@ export function PresencesListHookModal() {
     const [enterpriseId, setEnterpriseId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    //Charger les infos de la session
+    // Charger les infos de la session
     useEffect(() => {
         if (status === "authenticated" && session?.user) {
             const user = session.user as any;
             setAdminRole(user?.adminRole || "");
             setMainEnterpriseId(user?.MainEnterpriseId ? Number(user.MainEnterpriseId) : null);
             setEnterpriseId(user?.EnterpriseId ? Number(user.EnterpriseId) : null);
-            localStorage.removeItem("prencencesData")
+            localStorage.removeItem("prencencesData");
         }
     }, [session, status]);
 
-    //Charger les utilisateurs et les présences une fois le rôle connu
+    // Charger les utilisateurs et les présences une fois le rôle connu
     useEffect(() => {
         if (!adminRole) return;
 
@@ -120,15 +139,15 @@ export function PresencesListHookModal() {
                     filteredAttendances = rawAttendances.data;
                 } else if (adminRole === "Super_Admin_Enterprise") {
                     filteredAttendances = rawAttendances.data.filter(
-                        item => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
+                        (item) => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
                     );
                 } else if (adminRole === "Enterprise_Admin") {
                     filteredAttendances = rawAttendances.data.filter(
-                        item => item.EnterpriseId === enterpriseId
+                        (item) => item.EnterpriseId === enterpriseId
                     );
                 }
 
-                // Tri : dates et heures les plus récentes en premier
+                // Tri : enregistrements les plus récents en premier (absences incluses)
                 const sortedAttendances = sortByMostRecent(filteredAttendances);
 
                 setPresencesList(sortedAttendances);

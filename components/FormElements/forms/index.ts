@@ -472,17 +472,6 @@ export const formElements = [
                     }
                 },
                 {
-                    label: "Type d'abonnement",
-                    placeholder: "Sélectionner le type d'abonnement",
-                    requireField: false,
-                    type: "text",
-                    selectedInput: true,
-                    alias: "subscriptionType",
-                    dynamicOptions: {
-                        status: false
-                    }
-                },
-                {
                     label: "Entreprise principale",
                     placeholder: "Sélectionner l'entreprise principale",
                     requireField: false,
@@ -493,7 +482,51 @@ export const formElements = [
                         status: true
                     }
                 },
-
+                {
+                    label: "Type d'abonnement",
+                    placeholder: "Sélectionner le type d'abonnement",
+                    requireField: false,
+                    type: "text",
+                    selectedInput: true,
+                    alias: "SubscriptionTypeId",
+                    dynamicOptions: {
+                        status: true
+                    }
+                },
+                {
+                    label: "Mode de paiement",
+                    placeholder: "Sélectionner un mode de paiement",
+                    requireField: false,
+                    type: "text",
+                    selectedInput: true,
+                    alias: "paymentMode",
+                    dynamicOptions: {
+                        status: false
+                    }
+                },
+                {
+                    label: "Méthode de paiement",
+                    placeholder: "Sélectionner une méthode de paiement",
+                    requireField: false,
+                    type: "text",
+                    selectedInput: true,
+                    alias: "paymentMethod",
+                    dynamicOptions: {
+                        status: false
+                    }
+                },
+                {
+                    label: "Fréquence de paiement",
+                    placeholder: "Sélectionner une une fréquence de paiement",
+                    requireField: false,
+                    type: "text",
+                    selectedInput: true,
+                    alias: "paymentFrequency",
+                    dynamicOptions: {
+                        status: false
+                    }
+                },
+                
                 {
                     label: "Status d'abonnement",
                     placeholder: "Sélectionner le status...",

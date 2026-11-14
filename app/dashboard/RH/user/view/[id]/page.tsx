@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -22,17 +23,105 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { dateFormat, providers } from "@/index";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { User, UserResponseDto } from "@/types/global";
+import { User, UserResponseDto, LeaveListDto } from "@/types/global";
 
 export default function GetUserProfile() {
-  const [user, setUser] = useState<User>()
+  const [user, setUser] = useState<User>();
+  const [leave, setLeave] = useState<LeaveListDto | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    (async () => {
-      const userId = window.location.href.split("/").pop();
-      const user = await providers.API.getOne<UserResponseDto>(providers.APIUrl, "users", Number(userId));
-      setUser(user.data)
-    })()
-  }, [])
+    const fetchUserProfile = async () => {
+      try {
+        const userId = Number(window.location.href.split("/").pop());
+
+        if (!userId || Number.isNaN(userId)) return;
+
+        const [userResponse, leavesResponse] = await Promise.all([
+          providers.API.getOne<UserResponseDto>(
+            providers.APIUrl,
+            "users",
+            userId
+          ),
+          providers.API.getAll<LeaveListDto>(
+            providers.APIUrl,
+            "leaves",
+            null
+          )
+        ]);
+
+        setUser(userResponse.data);
+
+        // Récupération du congé approuvé actuellement en cours
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const toLocalDate = (value: string): Date | null => {
+          if (!value) return null;
+
+          const [year, month, day] = value
+            .slice(0, 10)
+            .split("-")
+            .map(Number);
+
+          if (!year || !month || !day) return null;
+
+          return new Date(year, month - 1, day);
+        };
+
+        const currentLeave =
+          leavesResponse.data
+            .filter((item: any) => {
+              if (
+                item.UserId !== userId ||
+                item.status !== "APPROVED"
+              ) {
+                return false;
+              }
+
+              const startDate = toLocalDate(item.startDate);
+              const endDate = toLocalDate(item.endDate);
+
+              if (!startDate || !endDate) return false;
+
+              return (
+                today.getTime() >= startDate.getTime() &&
+                today.getTime() <= endDate.getTime()
+              );
+            })
+            .sort((a: any, b: any) => {
+              const dateA = toLocalDate(a.startDate)?.getTime() ?? 0;
+              const dateB = toLocalDate(b.startDate)?.getTime() ?? 0;
+
+              return dateB - dateA;
+            })[0] ?? null;
+
+        setLeave(currentLeave);
+      } catch (error) {
+        console.error(
+          "Erreur lors du chargement du profil utilisateur :",
+          error
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Chargement du profil...
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-200">
@@ -53,7 +142,11 @@ export default function GetUserProfile() {
             {/* Photo de profil */}
             <div className="relative w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
               <img
-                src={user?.photo ? `${providers.ImageUrl}/${user.photo}` : "/images/clientProfile.png"}
+                src={
+                  user?.photo
+                    ? `${providers.ImageUrl}/${user.photo}`
+                    : "/images/clientProfile.png"
+                }
                 alt={`${user?.firstname} ${user?.lastname}`}
                 className="w-full h-full object-cover"
               />
@@ -63,9 +156,11 @@ export default function GetUserProfile() {
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-wide">
                 {user?.firstname} {user?.lastname}
               </h2>
+
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-0.5">
                 {user?.Post?.title || "Poste non spécifié"}
               </p>
+
               <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1.5">
                 <FontAwesomeIcon icon={faBuilding} className="text-slate-400 dark:text-slate-500" />
                 {user?.Enterprise?.name || "Entreprise non assignée"}
@@ -104,22 +199,34 @@ export default function GetUserProfile() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-6 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <FontAwesomeIcon icon={faUser} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Informations personnelles</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Informations personnelles
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Prénom</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">{user?.firstname || "—"}</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Prénom
+                  </p>
+                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">
+                    {user?.firstname || "—"}
+                  </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nom</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">{user?.lastname || "—"}</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Nom
+                  </p>
+                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">
+                    {user?.lastname || "—"}
+                  </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Téléphone</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Téléphone
+                  </p>
                   <p className="font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2">
                     <FontAwesomeIcon icon={faPhone} className="text-sm text-slate-400 dark:text-slate-500" />
                     {user?.phone || "—"}
@@ -127,7 +234,9 @@ export default function GetUserProfile() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">E-mail</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    E-mail
+                  </p>
                   <p className="font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2">
                     <FontAwesomeIcon icon={faEnvelope} className="text-sm text-slate-400 dark:text-slate-500" />
                     {user?.email || "—"}
@@ -135,7 +244,9 @@ export default function GetUserProfile() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Situation matrimoniale</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Situation matrimoniale
+                  </p>
                   <p className="font-medium text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2">
                     <FontAwesomeIcon icon={faHeart} className="text-sm text-slate-400 dark:text-slate-500" />
                     {user?.marialStatus || "Non précisée"}
@@ -148,24 +259,37 @@ export default function GetUserProfile() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-6 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <FontAwesomeIcon icon={faBriefcase} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Poste & Contrat</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Poste & Contrat
+                </h3>
               </div>
 
               <div className="space-y-4 text-sm">
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Titre du poste</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-1 text-base">{user?.Post?.title || "—"}</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Titre du poste
+                  </p>
+                  <p className="font-semibold text-slate-900 dark:text-white mt-1 text-base">
+                    {user?.Post?.title || "—"}
+                  </p>
+
                   {user?.Post?.description && (
-                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">{user?.Post?.description}</p>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">
+                      {user.Post.description}
+                    </p>
                   )}
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800/60">
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type de contrat</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Type de contrat
+                  </p>
+
                   <div className="flex flex-wrap items-center gap-3 mt-1">
                     <span className="font-medium text-slate-800 dark:text-slate-200">
                       Contrat {user?.ContractType?.title || "N/A"}
                     </span>
+
                     {(user?.Contract?.startDate || user?.Contract?.endDate) && (
                       <span className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800">
                         <FontAwesomeIcon icon={faCalendarAlt} className="text-slate-400 dark:text-slate-500" />
@@ -173,16 +297,26 @@ export default function GetUserProfile() {
                       </span>
                     )}
                   </div>
+
                   {user?.ContractType?.description && (
-                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">{user?.ContractType?.description}</p>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">
+                      {user.ContractType.description}
+                    </p>
                   )}
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800/60">
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Planning hebdomadaire</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">{user?.PlanningType?.title || "N/A"}</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Planning hebdomadaire
+                  </p>
+                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-1">
+                    {user?.PlanningType?.title || "N/A"}
+                  </p>
+
                   {user?.PlanningType?.description && (
-                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">{user?.PlanningType?.description}</p>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">
+                      {user.PlanningType.description}
+                    </p>
                   )}
                 </div>
               </div>
@@ -192,33 +326,43 @@ export default function GetUserProfile() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Localisation</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Localisation
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faGlobe} className="text-slate-400 dark:text-slate-500" /> Pays
+                    <FontAwesomeIcon icon={faGlobe} className="text-slate-400 dark:text-slate-500" />
+                    Pays
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{user?.Country?.name || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {user?.Country?.name || "—"}
+                  </p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faCity} className="text-slate-400 dark:text-slate-500" /> Ville
+                    <FontAwesomeIcon icon={faCity} className="text-slate-400 dark:text-slate-500" />
+                    Ville
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{user?.City?.name || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {user?.City?.name || "—"}
+                  </p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-                    <FontAwesomeIcon icon={faBuilding} className="text-slate-400 dark:text-slate-500" /> Arrondissement
+                    <FontAwesomeIcon icon={faBuilding} className="text-slate-400 dark:text-slate-500" />
+                    Arrondissement
                   </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{user?.District?.name || "—"}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {user?.District?.name || "—"}
+                  </p>
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* Colonne Droite */}
@@ -228,12 +372,16 @@ export default function GetUserProfile() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <FontAwesomeIcon icon={faCheckCircle} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Statut</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Statut
+                </h3>
               </div>
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">Statut du compte</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">
+                    Statut du compte
+                  </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
                     ● Actif
                   </span>
@@ -241,41 +389,136 @@ export default function GetUserProfile() {
               </div>
             </div>
 
+            {/* Carte Congé en cours */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <FontAwesomeIcon
+                    icon={faCalendarAlt}
+                    className="text-blue-600 dark:text-blue-500 text-sm"
+                  />
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Congé en cours
+                  </h3>
+                </div>
+
+                {leave && (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                    Approuvé
+                  </span>
+                )}
+              </div>
+
+              {leave ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Type de congé
+                    </p>
+                    <p className="font-bold text-slate-900 dark:text-white mt-1">
+                      {leave.LeaveType?.title || "Congé"}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                        Date de début
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {dateFormat(leave.startDate)}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                        Date de fin
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {dateFormat(leave.endDate)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {leave.reason && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        Motif
+                      </p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {leave.reason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center py-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                    <FontAwesomeIcon
+                      icon={faCalendarAlt}
+                      className="text-slate-400 text-lg"
+                    />
+                  </div>
+
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Aucun congé en cours
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Cet utilisateur n'est actuellement pas en congé.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Carte Rémunération */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-4 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <FontAwesomeIcon icon={faWallet} className="text-amber-600 dark:text-amber-400 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Rémunération</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Rémunération
+                </h3>
               </div>
 
               <div className="space-y-3">
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <FontAwesomeIcon icon={faCoins} className="text-slate-400 dark:text-slate-500 text-sm" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">Salaire brut</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                      Salaire brut
+                    </span>
                   </div>
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    {user?.Salary?.netSalary ? `${user.Salary.netSalary} XAF` : "—"}
+                    {user?.Salary?.netSalary
+                      ? `${user.Salary.netSalary} XAF`
+                      : "—"}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <FontAwesomeIcon icon={faMoneyBill1Wave} className="text-slate-400 dark:text-slate-500 text-sm" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">Salaire journalier</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                      Salaire journalier
+                    </span>
                   </div>
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    {user?.Salary?.dailySalary ? `${user.Salary.dailySalary} XAF` : "—"}
+                    {user?.Salary?.dailySalary
+                      ? `${user.Salary.dailySalary} XAF`
+                      : "—"}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <FontAwesomeIcon icon={faWallet} className="text-amber-600 dark:text-amber-400 text-sm" />
-                    <span className="text-sm text-amber-700 dark:text-amber-300 font-semibold">Salaire final</span>
+                    <span className="text-sm text-amber-700 dark:text-amber-300 font-semibold">
+                      Salaire final
+                    </span>
                   </div>
                   <span className="text-base font-extrabold text-amber-600 dark:text-amber-400">
-                    {user?.Salary?.netSalary ? `${user.Salary.netSalary} XAF` : "—"}
+                    {user?.Salary?.netSalary
+                      ? `${user.Salary.netSalary} XAF`
+                      : "—"}
                   </span>
                 </div>
               </div>
@@ -285,14 +528,19 @@ export default function GetUserProfile() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm dark:shadow-xl space-y-3 transition-colors">
               <div className="flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <FontAwesomeIcon icon={faBuilding} className="text-blue-600 dark:text-blue-500 text-sm" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Entreprise associée</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Entreprise associée
+                </h3>
               </div>
 
               <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{user?.Enterprise?.name || "Non renseignée"}</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
+                  {user?.Enterprise?.name || "Non renseignée"}
+                </p>
+
                 {user?.Enterprise?.description && (
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                    {user?.Enterprise?.description}
+                    {user.Enterprise.description}
                   </p>
                 )}
               </div>

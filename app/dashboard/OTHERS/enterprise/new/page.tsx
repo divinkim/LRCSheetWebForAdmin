@@ -8,11 +8,11 @@ import { providers } from "@/index";
 import { cn } from "@/lib/utils";
 import useAddDepartment from "./hook";
 import { EnterpriseDto, UploadFileResponseDto } from "@/types/global";
-
+import SearchableSelect from "@/components/SearchAbaleSelect";
 export default function AddEnterprise() {
   const {
-    dynamicArrayData,
-    staticArrayData,
+    dynamicOptions,
+    staticOptions,
     inputs,
     setInputs,
     isLoading,
@@ -134,7 +134,7 @@ export default function AddEnterprise() {
                               const response = await providers.API.post<UploadFileResponseDto>(providers.APIUrl, "upload-single", null, { file });
 
                               const updatedInputs = { ...inputs, [field]: response.filename } as EnterpriseDto;
-                             
+
                               setInputs(updatedInputs);
                               localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedInputs));
                               return;
@@ -152,38 +152,24 @@ export default function AddEnterprise() {
 
                       {/* 2. SELECT INPUT */}
                       {e.selectedInput && !e.textarea && (
-                        <select
-                          value={inputs?.[e.alias] ?? ""}
-                          onChange={(v) => {
-                            let field = e.alias;
-                            const fieldValue = {
+                        <SearchableSelect
+                          value={(inputs?.[e.alias] ?? "") as string | number}
+                          placeholder={e.placeholder}
+                          options={
+                            e.dynamicOptions?.status
+                              ? dynamicOptions.find((item) => item.alias === e.alias)?.arrayData ?? []
+                              : (staticOptions.find((item) => item.alias === e.alias)?.arrayData ?? [])
+                          }
+                          onChange={(val) => {
+                            const data = {
                               ...inputs,
-                              [field]: e.type === "number" ? parseInt(v.target.value) : v.target.value,
+                              [e.alias]: e.type === "number" ? Number(val) || 0 : val,
                             } as EnterpriseDto;
-                            setInputs(fieldValue);
-                            localStorage.setItem(LOCAL_KEY, JSON.stringify(fieldValue));
+
+                            setInputs(data);
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
                           }}
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100 shadow-sm transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                        >
-                          <option value="" className="text-slate-400 dark:bg-slate-900">
-                            {e.placeholder}
-                          </option>
-                          {e.dynamicOptions?.status
-                            ? dynamicArrayData
-                              .find((item: any) => item.alias === e.alias)
-                              ?.arrayData?.map((option: any) => (
-                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                  {option.title}
-                                </option>
-                              ))
-                            : staticArrayData
-                              .find((item: any) => item.alias === e.alias)
-                              ?.arrayData?.map((option: any) => (
-                                <option key={option.value} value={option.value} className="text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                  {option.title}
-                                </option>
-                              ))}
-                        </select>
+                        />
                       )}
 
                       {/* 3. TEXTAREA INPUT */}

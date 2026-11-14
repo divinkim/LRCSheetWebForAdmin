@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { providers } from "@/index";
 import { useToast } from "@/components/toast";
-import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, Enterprise, EnterprisesResponseDto } from "@/types/global";
+import { CitiesResponseDto, CountryResponseDto, DepartmentsPostResponseDto, Enterprise, EnterprisesResponseDto, ListSubscribeTypeDto, SubscribeListTypesResponseDto } from "@/types/global";
 
 export default function useUpdateEnterprise() {
   const { data: session } = useSession();
@@ -17,6 +17,7 @@ export default function useUpdateEnterprise() {
 
   // États utilisateur / administration
   const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
+  const [subscriptionTypes, setSubscriptionTypes] = useState<ListSubscribeTypeDto[]>([])
   const [adminRole, setAdminRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const toast = useToast();
@@ -41,6 +42,8 @@ export default function useUpdateEnterprise() {
       //Chargement depuis l'API si pas de mémoire locale
       if (currentEnterpriseId) {
         const enterprisesList = await providers.API.getAll<EnterprisesResponseDto>(providers.APIUrl, "enterprises", null);
+        const subscriptionTypesList = await providers.API.getAll<SubscribeListTypesResponseDto>(providers.APIUrl, "subscribe-types", null);
+        setSubscriptionTypes(subscriptionTypesList.data)
         setEnterprises(enterprisesList.data);
 
         const currentEnterprise = enterprisesList.data.find(
@@ -61,7 +64,7 @@ export default function useUpdateEnterprise() {
       }
     })();
   }, [session]);
-
+console.log(subscriptionTypes)
   // 2. Chargement des pays
   useEffect(() => {
     (async () => {
@@ -96,17 +99,20 @@ export default function useUpdateEnterprise() {
   }, [inputs?.CountryId]);
 
   // Structure des options dynamiques
-  const dynamicArrayData = [
+  const dynamicOptions = [
     {
       alias: "EnterpriseId",
-      arrayData: getEnterprises
-        .filter((item) => item.id && item.name)
+      arrayData: getEnterprises.filter((item) => item.id && item.name)
         .map((item) => ({ value: item.id, title: item.name })),
     },
     {
+      alias: "SubscriptionTypeId",
+      arrayData: subscriptionTypes.filter((item) => item.id && item.title)
+        .map((item) => ({ value: item.id, title: item.title })),
+    },
+    {
       alias: "MainEnterpriseId",
-      arrayData: getEnterprises
-        .filter((item) => item.id && item.name)
+      arrayData: getEnterprises.filter((item) => item.id && item.name)
         .map((item) => ({ value: item.id, title: item.name })),
     },
     {
@@ -130,7 +136,7 @@ export default function useUpdateEnterprise() {
   ];
 
   // Structure des options statiques
-  const staticArrayData = [
+  const staticOptions = [
     {
       alias: "subscriptionStatus",
       arrayData: [
@@ -149,14 +155,6 @@ export default function useUpdateEnterprise() {
       ],
     },
     {
-      alias: "subscriptionType",
-      arrayData: [
-        { title: "Starter", value: "STARTER" },
-        { title: "PREMIUM", value: "PREMIUM" },
-        { title: "PRO", value: "PRO" },
-      ],
-    },
-    {
       alias: "paymentFrequency",
       arrayData: [
         { title: "Mensuel", value: "MONTHLY" },
@@ -164,6 +162,22 @@ export default function useUpdateEnterprise() {
         { title: "Semestriel", value: "SEMI_ANNUAL" },
         { title: "Annuel", value: "ANNUAL" },
 
+      ],
+    },
+    {
+      alias: "paymentMode",
+      arrayData: [
+        { title: "Automatique", value: "AUTO" },
+        { title: "Manuel", value: "MANUAL" },
+      ],
+    },
+    {
+      alias: "paymentfrequency",
+      arrayData: [
+        { title: "Mensuel", value: "MONTHLY" },
+        { title: "Trimestriel", value: "QUARTERLY" },
+        { title: "Semestriel", value: "SEMI_ANNUAL" },
+        { title: "Annuel", value: "ANNUAL" },
       ],
     },
   ];
@@ -177,7 +191,7 @@ export default function useUpdateEnterprise() {
         'Description': inputs.description,
         'Logo': inputs.logo,
         "Statut d'abonnement": inputs.subscriptionStatus,
-        "Type d'abonnement": inputs.subscriptionType,
+        "Type d'abonnement": inputs.SubscriptionTypeId,
         "Domaine d'activité": inputs.activityDomain,
         'Téléphone': inputs.phone,
         'Villes': inputs.CityId,
@@ -212,7 +226,7 @@ export default function useUpdateEnterprise() {
           legalForm: inputs.legalForm,
           rccm: inputs.rccm,
           nui: inputs.nui,
-          subscriptionType: inputs.subscriptionType,
+          SubscriptionTypeId: inputs.SubscriptionTypeId,
           subscriptionStatus: inputs.subscriptionStatus,
           toleranceTime: inputs.toleranceTime,
           pourcentageOfHourlyDeduction: inputs.pourcentageOfHourlyDeduction,
@@ -243,8 +257,8 @@ export default function useUpdateEnterprise() {
   };
 
   return {
-    dynamicArrayData,
-    staticArrayData,
+    dynamicOptions,
+    staticOptions,
     handleSubmit,
     inputs,
     setInputs,
