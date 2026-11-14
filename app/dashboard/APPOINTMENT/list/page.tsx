@@ -481,11 +481,13 @@ export default function AppointmentsList() {
         </div>
 
         {/* Tableau */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+
+        {/* Tableau */}
+        <section className="w-full min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           {/* Barre d'outils */}
-          <div className="space-y-4 border-b border-slate-200/80 p-4 dark:border-slate-800">
-            <div className="flex flex-col items-stretch justify-between gap-3 lg:flex-row lg:items-center">
-              <div className="relative w-full lg:max-w-md">
+          <div className="min-w-0 space-y-4 border-b border-slate-200/80 p-4 dark:border-slate-800">
+            <div className="flex min-w-0 flex-col items-stretch justify-between gap-3 lg:flex-row lg:items-center">
+              <div className="relative w-full min-w-0 lg:max-w-md">
                 <FontAwesomeIcon
                   icon={faSearch}
                   className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"
@@ -495,14 +497,14 @@ export default function AppointmentsList() {
                   placeholder="Rechercher par nom, motif, collaborateur…"
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800"
+                  className="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800"
                 />
               </div>
 
               <button
                 onClick={exportToCSV}
                 disabled={filteredAppointments.length === 0}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/60"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/60"
                 title="Exporter au format CSV"
               >
                 <FontAwesomeIcon icon={faFileDownload} className="text-slate-400" />
@@ -514,25 +516,24 @@ export default function AppointmentsList() {
             <div role="tablist" aria-label="Filtrer par statut" className="flex flex-wrap gap-1.5">
               {tabs.map((tab) => {
                 const active = selectedStatus === tab.value;
+
                 return (
                   <button
                     key={tab.value}
                     role="tab"
                     aria-selected={active}
                     onClick={() => handleStatusFilterChange(tab.value)}
-                    className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      active
+                    className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
                         ? "bg-blue-600 text-white shadow-sm shadow-blue-600/20"
                         : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                    }`}
+                      }`}
                   >
                     {tab.label}
                     <span
-                      className={`rounded-full px-1.5 text-xs tabular-nums ${
-                        active
+                      className={`rounded-full px-1.5 text-xs tabular-nums ${active
                           ? "bg-white/20 text-white"
                           : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                      }`}
+                        }`}
                     >
                       {tab.count}
                     </span>
@@ -542,17 +543,28 @@ export default function AppointmentsList() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+          {/* Tableau à largeur fixe */}
+          <div className="w-full min-w-0 overflow-hidden">
+            <table className="w-full table-fixed text-left text-sm text-slate-600 dark:text-slate-300">
+              <colgroup>
+                <col className="w-[17%]" />
+                <col className="w-[18%]" />
+                <col className="w-[15%]" />
+                <col className="w-[14%]" />
+                <col className="w-[16%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+              </colgroup>
+
               <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400">
                 <tr>
-                  <th scope="col" className="px-6 py-3.5">Client</th>
-                  <th scope="col" className="px-6 py-3.5">Contact</th>
-                  <th scope="col" className="px-6 py-3.5">Collaborateur</th>
-                  <th scope="col" className="px-6 py-3.5">Date & heure</th>
-                  <th scope="col" className="px-6 py-3.5">Motif</th>
-                  <th scope="col" className="px-6 py-3.5">Statut</th>
-                  <th scope="col" className="px-6 py-3.5 text-right">Actions</th>
+                  <th scope="col" className="break-words px-2 py-3 sm:px-4 lg:px-6">Client</th>
+                  <th scope="col" className="break-words px-2 py-3 sm:px-4 lg:px-6">Contact</th>
+                  <th scope="col" className="break-words px-2 py-3 sm:px-4 lg:px-6">Collaborateur</th>
+                  <th scope="col" className="break-words px-2 py-3 sm:px-4 lg:px-6">Date & heure</th>
+                  <th scope="col" className="break-words px-2 py-3 sm:px-4 lg:px-6">Motif</th>
+                  <th scope="col" className="break-words px-2 py-3 sm:px-4 lg:px-6">Statut</th>
+                  <th scope="col" className="px-1 py-3 text-center sm:px-2">Actions</th>
                 </tr>
               </thead>
 
@@ -560,54 +572,75 @@ export default function AppointmentsList() {
                 {loading ? (
                   Array.from({ length: PAGE_SIZE }).map((_, index) => (
                     <tr key={index} className="animate-pulse">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800" />
-                          <div className="h-4 w-28 rounded-md bg-slate-200 dark:bg-slate-800" />
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-9 w-9 shrink-0 rounded-full bg-slate-200 dark:bg-slate-800" />
+                          <div className="h-4 w-full max-w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
                         </div>
                       </td>
-                      <td className="px-6 py-4"><div className="h-4 w-28 rounded-md bg-slate-200 dark:bg-slate-800" /></td>
-                      <td className="px-6 py-4"><div className="h-4 w-28 rounded-md bg-slate-200 dark:bg-slate-800" /></td>
-                      <td className="px-6 py-4"><div className="h-4 w-24 rounded-md bg-slate-200 dark:bg-slate-800" /></td>
-                      <td className="px-6 py-4"><div className="h-4 w-36 rounded-md bg-slate-200 dark:bg-slate-800" /></td>
-                      <td className="px-6 py-4"><div className="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800" /></td>
-                      <td className="px-6 py-4"><div className="ml-auto h-8 w-24 rounded-lg bg-slate-200 dark:bg-slate-800" /></td>
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="h-4 w-full max-w-24 rounded-md bg-slate-200 dark:bg-slate-800" />
+                      </td>
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="h-4 w-full max-w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
+                      </td>
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="h-4 w-full max-w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
+                      </td>
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="h-4 w-full max-w-24 rounded-md bg-slate-200 dark:bg-slate-800" />
+                      </td>
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="h-6 w-full max-w-16 rounded-full bg-slate-200 dark:bg-slate-800" />
+                      </td>
+                      <td className="px-1 py-4 sm:px-2">
+                        <div className="ml-auto h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                      </td>
                     </tr>
                   ))
                 ) : currentData.length > 0 ? (
                   currentData.map((item, idx) => {
                     const kind = statusKind(item.status);
                     const time = formatTime(item.time);
+
                     return (
                       <tr
                         key={item.id ?? idx}
                         className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
                       >
                         {/* Client */}
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <div className="flex items-center gap-3">
+                        <td className="px-2 py-4 sm:px-4 lg:px-6">
+                          <div className="flex min-w-0 items-center gap-2">
                             <span
                               aria-hidden="true"
                               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700 dark:bg-blue-400/10 dark:text-blue-300"
                             >
-                              {initials(item.fullName) || <FontAwesomeIcon icon={faUser} className="h-3 w-3" />}
+                              {initials(item.fullName) || (
+                                <FontAwesomeIcon icon={faUser} className="h-3 w-3" />
+                              )}
                             </span>
-                            <span className="font-semibold text-slate-900 dark:text-slate-100">{item.fullName}</span>
+                            <span className="min-w-0 break-words font-semibold text-slate-900 dark:text-slate-100 [overflow-wrap:anywhere]">
+                              {item.fullName}
+                            </span>
                           </div>
                         </td>
 
                         {/* Contact */}
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{item.phone}</span>
-                            <span className="text-xs text-slate-400">{item.email || "—"}</span>
+                        <td className="px-2 py-4 sm:px-4 lg:px-6">
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <span className="break-words font-medium text-slate-800 dark:text-slate-200 [overflow-wrap:anywhere]">
+                              {item.phone}
+                            </span>
+                            <span className="break-all text-xs text-slate-400">
+                              {item.email || "—"}
+                            </span>
                           </div>
                         </td>
 
                         {/* Collaborateur */}
-                        <td className="whitespace-nowrap px-6 py-4">
+                        <td className="px-2 py-4 sm:px-4 lg:px-6">
                           {item.User ? (
-                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                            <span className="break-words font-medium text-slate-700 dark:text-slate-300 [overflow-wrap:anywhere]">
                               {item.User.firstname} {item.User.lastname}
                             </span>
                           ) : (
@@ -616,30 +649,37 @@ export default function AppointmentsList() {
                         </td>
 
                         {/* Date & heure */}
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                        <td className="px-2 py-4 sm:px-4 lg:px-6">
+                          <div className="flex min-w-0 flex-col">
+                            <span className="break-words font-medium text-slate-800 dark:text-slate-200">
                               {formatDate(item.date)}
                             </span>
-                            <span className="text-xs tabular-nums text-slate-400">{time ?? "Heure non définie"}</span>
+                            <span className="text-xs tabular-nums text-slate-400">
+                              {time ?? "Heure non définie"}
+                            </span>
                           </div>
                         </td>
 
                         {/* Motif */}
-                        <td className="max-w-[14rem] px-6 py-4">
-                          <p className="truncate" title={item.reason || undefined}>
+                        <td className="px-2 py-4 sm:px-4 lg:px-6">
+                          <p
+                            className="line-clamp-2 break-words [overflow-wrap:anywhere]"
+                            title={item.reason || undefined}
+                          >
                             {item.reason || <span className="text-slate-400">—</span>}
                           </p>
                         </td>
 
                         {/* Statut */}
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <StatusBadge status={item.status} />
+                        <td className="px-2 py-4 sm:px-4 lg:px-6">
+                          <div className="min-w-0">
+                            <StatusBadge status={item.status} />
+                          </div>
                         </td>
 
                         {/* Actions */}
-                        <td className="whitespace-nowrap px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-0.5">
+                        <td className="px-1 py-4 sm:px-2">
+                          <div className="flex flex-wrap items-center justify-center gap-0.5">
                             <ActionButton
                               label="Consulter"
                               icon={faEye}
@@ -650,6 +690,7 @@ export default function AppointmentsList() {
                               }
                               className="text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             />
+
                             <ActionButton
                               label="Accepter"
                               icon={faCheck}
@@ -657,6 +698,7 @@ export default function AppointmentsList() {
                               onClick={() => handleUpdateStatus(item.id, "ACCEPTED")}
                               className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40"
                             />
+
                             <ActionButton
                               label="Rejeter"
                               icon={faTimes}
@@ -664,6 +706,7 @@ export default function AppointmentsList() {
                               onClick={() => handleUpdateStatus(item.id, "REJECTED")}
                               className="text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/40"
                             />
+
                             <ActionButton
                               label="Supprimer"
                               icon={faTrashAlt}
@@ -682,14 +725,17 @@ export default function AppointmentsList() {
                         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-400 dark:bg-slate-800">
                           <FontAwesomeIcon icon={faCalendarXmark} />
                         </span>
+
                         <p className="mt-4 font-semibold text-slate-900 dark:text-slate-100">
                           Aucun rendez-vous trouvé
                         </p>
+
                         <p className="mt-1 max-w-xs text-sm text-slate-500 dark:text-slate-400">
                           {filtersActive
                             ? "Aucun résultat ne correspond à vos critères de recherche."
                             : "Les nouvelles demandes apparaîtront ici."}
                         </p>
+
                         {filtersActive && (
                           <button
                             onClick={resetFilters}
@@ -707,7 +753,7 @@ export default function AppointmentsList() {
           </div>
 
           {/* Pagination */}
-          <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50 sm:flex-row">
+          <div className="flex min-w-0 flex-col items-center justify-between gap-4 border-t border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50 sm:flex-row">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {filteredAppointments.length > 0 ? (
                 <>
@@ -725,10 +771,11 @@ export default function AppointmentsList() {
               )}
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="mr-1 text-sm tabular-nums text-slate-500 dark:text-slate-400">
                 Page {page} / {maxPage}
               </span>
+
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
@@ -737,6 +784,7 @@ export default function AppointmentsList() {
                 <FontAwesomeIcon icon={faChevronLeft} className="text-xs" />
                 Précédent
               </button>
+
               <button
                 onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
                 disabled={page === maxPage}

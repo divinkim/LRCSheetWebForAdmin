@@ -13,7 +13,8 @@ import { useCallContext, useRingtone } from './CallProvider';
 /* Types                                                               */
 /* ------------------------------------------------------------------ */
 export const MAX_GROUP_PARTICIPANTS = 8; // identique au serveur (mesh)
-const PENDING_TTL_MS = 60_000;           // un invité reste "en attente" 60 s à l'écran
+const PENDING_TTL_MS = 60_000;
+export const GROUP_CALL_LOG_TITLE = 'group_call'; // valeur du champ `title` de la ligne de journal
 
 export type RoomType = 'audio' | 'video';
 
@@ -24,8 +25,14 @@ export interface Person {
   photo?: string;
   Post?: { title: string };
 }
-export interface GroupRoom { id: string; type: RoomType; hostId: number; startedAt: number }
-export interface GroupInvite { roomId: string; type: RoomType; hostId: number; caller: Person }
+export interface GroupRoom {
+  id: string; type: RoomType; hostId: number; startedAt: number;
+  endsAt: number | null; // fin programmée (null = illimitée)
+}
+export interface GroupInvite {
+  roomId: string; type: RoomType; hostId: number; caller: Person;
+  remainingMs: number | null;
+}
 export interface PeerView {
   id: number;
   profile: Person;
@@ -36,11 +43,12 @@ export interface PeerView {
   connState: RTCPeerConnectionState | 'new';
 }
 export type PickerMode = 'start' | 'invite';
+export type ScreenTargets = number[] | 'all';
 
 interface PeerConn {
   id: number;
   pc: RTCPeerConnection;
-  polite: boolean;          // négociation parfaite : le plus grand id est "poli"
+  polite: boolean;
   makingOffer: boolean;
   ignoreOffer: boolean;
   pendingIce: RTCIceCandidateInit[];
@@ -58,27 +66,36 @@ interface Ctx {
   directory: Person[];
   onlineUserIds: number[];
   myProfile: Person;
+  isHost: boolean;
   localStream: MediaStream | null;
   screenStream: MediaStream | null;
+  screenTargetIds: ScreenTargets;
   isMuted: boolean;
+  micLocked: boolean;       // micro bloqué PAR l'organisateur
+  lockedIds: number[];      // (organisateur) participants dont le micro est bloqué
   isVideoOff: boolean;
   isSpeakerOn: boolean;
   isMinimized: boolean;
   setMinimized: (v: boolean) => void;
   duration: number;
+  remainingSec: number | null;
   canShareScreen: boolean;
   picker: { mode: PickerMode; preselected: number[] } | null;
   openPicker: (mode: PickerMode, preselected?: number[]) => void;
   closePicker: () => void;
-  startGroup: (ids: number[], type: RoomType) => Promise<void>;
+  startGroup: (ids: number[], type: RoomType, durationMs?: number) => Promise<void>;
   addInvitees: (ids: number[]) => void;
   acceptInvite: () => Promise<void>;
   declineInvite: () => void;
   leave: () => void;
+  kick: (id: number) => void;
+  lockMic: (target: number | 'all', locked: boolean) => void;
   toggleMute: () => void;
   toggleVideo: () => void;
   toggleSpeaker: () => void;
-  toggleScreenShare: () => Promise<void>;
+  shareScreen: (targets: ScreenTargets) => Promise<void>; // démarre OU met à jour les destinataires
+  stopScreen: () => void;
+  subscribeGroupLogged: (fn: () => void) => () => void;
 }
 const GroupCallContext = createContext<Ctx | null>(null);
 export const useGroupCall = () => {
@@ -109,7 +126,7 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   const { socket, onlineUserIds } = useChatSocket();
   const { data: session } = useSession();
   const toast = useToast();
-  const call = useCallContext(); // appel 1-1 : on ne démarre pas une visio pendant un appel
+  const call = useCallContext();
 
   const me: any = session?.user;
   const currentUserId = Number(me?.id);
@@ -120,7 +137,6 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     photo: me?.photo,
   };
 
-  // refs "toujours à jour" : les handlers socket ne gèrent jamais de closures périmées
   const myProfileRef = useRef(myProfile); myProfileRef.current = myProfile;
   const userIdRef = useRef(currentUserId); userIdRef.current = currentUserId;
   const socketRef = useRef(socket); socketRef.current = socket;
@@ -141,28 +157,73 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   const [directory, setDirectory] = useState<Person[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [screenTargetIds, setScreenTargetIds] = useState<ScreenTargets>('all');
   const [isMuted, setIsMuted] = useState(false);
+  const [micLocked, setMicLocked] = useState(false);
+  const [lockedIds, setLockedIds] = useState<number[]>([]);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [isMinimized, setMinimized] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [picker, setPicker] = useState<{ mode: PickerMode; preselected: number[] } | null>(null);
 
   const localRef = useRef<MediaStream | null>(null);
   const screenRef = useRef<MediaStream | null>(null);
+  const screenTargetsRef = useRef<ScreenTargets>('all');
+  const micLockedRef = useRef(false);
   const peersRef = useRef<Map<number, PeerConn>>(new Map());
   const membersRef = useRef<Set<number>>(new Set());
   const peerStreams = useRef<Map<number, Map<string, MediaStream>>>(new Map());
   const peerMedia = useRef<Map<number, PeerMedia>>(new Map());
   const profiles = useRef<Map<number, Person>>(new Map());
+  const warnedRef = useRef<string | null>(null);
+
+  // Journal (organisateur) : qui a été invité, qui a rejoint, combien de temps
+  const invitedRef = useRef<Set<number>>(new Set());
+  const statsRef = useRef<Map<number, { joinedAt: number | null; total: number }>>(new Map());
+  const loggedRooms = useRef<Set<string>>(new Set());
+  const loggedListeners = useRef<Set<() => void>>(new Set());
 
   const canShareScreen =
     typeof navigator !== 'undefined' && !!(navigator.mediaDevices as any)?.getDisplayMedia;
 
-  // Sonnerie d'invitation (useRingtone est exporté par CallProvider)
   useRingtone(!!invite && !room);
 
-  /* ---------------- Annuaire (noms des invités, sélection) ---------------- */
+  const subscribeGroupLogged = useCallback((fn: () => void) => {
+    loggedListeners.current.add(fn);
+    return () => { loggedListeners.current.delete(fn); };
+  }, []);
+  const notifyLogged = () => loggedListeners.current.forEach((f) => f());
+
+  /* ---------------- Notification système (hors application) ---------------- */
+  const osNotifyInvite = async (inv: GroupInvite) => {
+    try {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      if (!document.hidden) return; // application au premier plan : sonnerie interne
+      const title = `Visioconférence ${inv.type === 'video' ? 'vidéo' : 'audio'}`;
+      const opts: any = {
+        body: `${inv.caller.firstname} ${inv.caller.lastname || ''} vous invite à rejoindre`.trim(),
+        tag: `group-${inv.roomId}`,
+        renotify: true,
+        requireInteraction: true,
+        vibrate: [400, 200, 400, 200, 400, 200, 400],
+        data: { roomId: inv.roomId, url: '/' },
+      };
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg) await reg.showNotification(title, opts);
+      else new Notification(title, opts);
+    } catch { /* ignoré */ }
+  };
+  const closeOsNotif = async (roomId?: string) => {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      const list = await reg?.getNotifications(roomId ? { tag: `group-${roomId}` } : undefined);
+      list?.forEach((n) => n.close());
+    } catch { /* ignoré */ }
+  };
+
+  /* ---------------- Annuaire ---------------- */
   useEffect(() => {
     if (!currentUserId) return;
     (async () => {
@@ -175,13 +236,62 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     })();
   }, [currentUserId]);
 
-  /* ---------------- Chrono ---------------- */
+  /* ---------------- Chrono + minuteur de fin ---------------- */
   useEffect(() => {
-    if (!room) { setDuration(0); return; }
-    const t = setInterval(
-      () => setDuration(Math.floor((Date.now() - room.startedAt) / 1000)), 1000);
+    if (!room) { setDuration(0); setRemainingSec(null); return; }
+    const tick = () => {
+      const now = Date.now();
+      setDuration(Math.floor((now - room.startedAt) / 1000));
+      if (room.endsAt) {
+        const rem = Math.max(0, Math.ceil((room.endsAt - now) / 1000));
+        setRemainingSec(rem);
+        if (rem > 0 && rem <= 60 && warnedRef.current !== room.id) {
+          warnedRef.current = room.id;
+          toastRef.current.info('Visioconférence', 'Il reste moins d’une minute');
+        }
+      } else setRemainingSec(null);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [room?.id, room?.startedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [room?.id, room?.startedAt, room?.endsAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ---------------- Statistiques de présence ---------------- */
+  const markJoined = (id: number) => {
+    const s = statsRef.current.get(id) ?? { joinedAt: null, total: 0 };
+    if (!s.joinedAt) s.joinedAt = Date.now();
+    statsRef.current.set(id, s);
+  };
+  const markLeft = (id: number) => {
+    const s = statsRef.current.get(id);
+    if (s?.joinedAt) { s.total += Date.now() - s.joinedAt; s.joinedAt = null; }
+  };
+
+  /**
+   * Journal en base, comme pour un appel individuel : une ligne `chats` par invité
+   * (expéditeur = organisateur). callDuration = secondes de présence, callStatus = a rejoint ou non.
+   */
+  const logGroupCall = (r: GroupRoom) => {
+    if (loggedRooms.current.has(r.id)) return;
+    loggedRooms.current.add(r.id);
+    const meId = userIdRef.current;
+    const rows = Array.from(invitedRef.current).filter((id) => id !== meId).map((id) => {
+      const s = statsRef.current.get(id);
+      return { id, joined: !!s, secs: Math.round((s?.total ?? 0) / 1000) };
+    });
+    Promise.allSettled(rows.map((row) =>
+      providers.API.post(CHAT_SERVER_URL, 'chats', null, {
+        title: GROUP_CALL_LOG_TITLE,
+        senderId: meId,
+        receiverId: row.id,
+        content: '',
+        file: '',
+        role: 'client',
+        callDuration: row.secs,
+        callStatus: row.joined,
+      }),
+    )).then(notifyLogged);
+  };
 
   /* ---------------- Vues des pairs ---------------- */
   const refreshPeer = useCallback((id: number) => {
@@ -208,25 +318,27 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     socketRef.current?.emit('groupCall:signal', { roomId: r.id, from: userIdRef.current, to, ...payload });
   };
 
-  // État de mes médias (micro / caméra / flux d'écran) envoyé via le relais "signal"
-  const localMedia = (): PeerMedia => {
+  const isScreenTarget = (id: number) =>
+    screenTargetsRef.current === 'all' || screenTargetsRef.current.includes(id);
+
+  // État de mes médias, personnalisé par destinataire (le flux d'écran n'est annoncé qu'à ses destinataires)
+  const localMedia = (forId?: number): PeerMedia => {
     const a = localRef.current?.getAudioTracks()[0];
     const v = localRef.current?.getVideoTracks()[0];
+    const sharing = screenRef.current && (forId === undefined || isScreenTarget(forId));
     return {
-      screenStreamId: screenRef.current?.id ?? null,
+      screenStreamId: sharing ? screenRef.current!.id : null,
       muted: a ? !a.enabled : true,
       cameraOff: v ? !v.enabled : true,
     };
   };
   const sendMedia = (to?: number) => {
-    const media = localMedia();
-    if (to) sendSignal(to, { media });
-    else membersRef.current.forEach((id) => sendSignal(id, { media }));
+    if (to) sendSignal(to, { media: localMedia(to) });
+    else membersRef.current.forEach((id) => sendSignal(id, { media: localMedia(id) }));
   };
 
   const applyMedia = (id: number, m: PeerMedia) => {
     const prev = peerMedia.current.get(id);
-    // l'écran distant s'est arrêté : on oublie son flux pour qu'il ne passe pas pour la caméra
     if (prev?.screenStreamId && prev.screenStreamId !== m.screenStreamId) {
       peerStreams.current.get(id)?.delete(prev.screenStreamId);
     }
@@ -237,8 +349,12 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   /* ---------------- Pairs WebRTC (négociation parfaite) ---------------- */
   const addScreenTracks = (p: PeerConn) => {
     const ss = screenRef.current;
-    if (!ss) return;
+    if (!ss || p.screenSenders.length || !isScreenTarget(p.id)) return;
     ss.getTracks().forEach((t) => p.screenSenders.push(p.pc.addTrack(t, ss)));
+  };
+  const removeScreenTracks = (p: PeerConn) => {
+    p.screenSenders.forEach((snd) => { try { p.pc.removeTrack(snd); } catch { /* déjà retiré */ } });
+    p.screenSenders = [];
   };
   const addLocalTracks = (p: PeerConn) => {
     if (p.tracksAdded) return;
@@ -296,10 +412,12 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       p.pc.onnegotiationneeded = null; p.pc.onconnectionstatechange = null;
       p.pc.close();
     }
+    markLeft(id);
     peersRef.current.delete(id);
     membersRef.current.delete(id);
     peerStreams.current.delete(id);
     peerMedia.current.delete(id);
+    setLockedIds((l) => l.filter((x) => x !== id));
     setPeers((prev) => {
       const { [id]: _gone, ...rest } = prev;
       return rest;
@@ -332,7 +450,7 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
         peer.pendingIce = [];
 
         if (desc.type === 'offer') {
-          addLocalTracks(peer); // côté "déjà dans la salle" : on envoie nos médias en répondant
+          addLocalTracks(peer);
           await pc.setLocalDescription();
           const ld = pc.localDescription!;
           sendSignal(from, { description: { type: ld.type, sdp: ld.sdp } });
@@ -353,65 +471,34 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   /* ---------------- Médias locaux ---------------- */
   const getMedia = async (video: boolean): Promise<MediaStream | null> => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      toastRef.current.info(
-        'Visioconférence',
-        'Votre navigateur ne prend pas en charge les appels vidéo. Utilisez HTTPS.'
-      );
+      toastRef.current.info('Visioconférence', 'Votre navigateur ne prend pas en charge les appels vidéo. Utilisez HTTPS.');
       return null;
     }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-        video: video
-          ? {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-          }
-          : false,
+        audio: { echoCancellation: true, noiseSuppression: true },
+        video: video ? { width: { ideal: 640 }, height: { ideal: 480 } } : false,
       });
-
       localRef.current = stream;
       setLocalStream(stream);
-
       setIsVideoOff(false);
       setIsMuted(false);
-
       return stream;
     } catch (error: any) {
       console.error('Erreur accès caméra/micro :', error);
-
       if (video) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: false,
-          });
-
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           localRef.current = stream;
           setLocalStream(stream);
-
           setIsVideoOff(true);
-
-          toastRef.current.info(
-            'Visioconférence',
-            'Caméra indisponible. Vous rejoignez avec le micro uniquement.'
-          );
-
+          toastRef.current.info('Visioconférence', 'Caméra indisponible. Vous rejoignez avec le micro uniquement.');
           return stream;
         } catch (audioError) {
           console.error('Erreur accès microphone :', audioError);
         }
       }
-
-      toastRef.current.info(
-        'Visioconférence',
-        'Impossible d’accéder au microphone ou à la caméra. Vérifiez les permissions.'
-      );
-
+      toastRef.current.info('Visioconférence', 'Impossible d’accéder au microphone ou à la caméra. Vérifiez les permissions.');
       return null;
     }
   };
@@ -419,18 +506,27 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   /* ---------------- Sortie de la salle ---------------- */
   const leaveRoom = (notify = true) => {
     const r = roomRef.current;
+    const iAmHost = !!r && r.hostId === userIdRef.current;
     if (r && notify) {
-      socketRef.current?.emit('groupCall:leave', { roomId: r.id, userId: userIdRef.current });
+      // l'organisateur qui raccroche termine la réunion pour tout le monde
+      if (iAmHost) socketRef.current?.emit('groupCall:end', { roomId: r.id, userId: userIdRef.current });
+      else socketRef.current?.emit('groupCall:leave', { roomId: r.id, userId: userIdRef.current });
     }
     Array.from(peersRef.current.keys()).forEach(removePeer);
+    if (r && iAmHost) logGroupCall(r); // enregistrement en base de l'appel terminé
+
     peersRef.current.clear(); membersRef.current.clear();
     peerStreams.current.clear(); peerMedia.current.clear(); profiles.current.clear();
+    invitedRef.current.clear(); statsRef.current.clear();
     localRef.current?.getTracks().forEach((t) => t.stop());
     screenRef.current?.getTracks().forEach((t) => t.stop());
     localRef.current = null; screenRef.current = null;
-    setLocalStream(null); setScreenStream(null); setPeers({}); setPendingIds([]);
+    screenTargetsRef.current = 'all'; micLockedRef.current = false;
+    setLocalStream(null); setScreenStream(null); setScreenTargetIds('all');
+    setPeers({}); setPendingIds([]); setLockedIds([]); setMicLocked(false);
     setIsMuted(false); setIsVideoOff(false); setIsSpeakerOn(true); setMinimized(false);
     setRoomBoth(null);
+    closeOsNotif();
   };
 
   /* ---------------- Évènements socket ---------------- */
@@ -438,25 +534,28 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     if (!socket || !currentUserId) return;
 
     const onInvite = (d: any) => {
-      // déjà en visio ou en appel : on décline pour ne pas rester "invité"
       if (roomRef.current || callBusyRef.current) {
         socket.emit('groupCall:decline', { roomId: d.roomId, userId: currentUserId });
         return;
       }
-      if (inviteRef.current?.roomId === d.roomId) return; // relecture serveur
+      if (inviteRef.current?.roomId === d.roomId) return;
       setMinimized(false);
-      setInviteBoth({
+      const inv: GroupInvite = {
         roomId: d.roomId,
         type: d.type === 'audio' ? 'audio' : 'video',
         hostId: Number(d.hostId),
         caller: toPerson(Number(d.hostId), d.callerProfile),
-      });
+        remainingMs: typeof d.remainingMs === 'number' ? d.remainingMs : null,
+      };
+      setInviteBoth(inv);
+      osNotifyInvite(inv);
     };
 
-    // Je viens de rejoindre : je reçois les présents et j'envoie une offre à chacun
     const onPeers = (d: any) => {
       const r = roomRef.current;
       if (!r || d.roomId !== r.id) return;
+      // temps restant fixé par l'organisateur
+      setRoomBoth({ ...r, endsAt: typeof d.remainingMs === 'number' ? Date.now() + d.remainingMs : null });
       (d.peers || []).forEach((p: any) => {
         const id = Number(p.id);
         membersRef.current.add(id);
@@ -467,12 +566,13 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       });
     };
 
-    // Quelqu'un arrive : c'est lui qui nous enverra l'offre (voir handleSignal)
     const onPeerJoined = (d: any) => {
       const r = roomRef.current;
       if (!r || d.roomId !== r.id) return;
       const id = Number(d.userId);
       membersRef.current.add(id);
+      invitedRef.current.add(id);
+      markJoined(id);
       profiles.current.set(id, toPerson(id, d.profile));
       refreshPeer(id);
       sendMedia(id);
@@ -486,10 +586,16 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     };
 
     const onEnded = (d: any) => {
+      closeOsNotif(d.roomId);
       if (inviteRef.current?.roomId === d.roomId) setInviteBoth(null);
       if (roomRef.current?.id === d.roomId) {
-        toastRef.current.info('Visioconférence', 'La visioconférence est terminée');
+        const msg =
+          d.reason === 'timeout' ? 'La durée prévue est écoulée : la visioconférence est terminée'
+            : d.reason === 'host_left' || d.reason === 'ended' ? 'L’organisateur a mis fin à la visioconférence'
+              : 'La visioconférence est terminée';
+        toastRef.current.info('Visioconférence', msg);
         leaveRoom(false);
+        setTimeout(notifyLogged, 1500); // laisse le temps à l'organisateur d'écrire le journal
       }
     };
 
@@ -498,7 +604,32 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       leaveRoom(false);
     };
 
-    // Le serveur nous retire de la salle quand tous nos sockets sont coupés
+    // Retiré par l'organisateur
+    const onKicked = (d: any) => {
+      closeOsNotif(d?.roomId);
+      if (inviteRef.current?.roomId === d?.roomId) setInviteBoth(null);
+      if (roomRef.current?.id === d?.roomId) {
+        toastRef.current.info('Visioconférence', 'L’organisateur vous a retiré de la visioconférence');
+        leaveRoom(false);
+      }
+    };
+
+    // Micro bloqué / rétabli par l'organisateur
+    const onMicLock = (d: any) => {
+      if (roomRef.current?.id !== d?.roomId) return;
+      const locked = !!d.locked;
+      micLockedRef.current = locked;
+      setMicLocked(locked);
+      if (locked) {
+        localRef.current?.getAudioTracks().forEach((t) => (t.enabled = false));
+        setIsMuted(true);
+        sendMedia();
+        toastRef.current.info('Visioconférence', 'L’organisateur a coupé votre micro');
+      } else {
+        toastRef.current.info('Visioconférence', 'Vous pouvez de nouveau activer votre micro');
+      }
+    };
+
     const onDisconnect = () => {
       if (roomRef.current) {
         toastRef.current.info('Visioconférence', 'Connexion perdue : vous avez quitté la visioconférence');
@@ -513,6 +644,8 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     socket.on('groupCall:signal', handleSignal);
     socket.on('groupCall:ended', onEnded);
     socket.on('groupCall:full', onFull);
+    socket.on('groupCall:kicked', onKicked);
+    socket.on('groupCall:micLock', onMicLock);
     socket.on('disconnect', onDisconnect);
     return () => {
       socket.off('groupCall:invite', onInvite);
@@ -522,12 +655,13 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       socket.off('groupCall:signal', handleSignal);
       socket.off('groupCall:ended', onEnded);
       socket.off('groupCall:full', onFull);
+      socket.off('groupCall:kicked', onKicked);
+      socket.off('groupCall:micLock', onMicLock);
       socket.off('disconnect', onDisconnect);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, currentUserId]);
 
-  // Quitter la page pendant une visio = quitter la salle
   useEffect(() => () => { if (roomRef.current) leaveRoom(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------- Push pour les invités hors ligne ---------------- */
@@ -554,151 +688,75 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   };
 
   /* ---------------- Actions ---------------- */
-  const openPicker = (
-    mode: PickerMode,
-    preselected: number[] = []
-  ) => {
+  const openPicker = (mode: PickerMode, preselected: number[] = []) => {
     if (mode === 'start' && roomRef.current) {
-      toastRef.current.info(
-        'Visioconférence',
-        'Vous êtes déjà dans une visioconférence.'
-      );
+      toastRef.current.info('Visioconférence', 'Vous êtes déjà dans une visioconférence.');
       return;
     }
-
     if (mode === 'start' && callBusyRef.current) {
-      toastRef.current.info(
-        'Visioconférence',
-        'Terminez votre appel actuel avant de commencer.'
-      );
+      toastRef.current.info('Visioconférence', 'Terminez votre appel actuel avant de commencer.');
       return;
     }
-
-    setPicker({
-      mode,
-      preselected,
-    });
+    // la permission doit être demandée sur un geste utilisateur
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => { /* ignoré */ });
+    }
+    setPicker({ mode, preselected });
   };
+  const closePicker = () => setPicker(null);
 
-  const closePicker = () => {
-    setPicker(null);
-  };
-
-  const startGroup = async (ids: number[], type: RoomType) => {
+  const startGroup = async (ids: number[], type: RoomType, durationMs = 0) => {
     const t = toastRef.current;
-
     try {
-      const invitees = Array.from(
-        new Set(ids.map(Number))
-      ).filter(
-        (id) => id && id !== userIdRef.current
-      );
+      const invitees = Array.from(new Set(ids.map(Number))).filter((id) => id && id !== userIdRef.current);
 
-      if (!userIdRef.current) {
-        t.info('Visioconférence', 'Utilisateur non identifié.');
-        return;
+      if (!userIdRef.current) return void t.info('Visioconférence', 'Utilisateur non identifié.');
+      if (roomRef.current) return void t.info('Visioconférence', 'Une visioconférence est déjà en cours.');
+      if (callBusyRef.current) return void t.info('Visioconférence', 'Terminez votre appel actuel avant de lancer une visioconférence.');
+      if (!socketRef.current?.connected) return void t.info('Visioconférence', 'Connexion au serveur indisponible. Veuillez réessayer.');
+      if (typeof RTCPeerConnection === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        return void t.info('Visioconférence', 'La visioconférence nécessite un navigateur compatible et HTTPS.');
       }
-
-      if (roomRef.current) {
-        t.info('Visioconférence', 'Une visioconférence est déjà en cours.');
-        return;
-      }
-
-      if (callBusyRef.current) {
-        t.info(
-          'Visioconférence',
-          'Terminez votre appel actuel avant de lancer une visioconférence.'
-        );
-        return;
-      }
-
-      if (!socketRef.current?.connected) {
-        t.info(
-          'Visioconférence',
-          'Connexion au serveur indisponible. Veuillez réessayer.'
-        );
-        return;
-      }
-
-      if (
-        typeof RTCPeerConnection === 'undefined' ||
-        !navigator.mediaDevices?.getUserMedia
-      ) {
-        t.info(
-          'Visioconférence',
-          'La visioconférence nécessite un navigateur compatible et HTTPS.'
-        );
-        return;
-      }
-
-      if (invitees.length === 0) {
-        t.info(
-          'Visioconférence',
-          'Sélectionnez au moins un participant.'
-        );
-        return;
-      }
-
+      if (invitees.length === 0) return void t.info('Visioconférence', 'Sélectionnez au moins un participant.');
       if (invitees.length > MAX_GROUP_PARTICIPANTS - 1) {
-        t.info(
-          'Visioconférence',
-          `${MAX_GROUP_PARTICIPANTS} participants maximum, vous compris.`
-        );
-        return;
+        return void t.info('Visioconférence', `${MAX_GROUP_PARTICIPANTS} participants maximum, vous compris.`);
       }
 
-      t.info(
-        'Visioconférence',
-        'Initialisation de votre visioconférence...'
-      );
-
+      t.info('Visioconférence', 'Initialisation de votre visioconférence...');
       const stream = await getMedia(type === 'video');
-
       if (!stream) return;
 
       const roomId = `g-${userIdRef.current}-${Date.now().toString(36)}`;
-
+      const ms = durationMs > 0 ? durationMs : 0;
       const newRoom: GroupRoom = {
-        id: roomId,
-        type,
-        hostId: userIdRef.current,
-        startedAt: Date.now(),
+        id: roomId, type, hostId: userIdRef.current, startedAt: Date.now(),
+        endsAt: ms ? Date.now() + ms : null,
       };
+
+      invitedRef.current = new Set(invitees);
+      statsRef.current = new Map();
+      warnedRef.current = null;
 
       setPicker(null);
       setMinimized(false);
-
       setRoomBoth(newRoom);
-
       markPending(invitees);
 
       socketRef.current.emit('groupCall:start', {
-        roomId,
-        from: userIdRef.current,
-        type,
-        invitees,
+        roomId, from: userIdRef.current, type, invitees,
         profile: myProfileRef.current,
+        durationMs: ms || null,
       });
 
-      try {
-        await sendGroupPush(invitees, roomId, type);
-      } catch (pushError) {
-        console.warn('Erreur notification push :', pushError);
-      }
-
-      console.log('Visioconférence lancée :', roomId);
-
+      try { await sendGroupPush(invitees, roomId, type); }
+      catch (pushError) { console.warn('Erreur notification push :', pushError); }
     } catch (error) {
       console.error('Erreur lancement visioconférence :', error);
-
       leaveRoom(false);
-
-      t.info(
-        'Visioconférence',
-        'Une erreur est survenue lors du démarrage de la visioconférence.'
-      );
+      t.info('Visioconférence', 'Une erreur est survenue lors du démarrage de la visioconférence.');
     }
   };
+
   const addInvitees = (ids: number[]) => {
     const r = roomRef.current;
     if (!r) return;
@@ -706,9 +764,32 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       (id) => id && id !== userIdRef.current && !membersRef.current.has(id));
     if (!invitees.length) return;
     socketRef.current?.emit('groupCall:addInvitees', { roomId: r.id, from: userIdRef.current, invitees });
+    invitees.forEach((id) => invitedRef.current.add(id));
     markPending(invitees);
     sendGroupPush(invitees, r.id, r.type);
     setPicker(null);
+  };
+
+  /** Organisateur : retire un participant (ou annule l'invitation d'un invité qui sonne encore) */
+  const kick = (id: number) => {
+    const r = roomRef.current;
+    if (!r || r.hostId !== userIdRef.current) return;
+    socketRef.current?.emit('groupCall:kick', { roomId: r.id, from: userIdRef.current, target: id });
+    setPendingIds((p) => p.filter((x) => x !== id));
+    if (peersRef.current.has(id)) removePeer(id);
+  };
+
+  /** Organisateur : coupe + bloque (ou rétablit) le micro d'un participant ou de tous */
+  const lockMic = (target: number | 'all', locked: boolean) => {
+    const r = roomRef.current;
+    if (!r || r.hostId !== userIdRef.current) return;
+    socketRef.current?.emit('groupCall:micLock', {
+      roomId: r.id, from: userIdRef.current, target, locked,
+    });
+    const ids = target === 'all' ? Array.from(membersRef.current) : [target];
+    setLockedIds((prev) => locked
+      ? Array.from(new Set([...prev, ...ids]))
+      : prev.filter((x) => !ids.includes(x)));
   };
 
   const acceptInvite = async () => {
@@ -724,10 +805,14 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       return declineInvite();
     }
     setInviteBoth(null);
+    closeOsNotif(inv.roomId);
     profiles.current.set(inv.hostId, inv.caller);
+    warnedRef.current = null;
     setMinimized(false);
-    setRoomBoth({ id: inv.roomId, type: inv.type, hostId: inv.hostId, startedAt: Date.now() });
-    // la salle doit être connue avant la réponse 'groupCall:peers'
+    setRoomBoth({
+      id: inv.roomId, type: inv.type, hostId: inv.hostId, startedAt: Date.now(),
+      endsAt: inv.remainingMs != null ? Date.now() + inv.remainingMs : null,
+    });
     socketRef.current?.emit('groupCall:join', {
       roomId: inv.roomId, userId: userIdRef.current, profile: myProfileRef.current,
     });
@@ -736,12 +821,17 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   const declineInvite = () => {
     const inv = inviteRef.current;
     if (inv) socketRef.current?.emit('groupCall:decline', { roomId: inv.roomId, userId: userIdRef.current });
+    closeOsNotif(inv?.roomId);
     setInviteBoth(null);
   };
 
   const leave = () => leaveRoom(true);
 
   const toggleMute = () => {
+    if (micLockedRef.current) {
+      toastRef.current.info('Visioconférence', 'Votre micro est bloqué par l’organisateur');
+      return;
+    }
     localRef.current?.getAudioTracks().forEach((t) => (t.enabled = !t.enabled));
     setIsMuted((m) => !m);
     sendMedia();
@@ -754,25 +844,34 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
   };
   const toggleSpeaker = () => setIsSpeakerOn((s) => !s);
 
-  /* ---------------- Partage d'écran ---------------- */
+  /* ---------------- Partage d'écran ciblé ---------------- */
+  const applyScreenTargets = () => {
+    peersRef.current.forEach((p) => {
+      if (isScreenTarget(p.id)) { if (p.tracksAdded) addScreenTracks(p); }
+      else if (p.screenSenders.length) removeScreenTracks(p);
+    });
+    sendMedia(); // annonce le flux d'écran (ou son retrait) avant la renégociation
+  };
+
   const stopScreen = () => {
     const s = screenRef.current;
     if (!s) return;
     screenRef.current = null;
     setScreenStream(null);
-    peersRef.current.forEach((p) => {
-      p.screenSenders.forEach((snd) => { try { p.pc.removeTrack(snd); } catch { /* déjà retiré */ } });
-      p.screenSenders = [];
-    });
+    peersRef.current.forEach(removeScreenTracks);
     s.getTracks().forEach((t) => t.stop());
     sendMedia();
   };
 
-  const toggleScreenShare = async () => {
-    if (screenRef.current) { stopScreen(); return; }
+  /** Démarre le partage vers `targets`, ou met à jour les destinataires s'il est déjà actif */
+  const shareScreen = async (targets: ScreenTargets) => {
+    screenTargetsRef.current = targets;
+    setScreenTargetIds(targets);
+
+    if (screenRef.current) { applyScreenTargets(); return; }
     if (!roomRef.current) return;
     if (!canShareScreen) {
-      toastRef.current.info('Partage d\'écran', 'Non supporté sur cet appareil');
+      toastRef.current.info('Partage d’écran', 'Non supporté sur cet appareil');
       return;
     }
     try {
@@ -784,22 +883,22 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
       const v = s.getVideoTracks()[0];
       if (v) {
         (v as any).contentHint = 'detail';
-        v.onended = () => stopScreen(); // bouton "Arrêter le partage" du navigateur
+        v.onended = () => stopScreen();
       }
-      // les pairs pas encore négociés recevront l'écran via addLocalTracks
-      peersRef.current.forEach((p) => { if (p.tracksAdded) addScreenTracks(p); });
-      sendMedia(); // le flux d'écran est annoncé avant l'offre de renégociation
+      applyScreenTargets();
     } catch (e: any) {
-      if (e?.name !== 'NotAllowedError') console.warn('Partage d\'écran', e);
+      if (e?.name !== 'NotAllowedError') console.warn('Partage d’écran', e);
     }
   };
 
   const value: Ctx = {
     room, invite, peers, pendingIds, directory, onlineUserIds, myProfile,
-    localStream, screenStream, isMuted, isVideoOff, isSpeakerOn, isMinimized, setMinimized,
-    duration, canShareScreen, picker, openPicker, closePicker,
-    startGroup, addInvitees, acceptInvite, declineInvite, leave,
-    toggleMute, toggleVideo, toggleSpeaker, toggleScreenShare,
+    isHost: !!room && room.hostId === currentUserId,
+    localStream, screenStream, screenTargetIds,
+    isMuted, micLocked, lockedIds, isVideoOff, isSpeakerOn, isMinimized, setMinimized,
+    duration, remainingSec, canShareScreen, picker, openPicker, closePicker,
+    startGroup, addInvitees, acceptInvite, declineInvite, leave, kick, lockMic,
+    toggleMute, toggleVideo, toggleSpeaker, shareScreen, stopScreen, subscribeGroupLogged,
   };
 
   return <GroupCallContext.Provider value={value}>{children}</GroupCallContext.Provider>;

@@ -86,6 +86,21 @@ const getDaysLeft = (value?: string | null): number | null => {
 const TH = "px-3 sm:px-4 py-4 whitespace-nowrap";
 const TD = "px-3 sm:px-4 py-4 align-middle";
 
+/**
+ * Visibilité des colonnes.
+ * Les breakpoints Tailwind se basent sur la largeur de l'ÉCRAN, pas sur celle
+ * de la zone de contenu (qui est réduite par la sidebar). Les colonnes
+ * secondaires n'apparaissent donc que sur de grands écrans, et le tableau
+ * reste de toute façon défilable horizontalement dans son conteneur.
+ */
+const COL = {
+  sector: "hidden 2xl:table-cell",
+  contact: "hidden 2xl:table-cell",
+  plan: "hidden md:table-cell",
+  price: "hidden xl:table-cell",
+  expiry: "hidden lg:table-cell",
+};
+
 export default function ListEnterprise() {
   const { data: session, status } = useSession();
   const toast = useToast();
@@ -215,9 +230,16 @@ export default function ListEnterprise() {
     return filteredEnterprises.slice(start, start + itemsPerPage);
   }, [filteredEnterprises, currentPage, itemsPerPage]);
 
+  // Si le filtre réduit le nombre de pages, on revient sur une page valide
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   return (
-    <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50/50 dark:bg-slate-950 transition-colors overflow-x-hidden">
-      <main className="max-w-7xl mx-auto space-y-6 font-sans">
+    // min-w-0 + max-w-full : empêche la page de s'élargir au-delà de la zone
+    // de contenu (cas d'un parent flex avec sidebar).
+    <div className="w-full max-w-full min-w-0 min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50/50 dark:bg-slate-950 transition-colors">
+      <main className="w-full min-w-0 max-w-7xl mx-auto space-y-6 font-sans">
         {/* En-tête Principal */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="min-w-0">
@@ -243,7 +265,7 @@ export default function ListEnterprise() {
         {/* Barre de Recherche & Filtres */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
           {/* Recherche */}
-          <div className="relative w-full md:w-96">
+          <div className="relative w-full md:w-96 min-w-0">
             <FontAwesomeIcon
               icon={faSearch}
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"
@@ -283,35 +305,30 @@ export default function ListEnterprise() {
         </div>
 
         {/* DATA TABLE */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-              <thead className="bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200/80 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-800">
+        <div className="w-full max-w-full min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="w-full min-w-0 overflow-hidden">
+            <table className="w-full table-fixed text-left text-sm text-slate-600 dark:text-slate-300">
+              <colgroup>
+                <col className="w-[28%]" />
+                <col className="w-[14%] hidden 2xl:table-column" />
+                <col className="w-[18%] hidden 2xl:table-column" />
+                <col className="w-[16%] hidden md:table-column" />
+                <col className="w-[12%] hidden xl:table-column" />
+                <col className="w-[14%] hidden lg:table-column" />
+                <col className="w-[16%]" />
+                <col className="w-[16%]" />
+              </colgroup>
+
+              <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400">
                 <tr>
-                  <th scope="col" className={`${TH} min-w-[220px]`}>
-                    Entreprise
-                  </th>
-                  <th scope="col" className={`${TH} hidden xl:table-cell`}>
-                    Secteur
-                  </th>
-                  <th scope="col" className={`${TH} hidden xl:table-cell`}>
-                    Contact
-                  </th>
-                  <th scope="col" className={`${TH} hidden md:table-cell`}>
-                    Abonnement
-                  </th>
-                  <th scope="col" className={`${TH} hidden lg:table-cell`}>
-                    Prix
-                  </th>
-                  <th scope="col" className={`${TH} hidden lg:table-cell`}>
-                    Expiration
-                  </th>
-                  <th scope="col" className={`${TH} text-center`}>
-                    Statut
-                  </th>
-                  <th scope="col" className={`${TH} text-right`}>
-                    Actions
-                  </th>
+                  <th className="px-2 py-4 sm:px-4">Entreprise</th>
+                  <th className={`${TH} ${COL.sector}`}>Secteur</th>
+                  <th className={`${TH} ${COL.contact}`}>Contact</th>
+                  <th className={`${TH} ${COL.plan}`}>Abonnement</th>
+                  <th className={`${TH} ${COL.price}`}>Prix</th>
+                  <th className={`${TH} ${COL.expiry}`}>Expiration</th>
+                  <th className="px-2 py-4 text-center sm:px-4">Statut</th>
+                  <th className="px-2 py-4 text-center sm:px-4">Actions</th>
                 </tr>
               </thead>
 
@@ -319,71 +336,41 @@ export default function ListEnterprise() {
                 {isLoading ? (
                   Array.from({ length: itemsPerPage }).map((_, idx) => (
                     <tr key={idx} className="animate-pulse">
-                      <td className={TD}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-800 shrink-0"></div>
-                          <div className="space-y-1.5 min-w-0 flex-1">
-                            <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                            <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                      <td className="px-2 py-4 sm:px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-10 w-10 shrink-0 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
+                            <div className="h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-800" />
                           </div>
                         </div>
                       </td>
-                      <td className={`${TD} hidden xl:table-cell`}>
-                        <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                      </td>
-                      <td className={`${TD} hidden xl:table-cell`}>
-                        <div className="space-y-1.5">
-                          <div className="h-3.5 w-36 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                          <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                        </div>
-                      </td>
-                      <td className={`${TD} hidden md:table-cell`}>
-                        <div className="space-y-1.5">
-                          <div className="h-5 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                          <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                        </div>
-                      </td>
-                      <td className={`${TD} hidden lg:table-cell`}>
-                        <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                      </td>
-                      <td className={`${TD} hidden lg:table-cell`}>
-                        <div className="space-y-1.5">
-                          <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                          <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                        </div>
-                      </td>
-                      <td className={`${TD} text-center`}>
-                        <div className="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800 mx-auto"></div>
-                      </td>
-                      <td className={`${TD} text-right`}>
-                        <div className="flex items-center justify-end gap-1">
-                          <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800"></div>
-                          <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800"></div>
-                        </div>
-                      </td>
+                      <td className={`${TD} ${COL.sector}`} />
+                      <td className={`${TD} ${COL.contact}`} />
+                      <td className={`${TD} ${COL.plan}`} />
+                      <td className={`${TD} ${COL.price}`} />
+                      <td className={`${TD} ${COL.expiry}`} />
+                      <td className={`${TD} text-center`} />
+                      <td className={`${TD} text-center`} />
                     </tr>
                   ))
                 ) : paginatedEnterprises.length > 0 ? (
                   paginatedEnterprises.map((enterprise) => {
-                    const statusKey =
-                      enterprise.subscriptionStatus?.toUpperCase() ?? "";
-                    const statusCfg =
-                      STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.INACTIVE;
+                    const statusKey = enterprise.subscriptionStatus?.toUpperCase() ?? "";
+                    const statusCfg = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.INACTIVE;
 
-                    const planKey =
-                      enterprise.subscriptionType?.toUpperCase() ?? "";
-                    const planClasses =
-                      PLAN_CLASSES[planKey] ?? PLAN_CLASSES.STARTER;
+                    const planKey = enterprise.subscriptionType?.toUpperCase() ?? "";
+                    const planClasses = PLAN_CLASSES[planKey] ?? PLAN_CLASSES.STARTER;
+
                     const frequencyLabel =
-                      FREQUENCY_LABELS[
-                        enterprise.paymentFrequency?.toUpperCase() ?? ""
-                      ] ??
+                      FREQUENCY_LABELS[enterprise.paymentFrequency?.toUpperCase() ?? ""] ??
                       enterprise.paymentFrequency ??
                       "-";
 
                     const rawPrice = Number(
                       (enterprise as any)?.SubscriptionType?.price
                     );
+
                     const priceLabel =
                       Number.isFinite(rawPrice) && rawPrice > 0
                         ? `${rawPrice.toLocaleString("fr-FR")} XAF`
@@ -392,6 +379,7 @@ export default function ListEnterprise() {
                     const daysLeft = getDaysLeft(
                       String(enterprise.subscriptionExpiresAt)
                     );
+
                     const isExpired = daysLeft !== null && daysLeft < 0;
                     const isExpiringSoon =
                       daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
@@ -399,12 +387,12 @@ export default function ListEnterprise() {
                     return (
                       <tr
                         key={enterprise.id}
-                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
+                        className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
                       >
                         {/* Entreprise */}
-                        <td className={`${TD} min-w-[220px] max-w-[300px]`}>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0">
+                        <td className="px-2 py-4 sm:px-4">
+                          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800 sm:h-10 sm:w-10">
                               <img
                                 src={
                                   enterprise.logo
@@ -412,17 +400,22 @@ export default function ListEnterprise() {
                                     : "/images/company-placeholder.png"
                                 }
                                 alt={enterprise.name || "Logo"}
-                                className="w-full h-full object-cover"
+                                className="h-full w-full object-cover"
                               />
                             </div>
+
                             <div className="min-w-0 flex-1">
                               <div
-                                className="font-semibold text-slate-900 dark:text-slate-100 truncate"
+                                className="break-words font-semibold text-slate-900 dark:text-slate-100 [overflow-wrap:anywhere]"
                                 title={enterprise.name}
                               >
                                 {enterprise.name}
                               </div>
-                              <p className="text-xs text-slate-400 font-medium truncate">
+
+                              <p
+                                className="break-words text-xs font-medium text-slate-400 [overflow-wrap:anywhere]"
+                                title={enterprise.legalForm || ""}
+                              >
                                 {enterprise.legalForm || "N/A"}
                                 {enterprise.City?.name
                                   ? ` • ${enterprise.City.name}`
@@ -434,68 +427,67 @@ export default function ListEnterprise() {
 
                         {/* Secteur */}
                         <td
-                          className={`${TD} hidden xl:table-cell max-w-[160px] text-sm font-medium text-slate-700 dark:text-slate-300`}
+                          className={`${TD} ${COL.sector} max-w-0`}
                           title={enterprise.activityDomain}
                         >
-                          <span className="block truncate">
+                          <span className="block break-words font-medium text-slate-700 dark:text-slate-300 [overflow-wrap:anywhere]">
                             {enterprise.activityDomain || "-"}
                           </span>
                         </td>
 
                         {/* Contact */}
-                        <td className={`${TD} hidden xl:table-cell max-w-[220px]`}>
-                          <div className="flex flex-col gap-0.5 text-sm font-medium min-w-0">
+                        <td className={`${TD} ${COL.contact} max-w-0`}>
+                          <div className="flex min-w-0 flex-col gap-1">
                             <span
-                              className="text-slate-800 dark:text-slate-200 truncate"
+                              className="break-all font-medium text-slate-800 dark:text-slate-200"
                               title={enterprise.email}
                             >
                               {enterprise.email || "-"}
                             </span>
-                            <span className="text-slate-400 text-xs truncate">
+                            <span className="break-words text-xs text-slate-400">
                               {enterprise.phone || "-"}
                             </span>
                           </div>
                         </td>
 
-                        {/* Abonnement + fréquence de paiement */}
-                        <td className={`${TD} hidden md:table-cell`}>
-                          <div className="flex flex-col items-start gap-1">
+                        {/* Abonnement */}
+                        <td className={`${TD} ${COL.plan} max-w-0`}>
+                          <div className="flex min-w-0 flex-col items-start gap-1">
                             <span
-                              className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-md border whitespace-nowrap ${planClasses}`}
+                              className={`max-w-full break-words rounded-md border px-2 py-1 text-xs font-bold [overflow-wrap:anywhere] ${planClasses}`}
                             >
                               {enterprise?.SubscribeType?.title || "-"}
                             </span>
-                            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
+
+                            <span className="break-words text-xs font-medium text-slate-400">
                               {frequencyLabel}
                             </span>
                           </div>
                         </td>
 
                         {/* Prix */}
-                        <td className={`${TD} hidden lg:table-cell`}>
-                          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                        <td className={`${TD} ${COL.price}`}>
+                          <span className="break-words font-semibold text-slate-800 dark:text-slate-200">
                             {priceLabel}
                           </span>
                         </td>
 
-                        {/* Date d'expiration */}
-                        <td className={`${TD} hidden lg:table-cell`}>
-                          <div className="flex flex-col gap-0.5">
+                        {/* Expiration */}
+                        <td className={`${TD} ${COL.expiry}`}>
+                          <div className="flex min-w-0 flex-col gap-1">
                             <span
-                              className={`text-sm font-medium whitespace-nowrap ${
-                                isExpired
+                              className={`break-words text-sm font-medium ${isExpired
                                   ? "text-rose-600 dark:text-rose-400"
                                   : isExpiringSoon
                                     ? "text-amber-600 dark:text-amber-400"
                                     : "text-slate-700 dark:text-slate-300"
-                              }`}
+                                }`}
                             >
-                              {formatDate(
-                                String(enterprise.subscriptionExpiresAt)
-                              )}
+                              {formatDate(String(enterprise.subscriptionExpiresAt))}
                             </span>
+
                             {daysLeft !== null && (
-                              <span className="text-xs text-slate-400 whitespace-nowrap">
+                              <span className="break-words text-xs text-slate-400">
                                 {isExpired
                                   ? `Expiré depuis ${Math.abs(daysLeft)} j`
                                   : daysLeft === 0
@@ -509,19 +501,24 @@ export default function ListEnterprise() {
                         {/* Statut */}
                         <td className={`${TD} text-center`}>
                           <span
-                            className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${statusCfg.classes}`}
+                            className={`inline-flex max-w-full items-center justify-center gap-1 rounded-full border px-2 py-1 text-xs font-bold ${statusCfg.classes}`}
                           >
-                            <FontAwesomeIcon icon={statusCfg.icon} />
-                            {statusCfg.label}
+                            <FontAwesomeIcon
+                              icon={statusCfg.icon}
+                              className="shrink-0"
+                            />
+                            <span className="break-words">
+                              {statusCfg.label}
+                            </span>
                           </span>
                         </td>
 
                         {/* Actions */}
-                        <td className={`${TD} text-right`}>
-                          <div className="flex items-center justify-end gap-0.5">
+                        <td className="px-1 py-4 sm:px-2">
+                          <div className="flex flex-wrap items-center justify-center gap-0.5">
                             <Link
                               href={`/dashboard/OTHERS/enterprise/view/${enterprise.id}`}
-                              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800"
                               title="Voir"
                             >
                               <FontAwesomeIcon icon={faEye} />
@@ -529,7 +526,7 @@ export default function ListEnterprise() {
 
                             <Link
                               href={`/dashboard/OTHERS/enterprise/edit/${enterprise.id}`}
-                              className="p-2 text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:hover:bg-slate-800"
                               title="Modifier"
                             >
                               <FontAwesomeIcon icon={faPen} />
@@ -538,7 +535,7 @@ export default function ListEnterprise() {
                             {adminRole === "Super_Admin_Platform" && (
                               <button
                                 onClick={() => handleDelete(enterprise.id)}
-                                className="p-2 text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800"
                                 title="Supprimer"
                               >
                                 <FontAwesomeIcon icon={faTrash} />
