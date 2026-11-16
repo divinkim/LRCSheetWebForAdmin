@@ -337,6 +337,27 @@ export const useCollaboratorsChat = () => {
     [messages, selectedCollaborator, socket, currentUserId, serverUrl, markAsDeleted, restoreMessages, loadHistory]
   );
 
+  // ------------------------------------------------------------ Modification d'un message
+  const updateMessage = useCallback(async (message: ChatMessage, content: string) => {
+    const nextContent = content.trim();
+    if (!nextContent) throw new Error('Le message ne peut pas être vide.');
+    if (message.senderId !== currentUserId || message.status !== 'sent' || message.readStatus === 'deleted' || message.file) {
+      throw new Error('Ce message ne peut pas être modifié.');
+    }
+    const partnerId = message.receiverId === currentUserId ? message.senderId : message.receiverId;
+    await providers.API.update(serverUrl, 'chats', null, { senderId: currentUserId, content: nextContent }, message.id);
+    setMessages((prev) => ({
+      ...prev,
+      [partnerId]: (prev[partnerId] || []).map((m) => m.id === message.id ? { ...m, content: nextContent } : m),
+    }));
+    setConversations((prev) => {
+      const conv = prev[partnerId];
+      if (!conv || conv.lastSenderId !== currentUserId) return prev;
+      return { ...prev, [partnerId]: { ...conv, lastMessage: nextContent } };
+    });
+    socket?.emit('message_updated', { id: message.id, senderId: currentUserId, receiverId: partnerId, content: nextContent });
+  }, [currentUserId, serverUrl, socket]);
+
   // ------------------------------------------------------------ Temps réel
   useEffect(() => {
     if (!socket) return;
@@ -434,12 +455,33 @@ export const useCollaboratorsChat = () => {
     socket.on('getChatData', onChat);
     socket.on('messagesRead', onRead);
     socket.on('writing', onWriting);
+    const onMessageUpdated = (data: any) => {
+      const id = Number(data?.id);
+      const senderId = Number(data?.senderId);
+      const receiverId = Number(data?.receiverId);
+      if (!id || typeof data?.content !== 'string') return;
+      const partnerId = senderId === currentUserId ? receiverId : senderId;
+      setMessages((prev) => ({
+        ...prev,
+        [partnerId]: (prev[partnerId] || []).map((m) =>
+          m.id === id ? { ...m, content: data.content } : m
+        ),
+      }));
+      setConversations((prev) => {
+        const conv = prev[partnerId];
+        if (!conv || conv.lastSenderId !== senderId) return prev;
+        return { ...prev, [partnerId]: { ...conv, lastMessage: data.content } };
+      });
+    };
+
     socket.on('messages_deleted', onDeleted);
+    socket.on('message_updated', onMessageUpdated);
     return () => {
       socket.off('getChatData', onChat);
       socket.off('messagesRead', onRead);
       socket.off('writing', onWriting);
       socket.off('messages_deleted', onDeleted);
+      socket.off('message_updated', onMessageUpdated);
     };
   }, [socket, currentUserId, markAsRead, clearWriting, markAsDeleted, loadHistory]);
 
@@ -627,6 +669,7 @@ export const useCollaboratorsChat = () => {
     sendVoiceNote,
     retryMessage,
     deleteMessages,
+    updateMessage,
     emitWriting,
     writing,
     markAsRead,

@@ -101,12 +101,13 @@ const CollaboratorsSkeleton = () => (
 /* Bulle de message                                                    */
 /* ------------------------------------------------------------------ */
 const MessageBubble = React.memo(({
-  item, isMe, onRetry, onDelete,
+  item, isMe, onRetry, onDelete, onEdit,
 }: {
   item: ChatMessage;
   isMe: boolean;
   onRetry: (m: ChatMessage) => void;
   onDelete: (m: ChatMessage) => void;
+  onEdit: (m: ChatMessage) => void;
 }) => {
   const time = formatHour(item.createdAt);
   const isCall = item.callDuration !== undefined && item.callDuration !== null;
@@ -152,9 +153,16 @@ const MessageBubble = React.memo(({
   const html = containsHtml(item.content ?? '');
   // Seuls mes messages déjà enregistrés en base peuvent être supprimés
   const canDelete = isMe && item.status === 'sent';
+  const canEdit = isMe && item.status === 'sent' && !item.file && !!item.content?.trim();
 
   return (
     <div className={`group flex items-center gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
+      {canEdit && (
+        <button type="button" onClick={() => onEdit(item)} aria-label="Modifier le message" title="Modifier"
+          className="shrink-0 rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:hover:bg-slate-700 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100">
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
       {canDelete && (
         <button type="button" onClick={() => onDelete(item)}
           aria-label="Supprimer le message" title="Supprimer"
@@ -235,7 +243,7 @@ function ChatPageContent() {
   const {
     collaborators, onlineUserIds, conversations, selectedCollaborator, selectCollaborator,
     messages, inputText, setInputText, selectedFile, setSelectedFile,
-    sendMessage, sendVoiceNote, retryMessage, deleteMessages, emitWriting, writing,
+    sendMessage, sendVoiceNote, retryMessage, deleteMessages, updateMessage, emitWriting, writing,
     bumpHistory, connected, loader, currentUserId,
   } = useCollaboratorsChat();
 
@@ -255,6 +263,8 @@ function ChatPageContent() {
   const [mounted, setMounted] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ChatMessage | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -264,6 +274,30 @@ function ChatPageContent() {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
+
+  const startEditingMessage = (message: ChatMessage) => {
+    setEditingMessage(message);
+    setInputText(message.content);
+    setSelectedFile(null);
+  };
+
+  const cancelEditingMessage = () => {
+    setEditingMessage(null);
+    setInputText('');
+  };
+
+  const saveEditedMessage = async () => {
+    if (!editingMessage || !inputText.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateMessage(editingMessage, inputText);
+      setEditingMessage(null);
+      setInputText('');
+      toast.info('Message modifié', 'La modification a été enregistrée.');
+    } catch (error) {
+      toast.info('Modification', error instanceof Error ? error.message : 'Impossible de modifier ce message.');
+    } finally { setSavingEdit(false); }
+  };
 
   /* ---------------- Navigation / thème ---------------- */
   const goBack = () => {
@@ -412,6 +446,7 @@ function ChatPageContent() {
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!inputText.trim() && !selectedFile) return;
+    if (editingMessage) { void saveEditedMessage(); return; }
     sendMessage();
     isAtBottomRef.current = true;
     setTimeout(() => scrollToBottom(true), 50);
@@ -684,7 +719,7 @@ function ChatPageContent() {
                   </div>
                   {g.items.map((item) => (
                     <MessageBubble key={item.id} item={item} isMe={item.senderId === currentUserId}
-                      onRetry={retryMessage} onDelete={setPendingDelete} />
+                      onRetry={retryMessage} onDelete={setPendingDelete} onEdit={startEditingMessage} />
                   ))}
                 </div>
               ))}
@@ -721,8 +756,15 @@ function ChatPageContent() {
             </div>
           )}
 
+          {editingMessage && (
+            <div className="flex items-center justify-between border-t border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+              <span className="font-medium">Modification du message</span>
+              <button type="button" onClick={cancelEditingMessage} className="rounded-full p-1 hover:bg-blue-100 dark:hover:bg-blue-500/20" aria-label="Annuler la modification"><XCircle className="h-4 w-4" /></button>
+            </div>
+          )}
+
           {/* Saisie / enregistrement */}
-          <form onSubmit={handleSend} className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] dark:border-slate-800 dark:bg-slate-950">
+          <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] dark:border-slate-800 dark:bg-slate-950">
             {voice.isRecording ? (
               <RecordingBar durationMs={voice.durationMs} levels={voice.levels} onCancel={voice.cancel} onSend={handleVoiceSend} />
             ) : (
@@ -747,9 +789,9 @@ function ChatPageContent() {
                 </div>
 
                 {hasDraft ? (
-                  <button type="submit" aria-label="Envoyer le message"
+                  <button type="submit" aria-label={editingMessage ? 'Enregistrer la modification' : 'Envoyer le message'} disabled={savingEdit}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950">
-                    <Send className="h-4 w-4" />
+                    {editingMessage ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                   </button>
                 ) : (
                   <button type="button" onClick={voice.start} disabled={!!callState || inGroupCall || !connected}
