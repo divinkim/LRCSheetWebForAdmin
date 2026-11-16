@@ -76,6 +76,9 @@ async function notifyClients() {
   }
 }
 
+/* Types de messages "appel" : jamais enregistrés dans la liste de notifications */
+const CALL_TYPES = ["call", "call_cancel", "group_call", "group_call_cancel"];
+
 /* Sauvegarde directe sur l'évènement push natif (indépendant de Firebase).
  * Si une fenêtre est visible, c'est onMessage côté page qui s'en charge. */
 self.addEventListener("push", (event) => {
@@ -86,7 +89,7 @@ self.addEventListener("push", (event) => {
         console.log("[SW] push reçu", payload);
         const data = payload?.data || {};
 
-        if (data.messagingType === "call" || data.messagingType === "call_cancel") return;
+        if (CALL_TYPES.includes(data.messagingType)) return;
 
         const wins = await clients.matchAll({ type: "window", includeUncontrolled: true });
         if (wins.some((w) => w.visibilityState === "visible")) return;
@@ -120,6 +123,7 @@ const activeCalls = new Map(); // tag -> { cancelled }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const callTag = (senderId) => `call_${senderId}`;
+const groupTag = (roomId) => `group-${roomId}`; // même tag que le provider côté page
 
 async function closeByTag(tag) {
   const list = await self.registration.getNotifications({ tag });
@@ -185,6 +189,65 @@ async function handleCall(data) {
   }
 }
 
+/* ================= VISIOCONFÉRENCE DE GROUPE =================
+ * Même principe que les appels 1-1, mais la clé est la SALLE (roomId).
+ * Payload attendu (data-only) :
+ *   { messagingType: 'group_call' | 'group_call_cancel', roomId, senderId, callType,
+ *     content, path }
+ * 'group_call_cancel' (optionnel, à envoyer quand la salle se termine) coupe la sonnerie.
+ */
+async function handleGroupCall(data) {
+  const tag = groupTag(data.roomId);
+  const body = data.content || "Vous êtes invité à rejoindre une visioconférence";
+  const kind = data.callType === "video" ? "vidéo" : "audio";
+  const path = data.path || "/";
+
+  // --- La réunion est terminée / l'invitation annulée : on coupe sans notification "manquée"
+  if (data.messagingType === "group_call_cancel") {
+    const st = activeCalls.get(tag);
+    if (st) st.cancelled = true;
+    await closeByTag(tag);
+    return;
+  }
+
+  if (activeCalls.has(tag)) return;
+
+  const st = { cancelled: false };
+  activeCalls.set(tag, st);
+  const start = Date.now();
+
+  while (!st.cancelled && Date.now() - start < RING_MS) {
+    await self.registration.showNotification(`Visioconférence ${kind}`, {
+      body,
+      tag,
+      renotify: true,
+      requireInteraction: true,
+      silent: false,
+      vibrate: [500, 300, 500, 300, 500],
+      icon: "/images/logo.png",
+      data: { path, senderId: data.senderId, roomId: data.roomId, messagingType: "group_call" },
+      actions: [
+        { action: "accept", title: "Rejoindre" },
+        { action: "decline", title: "Ignorer" },
+      ],
+    });
+    await sleep(RING_EVERY);
+  }
+
+  const timedOut = !st.cancelled;
+  activeCalls.delete(tag);
+
+  if (timedOut) {
+    await self.registration.showNotification("Visioconférence manquée", {
+      body,
+      tag,
+      icon: "/images/logo.png",
+      renotify: false,
+      data: { path, senderId: data.senderId, roomId: data.roomId, messagingType: "group_call_missed" },
+    });
+  }
+}
+
 /* ================= BACKGROUND MESSAGE ================= */
 messaging.onBackgroundMessage((payload) => {
   console.log("[SW] onBackgroundMessage", payload);
@@ -192,6 +255,9 @@ messaging.onBackgroundMessage((payload) => {
 
   if (data.messagingType === "call" || data.messagingType === "call_cancel") {
     return handleCall(data); // la promesse garde le SW vivant pendant la sonnerie
+  }
+  if (data.messagingType === "group_call" || data.messagingType === "group_call_cancel") {
+    return handleGroupCall(data);
   }
 
   const title = payload?.notification?.title || data.title || "Nouvelle notification";
@@ -218,10 +284,13 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 /* ================= MESSAGES DE LA PAGE ================= */
-// La page prend le relais (modal + sonnerie) => on arrête la boucle du SW
+// La page prend le relais (modal + sonnerie) => on arrête la boucle du SW.
+// `tag` optionnel : { type: 'STOP_RINGING', tag: 'group-<roomId>' } n'arrête que cette sonnerie.
 self.addEventListener("message", (event) => {
   if (event.data?.type !== "STOP_RINGING") return;
+  const only = event.data.tag;
   activeCalls.forEach((st, tag) => {
+    if (only && tag !== only) return;
     st.cancelled = true;
     closeByTag(tag);
   });
@@ -238,6 +307,14 @@ self.addEventListener("notificationclick", (event) => {
   if (isCall) {
     const st = activeCalls.get(callTag(d.senderId));
     if (st) st.cancelled = true; // stoppe la sonnerie
+    if (event.action === "decline") return;
+  }
+
+  // Visio de groupe : on stoppe la sonnerie ; à l'ouverture de l'app, le serveur
+  // rejoue l'invitation ('register') et le modal d'invitation s'affiche.
+  if (d.messagingType === "group_call") {
+    const st = activeCalls.get(groupTag(d.roomId));
+    if (st) st.cancelled = true;
     if (event.action === "decline") return;
   }
 
