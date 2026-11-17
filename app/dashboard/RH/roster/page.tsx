@@ -27,7 +27,7 @@ import {
 import { useToast } from "@/components/toast";
 
 // Roles autorisés à supprimer un planning
-const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"];
+const REQUIRED_ADMIN_ROLES = ["SUPER_ADMIN_PLATFORM", "SUPER_ADMIN_ENTERPRISE", "ENTERPRISE_ADMIN"];
 
 // Mapping des couleurs pour les jours de la semaine
 const WEEKDAY_COLORS: Record<string, string> = {

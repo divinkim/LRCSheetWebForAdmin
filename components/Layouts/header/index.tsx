@@ -22,8 +22,8 @@ function getGreeting() {
 }
 
 function getAdminRole(adminRole: string): string {
-  if (adminRole === "Super_Admin_Platform") return "Super Administrateur LRCSheet";
-  if (adminRole === "Super_Admin_Enterprise") return "Super Administrateur";
+  if (adminRole === "SUPER_ADMIN_PLATFORM") return "Super Administrateur LRCSheet";
+  if (adminRole === "SUPER_ADMIN_ENTERPRISE") return "Super Administrateur";
   return "Administrateur"
 }
 

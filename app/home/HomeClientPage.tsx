@@ -21,9 +21,9 @@ import GetAnnualGain from "../dashboard/STATS/page";
 import SubscriptionEpiredComponent from "@/components/subscriptionExpiredComponent/page";
 
 const REQUIRED_ADMIN_ROLES = [
-  "Super_Admin_Platform",
-  "Super_Admin_Enterprise",
-  "Enterprise_Admin",
+  "SUPER_ADMIN_PLATFORM",
+  "SUPER_ADMIN_ENTERPRISE",
+  "ENTERPRISE_ADMIN",
 ] as const;
 
 interface UserSession {
@@ -58,8 +58,8 @@ export default function HomePage() {
 
   const getAdminRole = (value: string): string => {
     if (!value) return '';
-    if (value === "Super_Admin_Platform") return "Super Administrateur LRCSheet";
-    if (value === "Super_Admin_Enterprise") return "Super Administrateur";
+    if (value === "SUPER_ADMIN_PLATFORM") return "Super Administrateur LRCSheet";
+    if (value === "SUPER_ADMIN_ENTERPRISE") return "Super Administrateur";
     return "Administrateur";
   }
 

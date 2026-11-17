@@ -296,7 +296,7 @@ export default function AddLeave() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               {element.addOrEditLeave.navigationLinks.map((navItem, index) => {
                 // Masquer selon le rôle si nécessaire
-                if (index === 1 && adminRole !== "Super_Admin_Platform") return null;
+                if (index === 1 && adminRole !== "SUPER_ADMIN_PLATFORM") return null;
 
                 return (
                   <Link

@@ -431,7 +431,7 @@ type AdminUser = {
 export type LoginAdminResponseDto = {
     status: boolean;
     message: string;
-    user: AdminUser;
+    admin: AdminUser;
 };
 
 type AuthTokens = {

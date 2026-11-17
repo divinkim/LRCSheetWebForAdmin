@@ -84,16 +84,16 @@ const DOT_FALLBACK = "bg-rose-500";
 
 /* Rôles utilisateur (valeur de user.data.role) */
 const ROLE_LABELS: Record<string, string> = {
-  Super_Admin_Platform: "Super admin plateforme",
-  Super_Admin_Enterprise: "Super admin entreprise",
-  Admin_Enterprise: "Admin entreprise",
+  SUPER_ADMIN_PLATFORM: "Super admin plateforme",
+  SUPER_ADMIN_ENTERPRISE: "Super admin entreprise",
+  ENTERPRISE_ADMIN: "Admin entreprise",
   Employee: "Employé",
 };
 
 const ROLE_BADGE: Record<string, string> = {
-  Super_Admin_Platform: "border-[#c9a24b]/60 bg-[#c9a24b]/20 text-[#f0d894]",
-  Super_Admin_Enterprise: "border-violet-400/40 bg-violet-400/15 text-violet-200",
-  Admin_Enterprise: "border-sky-400/40 bg-sky-400/15 text-sky-200",
+  SUPER_ADMIN_PLATFORM: "border-[#c9a24b]/60 bg-[#c9a24b]/20 text-[#f0d894]",
+  SUPER_ADMIN_ENTERPRISE: "border-violet-400/40 bg-violet-400/15 text-violet-200",
+  ENTERPRISE_ADMIN: "border-sky-400/40 bg-sky-400/15 text-sky-200",
   Employee: "border-white/20 bg-white/10 text-white/80",
 };
 const ROLE_BADGE_FALLBACK = "border-white/20 bg-white/10 text-white/80";

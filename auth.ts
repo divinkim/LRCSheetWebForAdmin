@@ -52,17 +52,17 @@ export const authOptions = {
                     );
 
                     return {
-                        id: res.user.id.toString(),
-                        firstname: res.user.firstname,
-                        lastname: res.user.lastname,
-                        email: res.user.email,
-                        image: res.user.image,
-                        authToken: res.user.authToken,
-                        refreshToken: res.user.refreshToken,
-                        adminRole: res.user.adminRole,
-                        EnterpriseId: res.user.EnterpriseId,
-                        adminService: res.user.adminService,
-                        MainEnterpriseId: res.user.MainEnterpriseId
+                        id: res.admin.id.toString(),
+                        firstname: res.admin.firstname,
+                        lastname: res.admin.lastname,
+                        email: res.admin.email,
+                        image: res.admin.image,
+                        authToken: res.admin.authToken,
+                        refreshToken: res.admin.refreshToken,
+                        adminRole: res.admin.adminRole,
+                        EnterpriseId: res.admin.EnterpriseId,
+                        adminService: res.admin.adminService,
+                        MainEnterpriseId: res.admin.MainEnterpriseId
                     };
                 } catch (error) {
                     throw new Error(

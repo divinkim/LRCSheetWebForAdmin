@@ -27,11 +27,11 @@ import { useToast } from "@/components/toast";
 import { User, UsersResponseDto } from "@/types/global";
 
 const REQUIRED_ADMIN_ROLES = [
-  "Super_Admin_Platform",
-  "Super_Admin_Enterprise",
-  "Enterprise_Admin",
+  "SUPER_ADMIN_PLATFORM",
+  "SUPER_ADMIN_ENTERPRISE",
+  "ENTERPRISE_ADMIN",
 ];
-const CREATE_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise"];
+const CREATE_ROLES = ["SUPER_ADMIN_PLATFORM", "SUPER_ADMIN_ENTERPRISE"];
 
 const LIMIT = 8;
 
@@ -153,13 +153,13 @@ export default function UsersList() {
         const rawUsers: User[] = users.data;
 
         let filtered: User[] = [];
-        if (adminRole === "Super_Admin_Platform") {
+        if (adminRole === "SUPER_ADMIN_PLATFORM") {
           filtered = rawUsers;
-        } else if (adminRole === "Super_Admin_Enterprise") {
+        } else if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
           filtered = rawUsers.filter(
             (u) => u.Enterprise?.MainEnterpriseId === mainEnterpriseId
           );
-        } else if (adminRole === "Enterprise_Admin") {
+        } else if (adminRole === "ENTERPRISE_ADMIN") {
           filtered = rawUsers.filter((u) => u.EnterpriseId === enterpriseId);
         }
 
