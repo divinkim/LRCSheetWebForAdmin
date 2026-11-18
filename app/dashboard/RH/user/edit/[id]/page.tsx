@@ -43,7 +43,7 @@ export default function UpdateUser() {
             {currentFormElement?.addOrUpdateUser.navigationLinks
               .filter((link, index) => {
                 const isSuperAdminOnlyLink = index === 2;
-                if (isSuperAdminOnlyLink && adminRole !== "Super-Admin") {
+                if (isSuperAdminOnlyLink && adminRole !== "SUPER_ADMIN_PLATFORM") {
                   return false;
                 }
                 return true;
@@ -107,9 +107,11 @@ export default function UpdateUser() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {currentFormElement?.addOrUpdateUser.inputs.map((e, index) => {
 
-                const isUserAdminRole = ["Super_Admin_Platform",
-                  "Super_Admin_Enterprise", "Enterprise_Admin"
-                ].includes(String(inputs.role))
+                const isUserAdminRole = [
+                  "SUPER_ADMIN_PLATFORM",
+                  "SUPER_ADMIN_ENTERPRISE",
+                  "ENTERPRISE_ADMIN",
+                ].includes(String(inputs.role));
 
                 return (
                   <div key={e.alias || index} className={isUserAdminRole && e.alias === "adminService" ? "flex flex-col gap-2" : !isUserAdminRole && e.alias === "adminService" ? "hidden" : "flex flex-col gap-2"}>

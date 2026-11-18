@@ -107,8 +107,8 @@ export default function AddUser() {
               {formElements.map((element) =>
                 element.addOrUpdateUser.inputs.map((e) => {
                   const isUserAdminRole = [
-                    "Super_Admin_Platform",
-                    "Super_Admin_Enterprise",
+                    "SUPER_ADMIN_PLAT",
+                    "SUPER_ADMIN_Enterprise",
                     "Enterprise_Admin",
                   ].includes(String(inputs.role));
 

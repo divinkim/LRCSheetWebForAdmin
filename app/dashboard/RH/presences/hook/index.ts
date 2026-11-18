@@ -118,13 +118,13 @@ export function PresencesListHookModal() {
 
                 // Filtrage des Utilisateurs selon le Rôle
                 let filteredUsers: User[] = [];
-                if (adminRole === "Super_Admin_Platform") {
+                if (adminRole === "SUPER_ADMIN_PLATFORM") {
                     filteredUsers = rawUsers.data;
-                } else if (adminRole === "Super_Admin_Enterprise") {
+                } else if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
                     filteredUsers = rawUsers.data.filter(
                         (item: User) => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
                     );
-                } else if (adminRole === "Enterprise_Admin") {
+                } else if (adminRole === "ENTERPRISE_ADMIN") {
                     filteredUsers = rawUsers.data.filter(
                         (item: User) => item.EnterpriseId === enterpriseId
                     );
@@ -135,13 +135,13 @@ export function PresencesListHookModal() {
 
                 // Filtrage des Présences selon le Rôle
                 let filteredAttendances: AttendanceListDto[] = rawAttendances.data;
-                if (adminRole === "Super_Admin_Platform") {
+                if (adminRole === "SUPER_ADMIN_PLATFORM") {
                     filteredAttendances = rawAttendances.data;
-                } else if (adminRole === "Super_Admin_Enterprise") {
+                } else if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
                     filteredAttendances = rawAttendances.data.filter(
                         (item) => item.Enterprise?.MainEnterpriseId === mainEnterpriseId
                     );
-                } else if (adminRole === "Enterprise_Admin") {
+                } else if (adminRole === "ENTERPRISE_ADMIN") {
                     filteredAttendances = rawAttendances.data.filter(
                         (item) => item.EnterpriseId === enterpriseId
                     );

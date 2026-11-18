@@ -166,7 +166,7 @@ export default function AddUserHookModal() {
         "plannings",
         null
       );
-      if (adminRole !== "Super-Admin") {
+      if (adminRole !== "SUPER_ADMIN_PLATFORM") {
         setPlannings(
           plannings.data.filter(
             (item: { EnterpriseId: number }) =>
@@ -440,19 +440,19 @@ export default function AddUserHookModal() {
       alias: "role",
       arrayData: [
         {
-          value: "Super_Admin_Platform",
+          value: "SUPER_ADMIN_PLATFORM",
           title: "Super administrateur de la plateforme",
-          status: adminRole === "Super_Admin_Platform",
+          status: adminRole === "SUPER_ADMIN_PLATFORM",
         },
         {
-          value: "Super_Admin_Enterprise",
+          value: "SUPER_ADMIN_ENTERPRISE",
           title: "Super administrateur d'enterprise",
-          status: ["Super_Admin_Platform", "Super_Admin_Enterprise"].includes(String(adminRole)),
+          status: ["SUPER_ADMIN_PLATFORM", "SUPER_ADMIN_ENTERPRISE"].includes(String(adminRole)),
         },
         {
-          value: "Enterprise_Admin",
+          value: "Enterprise_ADMIN",
           title: "Administrateur d'entreprise",
-          status: ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"].includes(String(adminRole)),
+          status: ["SUPER_ADMIN_PLATFORM", "SUPER_ADMIN_ENTERPRISE", "Enterprise_ADMIN"].includes(String(adminRole)),
         },
         { value: "Employee", title: "employé(e)", status: true },
       ],

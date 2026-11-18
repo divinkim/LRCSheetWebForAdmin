@@ -22,7 +22,7 @@ import { providers } from "@/index";
 import { useToast } from "@/components/toast";
 import { LeaveListDto, LeaveListsResponseDto } from "@/types/global";
 
-const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise", "Enterprise_Admin"];
+const REQUIRED_ADMIN_ROLES = ["SUPER_ADMIN_PLATFORM", "SUPER_ADMIN_ENTERPRISE", "ENTERPRISE_AMIN"];
 
 // Adaptez ces valeurs à votre type `Status` si elles diffèrent
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -127,9 +127,9 @@ export default function LeaveList() {
 
                 let filtered: LeaveListDto[] = [];
 
-                if (adminRole === "Super_Admin_Platform" || adminRole === "Super_Admin_Enterprise") {
+                if (adminRole === "SUPER_ADMIN_PLATFORM" || adminRole === "SUPER_ADMIN_ENTERPRISE") {
                     filtered = rawLeaves;
-                } else if (adminRole === "Enterprise_Admin") {
+                } else if (adminRole === "ENTERPRISE_AMIN") {
                     // EnterpriseId n'est pas dans le type : il passe par l'index signature
                     filtered = rawLeaves.filter((l) => Number(l.EnterpriseId) === enterpriseId);
                 }

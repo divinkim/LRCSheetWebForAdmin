@@ -21,12 +21,12 @@ export function useNotification() {
                 );
                 let filterdNotifications = notifications.data;
 
-                if (adminRole === "Super_Admin_Platform") {
+                if (adminRole === "SUPER_ADMIN_PLATFORM") {
                     setNotifications(filterdNotifications)
-                } else if (adminRole === "Super_Admin_Enterprise") {
+                } else if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
                     filterdNotifications.filter(item => Number(item?.Enterprise?.MainEnterpriseId) === Number(enterpriseId));
                     setNotifications(filterdNotifications)
-                } else if (adminRole === "Enterprise_Admin") {
+                } else if (adminRole === "ENTERPRISE_ADMIN") {
                     filterdNotifications.filter(item => Number(item?.EnterpriseId) === Number(enterpriseId));
                     setNotifications(filterdNotifications)
                 } else if (adminRole === "Reception_Admin") {

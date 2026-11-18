@@ -99,11 +99,11 @@ export default function HomeComponent() {
 
         let filteredUsers: User[] = users.data;
 
-        if (adminRole !== "Super_Admin_Platform" && adminRole !== "Super_Admin_Enterprise") {
+        if (adminRole !== "SUPER_ADMIN_PLATFORM" && adminRole !== "SUPER_ADMIN_ENTERPRISE") {
           filteredUsers = users.data.filter(
             (u: { EnterpriseId: number }) => u.EnterpriseId === adminEnterpriseId
           );
-        } else if (adminRole === "Super_Admin_Enterprise") {
+        } else if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
           filteredUsers = users.data.filter(u => u.MainEnterpriseId === MainEnterpriseId
           );
         }
@@ -116,7 +116,7 @@ export default function HomeComponent() {
 
         let filteredEnterprises: Enterprise[] = enterprises.data
 
-        if (adminRole === "Super_Admin_Enterprise") {
+        if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
           filteredEnterprises.filter(item => item.MainEnterpriseId === MainEnterpriseId)
         }
 
@@ -152,14 +152,14 @@ export default function HomeComponent() {
         const currentYear = new Date().getFullYear();
         let filteredAttendances: AttendanceListDto[] = allAttendances.data;
 
-        if (adminRole === "Super_Admin_Platform") {
+        if (adminRole === "SUPER_ADMIN_PLATFORM") {
           filteredAttendances = allAttendances.data.filter(
             a =>
               a.EnterpriseId === adminEnterpriseId &&
               a.mounth === monthValue &&
               new Date(a.createdAt).getFullYear() === currentYear
           );
-        } else if (adminRole === "Super_Admin_Enterprise") {
+        } else if (adminRole === "SUPER_ADMIN_ENTERPRISE") {
           filteredAttendances = allAttendances.data.filter(a =>
             a.Enterprise.MainEnterpriseId === MainEnterpriseId &&
             a.mounth === monthValue &&

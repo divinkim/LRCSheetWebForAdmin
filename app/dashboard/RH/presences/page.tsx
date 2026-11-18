@@ -26,7 +26,7 @@ import AddPresenceModal from "./new/page";
 import UpdatePresenceModal from "./edit/page";
 import { useToast } from "@/components/toast";
 
-const REQUIRED_ADMIN_ROLES = ["Super_Admin_Platform", "Super_Admin_Enterprise"];
+const REQUIRED_ADMIN_ROLES = ["SUPER_ADMIN_PLATFORM", "SUPER_ADMIN_ENTERPRISE"];
 
 /* =========================================================
    THEME — même identité que le tableau de bord
