@@ -9,11 +9,14 @@ export function useNotification() {
     const [notifications, setNotifications] = useState<NotificationDto[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const { data: session, status } = useSession();
-    const adminRole = (session?.user as any)?.adminRole ?? "";
-    const enterpriseId = (session?.user as any)?.EnterpriseId ?? "";
+    const [adminId, setAdminId] = useState<number | null>(null);
     useEffect(() => {
         (async () => {
             try {
+                if (!session?.user) return;
+                const adminRole = (session?.user as any)?.adminRole ?? "";
+                const enterpriseId = (session?.user as any)?.EnterpriseId ?? "";
+                const adminId = (session?.user as any)?.id ?? "";
                 const notifications = await providers.API.getAll<NotificationsResponseDto>(
                     providers.APIUrl,
                     "notifications",
@@ -33,6 +36,7 @@ export function useNotification() {
                     filterdNotifications.filter(item => Number(item?.EnterpriseId) === Number(enterpriseId) && item.title === "Visite");
                     setNotifications(filterdNotifications)
                 }
+                setAdminId(adminId);
             } catch (error) {
                 console.log(error)
             } finally {
@@ -44,6 +48,7 @@ export function useNotification() {
     return {
         loadingData,
         notifications,
-        setNotifications, setLoadingData
+        setNotifications, setLoadingData,
+        adminId
     }
 }

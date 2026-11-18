@@ -23,6 +23,8 @@ import { providers } from "@/index";
 import { AttendanceListDto, AttendancesResponseDto, User, UserResponseDto } from "@/types/global";
 import useUserProfile from "./hook";
 
+type Confirmation = null | "PENDING" | "DENIED" | "ACCEPTED";
+
 interface CalendarEvent extends EventInput {
   extendedProps: {
     calendar: string;
@@ -33,6 +35,7 @@ interface CalendarEvent extends EventInput {
     dailySalary: string;
     startTime: string;
     endTime: string;
+    isConfirmedReason: Confirmation;
   };
 }
 
@@ -82,6 +85,28 @@ const STATUS_DOT: Record<string, string> = {
 const PILL_FALLBACK = "bg-rose-500/10 text-rose-700 dark:text-rose-400";
 const DOT_FALLBACK = "bg-rose-500";
 
+/* Départ anticipé : libellé et style selon la décision de l'admin */
+const EARLY_DEPARTURE: Record<
+  "PENDING" | "ACCEPTED" | "DENIED",
+  { label: string; pill: string; dot: string }
+> = {
+  PENDING: {
+    label: "Départ anticipé en attente",
+    pill: "bg-slate-500/10 text-slate-600 dark:text-slate-300",
+    dot: "bg-slate-400",
+  },
+  ACCEPTED: {
+    label: "Départ anticipé accepté",
+    pill: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    dot: "bg-emerald-500",
+  },
+  DENIED: {
+    label: "Départ anticipé refusé",
+    pill: "bg-rose-500/10 text-rose-700 dark:text-rose-400",
+    dot: "bg-rose-500",
+  },
+};
+
 /* Rôles utilisateur (valeur de user.data.role) */
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN_PLATFORM: "Super admin plateforme",
@@ -125,7 +150,8 @@ function getDeductionPercent(
   departureTime: string,
   startTime: string,
   endTime: string,
-  monthIndex: number
+  monthIndex: number,
+  confirmation: Confirmation
 ): number {
   if (status === "Absent") return 100;
 
@@ -144,7 +170,11 @@ function getDeductionPercent(
     return 15;
   }
 
-  if (monthIndex >= 4 && status === "A temps" && (!departure || departure < end)) {
+  // Départ avant l'heure de fin :
+  //  - ACCEPTED                      → pas de débit
+  //  - null / PENDING / DENIED       → débit de 10 %
+  const leftEarly = !departure || departure < end;
+  if (monthIndex >= 4 && status === "A temps" && leftEarly && confirmation !== "ACCEPTED") {
     return 10;
   }
 
@@ -158,7 +188,8 @@ function getData(
   endTime: string,
   status: string,
   dailySalary: number,
-  monthIndex: number
+  monthIndex: number,
+  confirmation: Confirmation = null
 ) {
   const safeSalary = Number.isFinite(dailySalary) ? dailySalary : 0;
 
@@ -168,7 +199,8 @@ function getData(
     departureTime,
     startTime,
     endTime,
-    monthIndex
+    monthIndex,
+    confirmation
   );
 
   const deductionAmount = Math.round((deductionPercent / 100) * safeSalary);
@@ -193,6 +225,7 @@ const renderEventContent = (eventInfo: any, currentMonth: number) => {
   const status = props.status || "";
   const startTime = props.startTime || "";
   const dailySalary = Number(props.dailySalary) || 0;
+  const confirmation: Confirmation = props.isConfirmedReason ?? null;
 
   const result = getData(
     arrivalTime,
@@ -201,7 +234,8 @@ const renderEventContent = (eventInfo: any, currentMonth: number) => {
     endTime,
     status,
     dailySalary,
-    currentMonth
+    currentMonth,
+    confirmation
   );
 
   const arrival = ["00:00", ""].includes(toHHmm(arrivalTime)) ? "--" : toHHmm(arrivalTime);
@@ -212,6 +246,8 @@ const renderEventContent = (eventInfo: any, currentMonth: number) => {
     ["Début", toHHmm(startTime) || "--"],
     ["Fin", toHHmm(endTime) || "--"],
   ];
+
+  const early = confirmation ? EARLY_DEPARTURE[confirmation] : null;
 
   return (
     <div className="w-full rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_4px_16px_-8px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#14244f]">
@@ -232,6 +268,16 @@ const renderEventContent = (eventInfo: any, currentMonth: number) => {
           </div>
         ))}
       </dl>
+
+      {/* Départ anticipé : affiché dès que isConfirmedReason n'est pas nul */}
+      {early && (
+        <span
+          className={`mt-3 inline-flex items-center relative right-2.5 rounded-full py-1 text-[11px] font-semibold ${early.pill}`}
+        >
+          <span className={`mr-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${early.dot}`} />
+          {early.label}
+        </span>
+      )}
 
       {currentMonth >= 4 && (
         <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs dark:border-white/10">
@@ -504,6 +550,7 @@ const CalendarPage = () => {
         const departureTime = attendance.departureTime || "";
         const startTime = attendance?.Planning?.startTime?.split("T")[1]?.slice(0, 5) || "00:00";
         const endTime = attendance?.Planning?.endTime?.split("T")[1]?.slice(0, 5) || "00:00";
+        const confirmation: Confirmation = attendance.isConfirmedReason ?? null;
 
         const result = getData(
           arrivalTime,
@@ -512,7 +559,8 @@ const CalendarPage = () => {
           endTime,
           status,
           dailySalaryVal,
-          monthIndex
+          monthIndex,
+          confirmation
         );
 
         totalSalaryCalculated += result.dailySalary;
@@ -562,39 +610,48 @@ const CalendarPage = () => {
       setAttendances(attendanceList);
 
       const formatted: CalendarEvent[] = attendanceList.map((item: any) => {
-          const { id: attendanceId, arrivalTime, departureTime, createdAt, status, User, Planning } =
-            item;
+        const {
+          id: attendanceId,
+          arrivalTime,
+          departureTime,
+          createdAt,
+          status,
+          User,
+          Planning,
+          isConfirmedReason,
+        } = item;
 
-          const dateOnly = createdAt.split("T")[0];
-          const start = `${dateOnly}T${arrivalTime || "00:00:00"}`;
-          const end = `${dateOnly}T${departureTime || "00:00:00"}`;
+        const dateOnly = createdAt.split("T")[0];
+        const start = `${dateOnly}T${arrivalTime || "00:00:00"}`;
+        const end = `${dateOnly}T${departureTime || "00:00:00"}`;
 
-          let calendarColor = "Primary";
-          if (status === "A temps") calendarColor = "Success";
-          else if (status === "En retard") calendarColor = "Warning";
-          else if (status === "Absent") calendarColor = "Danger";
+        let calendarColor = "Primary";
+        if (status === "A temps") calendarColor = "Success";
+        else if (status === "En retard") calendarColor = "Warning";
+        else if (status === "Absent") calendarColor = "Danger";
 
-          const startTime = Planning?.startTime?.split("T")[1]?.slice(0, 5);
-          const endTime = Planning?.endTime?.split("T")[1]?.slice(0, 5);
+        const startTime = Planning?.startTime?.split("T")[1]?.slice(0, 5);
+        const endTime = Planning?.endTime?.split("T")[1]?.slice(0, 5);
 
-          return {
-            id: attendanceId.toString(),
-            start,
-            end,
-            allDay: false,
-            extendedProps: {
-              calendar: calendarColor,
-              name: `${User?.lastname?.toUpperCase() ?? ""} ${User?.firstname ?? ""}`,
-              status: status || "",
-              arrivalTime: arrivalTime || "",
-              departureTime: departureTime || "",
-              // Le salaire journalier est celui de l'utilisateur sélectionné
-              dailySalary: String(userDailySalary),
-              startTime,
-              endTime,
-            },
-          };
-        });
+        return {
+          id: attendanceId.toString(),
+          start,
+          end,
+          allDay: false,
+          extendedProps: {
+            calendar: calendarColor,
+            name: `${User?.lastname?.toUpperCase() ?? ""} ${User?.firstname ?? ""}`,
+            status: status || "",
+            arrivalTime: arrivalTime || "",
+            departureTime: departureTime || "",
+            // Le salaire journalier est celui de l'utilisateur sélectionné
+            dailySalary: String(userDailySalary),
+            startTime,
+            endTime,
+            isConfirmedReason: isConfirmedReason ?? null,
+          },
+        };
+      });
 
       setEvents(formatted);
 

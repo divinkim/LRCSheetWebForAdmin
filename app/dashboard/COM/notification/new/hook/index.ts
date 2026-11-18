@@ -29,7 +29,7 @@ export default function useNotifications() {
     const [showModal, setShowModal] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
     const [usersCloned, setUsersCloned] = useState<User[]>([]);
-    const [UserId, setUserId] = useState<number | null>(null)
+    const [adminId, setAdminId] = useState<number | null>(null)
     const [EnterpriseId, setEnterpriseId] = useState<number | null>(null)
     const [role, setRole] = useState<string | null>(null)
     const [loader, setLoader] = useState(true);
@@ -42,7 +42,7 @@ export default function useNotifications() {
         (async () => {
             try {
                 const EnterpriseId = Number((session?.user as any)?.EnterpriseId);
-                const UserId = Number((session?.user as any)?.id);
+                const adminId = Number((session?.user as any)?.id);
                 const email = String((session?.user as any)?.email);
                 const role = String((session?.user as any)?.adminRole);
 
@@ -50,21 +50,19 @@ export default function useNotifications() {
 
                 let getUsersbyAdminRole = users.data;
 
-                console.log(session?.user)
-
-                if (role === "Super_Admin_Platform") {
+                if (role === "SUPER_ADMIN_PLATFORM") {
                     setUsers(users.data);
                     setUsersCloned(users.data)
-                } else if (role === "Super_Admin_Enterprise") {
+                } else if (role === "SUPER_ADMIN_ENTERPRISE") {
                     getUsersbyAdminRole = getUsersbyAdminRole.filter(user => user?.Enterprise?.MainEnterpriseId === Number(EnterpriseId) && user.status);
                     setUsers(getUsersbyAdminRole);
                     setUsersCloned(getUsersbyAdminRole)
-                } else if (role === "Enterprise_Admin") {
+                } else if (role === "ENTERPRISE_ADMIN") {
                     getUsersbyAdminRole = getUsersbyAdminRole.filter(user => user.EnterpriseId === Number(EnterpriseId) && user.status);
                     setUsers(getUsersbyAdminRole);
                     setUsersCloned(getUsersbyAdminRole)
                 }
-                setUserId(UserId);
+                setAdminId(adminId);
                 setEnterpriseId(EnterpriseId);
                 setRole(role);
                 setEmail(email)
@@ -74,7 +72,7 @@ export default function useNotifications() {
                 setLoader(false)
             }
         })()
-    }, [session?.user]);
+    }, [session]);
 
     async function handleSubmit() {
         try {
@@ -112,7 +110,7 @@ export default function useNotifications() {
                     content: inputs.content,
                     EnterpriseId: String(EnterpriseId),
                     file: files,
-                    senderId: UserId,
+                    senderId: adminId,
                     receiverId: String(receiverId),
                     adminSectionIndex: "0",
                     adminPageIndex: "1",
@@ -128,21 +126,11 @@ export default function useNotifications() {
                 //     role,
                 // })
             }
-
-            setInputs({
-                title: "",
-                content: "",
-                EnterpriseId: "",
-                UserId: "",
-                emails: [],
-                usersIds: [],
-            });
-            setFiles("");
-
             toast.success(
                 "Bravo",
                 "Notification envoyé avec succès."
             );
+            window.location.reload();
         } catch (error) {
             console.error(error);
             toast.error(

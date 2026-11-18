@@ -182,6 +182,7 @@ export type AttendanceListDto = {
     SalaryId: number;
     PlanningId: number;
     EnterpriseId: number;
+    isConfirmedReason: null | "PENDING" | "DENIED" | "ACCEPTED";
     status: string;
     mounth: number;
     Salary: AttendanceSalary;
@@ -673,6 +674,8 @@ export interface NotificationDto {
     title: string;
     description: string;
     EnterpriseId: number;
+    isConfirmedReason: null | "PENDING" | "DENIED" | "ACCEPTED";
+    adminComment?: string | null;
     UserId: number;
     createdAt: string;
     status: "unread " | "read";
@@ -773,4 +776,28 @@ export type SubscribeListTypeResponseDto = {
 export type SubscribeListTypesResponseDto = {
     title: string;
     data: ListSubscribeTypeDto[];
+}
+
+export interface AdminDtoList {
+    id: number;
+    firstname: string;
+    lastname?: string;
+    email: string;
+    phone?: string;
+    photo?: string;
+    password?: string;
+    role: string;
+    EnterpriseId?: number;
+    status: boolean;
+    Enterprise: Enterprise;
+}
+
+export interface AdminDtoResponseList {
+    message: string;
+    data: AdminDtoList;
+}
+
+export interface AdminDtoResponseLists {
+    message: string;
+    data: AdminDtoList[];
 }

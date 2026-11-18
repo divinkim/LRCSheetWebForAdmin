@@ -2,9 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNotification } from "./hook";
-import { Bell, FileText, Search, Trash2, ArrowUpRight, X, ChevronDown } from "lucide-react";
+import {
+    Bell,
+    FileText,
+    Search,
+    Trash2,
+    ArrowUpRight,
+    X,
+    ChevronDown,
+    Check,
+    Clock,
+    Ban,
+} from "lucide-react";
 import { providers } from "@/index";
 import { NotificationDto } from "@/types/global";
+import DecisionDialog, { DecisionAction } from "./DecisionDialog";
 
 const API_URL = providers.APIUrl;
 
@@ -63,6 +75,38 @@ function dayLabel(date: string | Date) {
     });
 }
 
+/* ---------- Badge de statut de la demande ---------- */
+
+function ConfirmationBadge({ value }: { value: NonNullable<NotificationDto["isConfirmedReason"]> }) {
+    const config = {
+        PENDING: {
+            label: "En attente de décision",
+            icon: Clock,
+            cls: "bg-amber-500/10 text-amber-700 ring-amber-500/30 dark:text-amber-400",
+        },
+        ACCEPTED: {
+            label: "Demande acceptée",
+            icon: Check,
+            cls: "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-400",
+        },
+        DENIED: {
+            label: "Demande refusée",
+            icon: Ban,
+            cls: "bg-red-500/10 text-red-700 ring-red-500/30 dark:text-red-400",
+        },
+    }[value];
+
+    const Icon = config.icon;
+    return (
+        <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${config.cls}`}
+        >
+            <Icon className="h-3.5 w-3.5" />
+            {config.label}
+        </span>
+    );
+}
+
 /* ---------- Carte de notification ---------- */
 
 function NotificationItem({
@@ -70,11 +114,13 @@ function NotificationItem({
     removing,
     onOpen,
     onDelete,
+    onDecide,
 }: {
     n: NotificationDto;
     removing: boolean;
     onOpen: (n: NotificationDto) => void;
     onDelete: (n: NotificationDto) => void;
+    onDecide: (n: NotificationDto, action: DecisionAction) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
     const [truncated, setTruncated] = useState(false);
@@ -84,13 +130,14 @@ function NotificationItem({
     const name = senderName(n.User);
     const ini = initials(n.User);
     const canToggle = truncated || expanded;
+    const confirmation = n.isConfirmedReason;
 
     // Détecte si le texte dépasse les 3 lignes (donc "..." affiché)
     useEffect(() => {
         const el = textRef.current;
         if (!el) return;
         const measure = () => {
-            if (expanded) return; // on garde la valeur mesurée quand c'est déplié
+            if (expanded) return;
             setTruncated(el.scrollHeight - el.clientHeight > 1);
         };
         measure();
@@ -99,10 +146,8 @@ function NotificationItem({
     }, [n.description, expanded]);
 
     const handleClick = () => {
-        // Ne pas déplier/replier si l'utilisateur est en train de sélectionner du texte
         if (window.getSelection()?.toString()) return;
-
-        onOpen(n); // passe de unread à read (si besoin)
+        onOpen(n);
         if (canToggle) setExpanded((v) => !v);
     };
 
@@ -119,8 +164,8 @@ function NotificationItem({
             }}
             aria-expanded={canToggle ? expanded : undefined}
             className={`group relative cursor-pointer overflow-hidden rounded-2xl border p-5 shadow-sm outline-none transition-all duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:border-blue-600/30 hover:shadow-xl hover:shadow-blue-700/10 focus-visible:ring-2 focus-visible:ring-blue-600 dark:hover:border-blue-500/40 dark:hover:shadow-black/40 ${unread
-                    ? "border-blue-200 bg-blue-50/40 dark:border-blue-900/50 dark:bg-slate-900"
-                    : "border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900/80"
+                ? "border-blue-200 bg-blue-50/40 dark:border-blue-900/50 dark:bg-slate-900"
+                : "border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900/80"
                 } ${removing ? "translate-x-4 scale-[0.98] opacity-0" : "translate-x-0 opacity-100"}`}
         >
             {/* Liseré d'accent : visible uniquement tant que la notification est non lue */}
@@ -202,7 +247,7 @@ function NotificationItem({
                                 rel="noopener noreferrer"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onOpen(n); // ouvrir la pièce jointe = avoir lu la notification
+                                    onOpen(n);
                                 }}
                                 className="group/file mt-4 inline-flex items-center gap-3 rounded-xl border border-gray-200 bg-white py-2 pl-2 pr-4 shadow-sm transition-all hover:border-amber-500 hover:shadow-md hover:shadow-amber-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-amber-500/60 dark:hover:shadow-amber-500/10"
                             >
@@ -219,6 +264,52 @@ function NotificationItem({
                                 </span>
                                 <ArrowUpRight className="h-4 w-4 text-gray-500 transition-colors group-hover/file:text-amber-500 dark:text-slate-500 dark:group-hover/file:text-amber-400" />
                             </a>
+                        </div>
+                    )}
+
+                    {/* Demande de confirmation : visible uniquement si isConfirmedreason n'est pas null */}
+                    {confirmation && (
+                        <div
+                            className="mt-4 rounded-xl border border-gray-200 bg-gray-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/40"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <ConfirmationBadge value={confirmation} />
+
+                                {confirmation === "PENDING" && (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDecide(n, "ACCEPTED");
+                                            }}
+                                            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                                        >
+                                            <Check className="h-4 w-4" />
+                                            Accepter
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDecide(n, "DENIED");
+                                            }}
+                                            className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                                        >
+                                            <X className="h-4 w-4" />
+                                            Refuser
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {confirmation !== "PENDING" && n.adminComment && (
+                                <p className="mt-2 whitespace-pre-line break-words text-sm text-gray-600 dark:text-slate-400">
+                                    <span className="font-semibold text-gray-700 dark:text-slate-300">
+                                        Commentaire :{" "}
+                                    </span>
+                                    {n.adminComment}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -243,14 +334,21 @@ function NotificationItem({
 /* ---------- Page ---------- */
 
 export default function NotificationPage() {
-    const { notifications, loadingData, setNotifications } = useNotification();
+    const { notifications, loadingData, setNotifications, adminId } = useNotification();
 
     const [query, setQuery] = useState("");
     const [confirmClear, setConfirmClear] = useState(false);
     const [removingIds, setRemovingIds] = useState<number[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    // Évite d'envoyer deux requêtes si l'utilisateur clique plusieurs fois rapidement
+    // Décision admin (accepter / refuser)
+    const [decision, setDecision] = useState<{
+        item: NotificationDto;
+        action: DecisionAction;
+    } | null>(null);
+    const [deciding, setDeciding] = useState(false);
+    const [decisionError, setDecisionError] = useState<string | null>(null);
+
     const pendingReadIds = useRef<Set<number>>(new Set());
 
     const filtered = useMemo(() => {
@@ -278,7 +376,7 @@ export default function NotificationPage() {
         return Array.from(map.values());
     }, [filtered]);
 
-    /** Passe la notification de "unread" à "read" (mise à jour optimiste + requête update) */
+    /** Passe la notification de "unread" à "read" */
     const handleMarkAsRead = async (item: NotificationDto) => {
         if (!isUnread(item) || pendingReadIds.current.has(item.id)) return;
 
@@ -288,16 +386,91 @@ export default function NotificationPage() {
         try {
             await providers.API.update(API_URL, "notifications", null, { status: "read" }, item.id);
             setNotifications((prev: NotificationDto[]) =>
-            prev.map((n) => (n.id === item.id ? { ...n, status: "read" } : n))
-        );
+                prev.map((n) => (n.id === item.id ? { ...n, status: "read" } : n))
+            );
         } catch {
-            // Annulation si la mise à jour échoue
             setNotifications((prev: NotificationDto[]) =>
                 prev.map((n) => (n.id === item.id ? { ...n, status: item.status } : n))
             );
             setError("Le statut de la notification n'a pas pu être mis à jour. Réessayez.");
         } finally {
             pendingReadIds.current.delete(item.id);
+        }
+    };
+
+    /** Ouvre la boîte de dialogue de décision */
+    const openDecision = (item: NotificationDto, action: DecisionAction) => {
+        setDecisionError(null);
+        setDecision({ item, action });
+    };
+
+    const closeDecision = () => {
+        if (deciding) return;
+        setDecision(null);
+        setDecisionError(null);
+    };
+
+    /** Enregistre la décision puis notifie l'utilisateur concerné */
+    const handleConfirmDecision = async (comment: string) => {
+        if (!decision) return;
+        const { item, action } = decision;
+
+        setDeciding(true);
+        setDecisionError(null);
+
+        // 1) Mise à jour de la notification d'origine
+        try {
+            await providers.API.update(
+                API_URL,
+                "notifications",
+                null,
+                { isConfirmedReason: action, adminComment: comment || null, status: "read" },
+                item.id
+            );
+            await providers.API.post(
+                API_URL,
+                "attendances/from-admin",
+                null,
+                {
+                    isConfirmedReason: action,
+                    usersId:[item.UserId],
+                    date: new Date(item.createdAt).toISOString(),
+                },
+            );
+        } catch {
+            setDecisionError("La décision n'a pas pu être enregistrée. Réessayez.");
+            setDeciding(false);
+            return;
+        }
+
+        setNotifications((prev: NotificationDto[]) =>
+            prev.map((n) =>
+                n.id === item.id
+                    ? { ...n, isConfirmedreason: action, adminComment: comment || null, status: "read" }
+                    : n
+            )
+        );
+        // 2) Notification de retour à l'utilisateur
+        const accepted = action === "ACCEPTED";
+        try {
+            await providers.API.post(API_URL, "notification-push", null, {
+                title: "Retour suite à votre départ anticipé",
+                content:
+                    `Votre demande « ${item.title || "Notification"} » a été ${accepted ? "acceptée" : "refusée"}.` +
+                    (comment ? `\n\nCommentaire : ${comment}` : ""),
+                senderId: String(adminId),
+                messagingtype:"general",
+                receiverId: String(item.UserId),
+                EnterpriseId: String(item.EnterpriseId),
+                status: "unread",
+            });
+        } catch {
+            setError(
+                "La décision a bien été enregistrée, mais la notification n'a pas pu être envoyée à l'utilisateur."
+            );
+        } finally {
+            setDeciding(false);
+            setDecision(null);
         }
     };
 
@@ -339,7 +512,6 @@ export default function NotificationPage() {
         <div className="min-h-screen bg-white text-gray-600 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-300">
             {/* ============ Bandeau héro ============ */}
             <div className="relative overflow-hidden border-b border-transparent bg-gradient-to-br from-blue-700 via-blue-700 to-blue-600 dark:border-slate-800/80 dark:from-blue-950 dark:via-slate-900 dark:to-blue-950">
-                {/* Halos décoratifs */}
                 <div
                     aria-hidden
                     className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-500/20 blur-3xl dark:bg-amber-500/10"
@@ -477,7 +649,6 @@ export default function NotificationPage() {
                         ))}
                     </div>
                 ) : total === 0 ? (
-                    /* Aucun résultat du tout */
                     <div className="flex flex-col items-center rounded-3xl border border-gray-200 bg-white px-6 py-20 text-center shadow-xl shadow-blue-700/10 dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-black/30">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/5 text-amber-500 ring-1 ring-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20">
                             <Bell className="h-7 w-7" />
@@ -490,7 +661,6 @@ export default function NotificationPage() {
                         </p>
                     </div>
                 ) : groups.length === 0 ? (
-                    /* Recherche sans résultat */
                     <div className="rounded-3xl border border-gray-200 bg-white px-6 py-16 text-center shadow-xl shadow-blue-700/10 dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-black/30">
                         <p className="font-semibold text-blue-700 dark:text-white">
                             Aucun résultat pour « {query} »
@@ -522,6 +692,7 @@ export default function NotificationPage() {
                                             removing={removingIds.includes(n.id)}
                                             onOpen={handleMarkAsRead}
                                             onDelete={handleDeleteOne}
+                                            onDecide={openDecision}
                                         />
                                     ))}
                                 </ul>
@@ -530,6 +701,17 @@ export default function NotificationPage() {
                     </div>
                 )}
             </div>
+
+            {/* ============ Boîte de dialogue de décision ============ */}
+            <DecisionDialog
+                open={!!decision}
+                action={decision?.action ?? "ACCEPTED"}
+                notificationTitle={decision?.item.title ?? ""}
+                submitting={deciding}
+                error={decisionError}
+                onConfirm={handleConfirmDecision}
+                onClose={closeDecision}
+            />
         </div>
     );
 }

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { providers } from '@/index';
-import { ChatsResponseDto, UsersResponseDto } from '@/types/global';
+import { AdminDtoResponseLists, ChatsResponseDto, UsersResponseDto } from '@/types/global';
 import { useChatSocket, CHAT_SERVER_URL } from '@/app/dashboard/COM/chat/components/ChatSocketProvider';
 
 /* ------------------------------------------------------------------ */
@@ -86,6 +86,7 @@ export const useCollaboratorsChat = () => {
   const serverUrl = CHAT_SERVER_URL;
   const { data: session } = useSession();
   const currentUserId = Number((session?.user as any)?.id);
+  const currentEnterpriseId = Number((session?.user as any)?.EnterpriseId);
   const { socket, connected, onlineUserIds } = useChatSocket();
 
   const [initialCollaborators, setInitialCollaborators] = useState<Collaborator[]>([]);
@@ -130,8 +131,12 @@ export const useCollaboratorsChat = () => {
   useEffect(() => {
     (async () => {
       try {
-        const list = await providers.API.getAll<UsersResponseDto>(serverUrl, 'users', null);
-        setInitialCollaborators(list.data);
+        const users = (await providers.API.getAll<UsersResponseDto>(serverUrl, 'users', null)).data;
+        const admins = (await providers.API.getAll<AdminDtoResponseLists>(serverUrl, 'admins', null)).data;
+        const filteredAdmins = admins.filter(
+          (a) => a?.Enterprise?.MainEnterpriseId === currentEnterpriseId
+        );
+        setInitialCollaborators([...users, ...filteredAdmins]);
       } catch (err) {
         console.error('Erreur récupération collaborateurs :', err);
       }
