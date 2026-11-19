@@ -1,63 +1,82 @@
+
 "use client";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
+import {
+    faFolderOpen,
+    faSearch,
+    faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 import useAddPresenceModal from "./hook";
 import { providers } from "@/index";
-import { ClipLoader } from "react-spinners";
-import { useState } from "react";
 
 export default function AddPresenceModal() {
-    const { usersArray,
+    const {
+        usersArray,
         filterUserByName,
         onCheckBtnEvent,
-        handleSubmit, isLoading, setInputs, inputs, selectAllProfile, deselectAllProfile } = useAddPresenceModal();
-    return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm p-4">
+        handleSubmit,
+        isLoading,
+        setInputs,
+        inputs,
+        selectAllProfile,
+        deselectAllProfile,
+        isLoadingBtn,
+    } = useAddPresenceModal();
 
-            <div className="w-full max-w-2xl rounded-3xl  bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                {/* Header */}
-                <div className="px-8 my-4">
-                    <h1 className="text-2xl font-bold text-slate-700 dark:text-white">
+    const inputClass =
+        "w-full min-w-0 rounded-xl border border-slate-300 bg-slate-50 px-3 sm:px-4 py-3 text-sm sm:text-base outline-none transition-all focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white";
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-2 sm:p-4 backdrop-blur-sm">
+
+            <div className="flex max-h-[95dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+
+                {/* HEADER */}
+                <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-7 sm:py-5 dark:border-slate-700">
+                    <h1 className="text-xl font-bold text-slate-700 sm:text-2xl dark:text-white">
                         Ajouter une présence
                     </h1>
-
+                    <p className="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+                        Enregistrez les horaires de présence des collaborateurs.
+                    </p>
                 </div>
-                <form className="px-8">
-                    <p className="text-sm text-orange-500 font-medium my-4">
+
+                {/* CONTENU SCROLLABLE */}
+                <form
+                    onSubmit={(e) => e.preventDefault()}
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-7 sm:py-5"
+                >
+                    <p className="mb-4 text-xs font-medium text-orange-500 sm:text-sm">
                         * Champs obligatoires
                     </p>
-                    {/* Recherche */}
-                    <div className="mb-6">
 
-                        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+                    {/* RECHERCHE */}
+                    <div className="mb-5">
+                        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                             Rechercher un collaborateur
                         </label>
 
                         <div className="relative">
-
                             <input
                                 type="text"
-                                placeholder="Rechercher..."
+                                placeholder="Rechercher un collaborateur..."
                                 onChange={(e) => filterUserByName(e.target.value)}
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 dark:bg-slate-800 dark:border-slate-600 px-4 py-3 pr-12 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:text-white"
+                                className={`${inputClass} pr-11`}
                             />
 
                             <FontAwesomeIcon
                                 icon={faSearch}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                             />
-
                         </div>
-
                     </div>
 
-                    {/* Heure + Date */}
+                    {/* HEURES ET DATE */}
+                    <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
-                    <div className="grid gap-5 md:grid-cols-3 mb-5">
-
-                        <div>
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                        <div className="min-w-0">
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                                 Arrivée
                             </label>
 
@@ -70,15 +89,12 @@ export default function AddPresenceModal() {
                                         arrivalTime: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                className={inputClass}
                             />
-
                         </div>
 
-
-                        <div>
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                        <div className="min-w-0">
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                                 Départ
                             </label>
 
@@ -91,13 +107,12 @@ export default function AddPresenceModal() {
                                         departureTime: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                className={inputClass}
                             />
-
                         </div>
-                        <div className="">
 
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
+                        <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                                 Date
                             </label>
 
@@ -110,17 +125,18 @@ export default function AddPresenceModal() {
                                         date: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                className={inputClass}
                             />
-
                         </div>
                     </div>
-                    {/* Boutons */}
-                    <div className="flex flex-wrap gap-3 mb-5">
+
+                    {/* SÉLECTION */}
+                    <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+
                         <button
                             type="button"
                             onClick={selectAllProfile}
-                            className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105"
+                            className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700 active:scale-[0.98]"
                         >
                             Tout sélectionner
                         </button>
@@ -128,27 +144,55 @@ export default function AddPresenceModal() {
                         <button
                             type="button"
                             onClick={deselectAllProfile}
-                            className="rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105"
+                            className="flex w-full items-center justify-center rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-orange-600 active:scale-[0.98]"
                         >
                             Tout désélectionner
                         </button>
-
                     </div>
 
-                    {/* Liste */}
+                    {/* LISTE DES COLLABORATEURS */}
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:p-3 dark:border-slate-700 dark:bg-slate-800">
 
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <div className="mb-2 flex items-center justify-between px-1">
+                            <h2 className="text-sm font-semibold text-slate-700 dark:text-white">
+                                Collaborateurs
+                            </h2>
 
-                        <div className="h-[200px] overflow-y-auto space-y-3 pr-2">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {inputs.usersId.length} sélectionné(s)
+                            </span>
+                        </div>
 
-                            {usersArray.map((user) => (
+                        <div className="max-h-[30vh] min-h-[150px] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[250px]">
 
-                                <label
-                                    key={user.id}
-                                    className="flex cursor-pointer items-center justify-between rounded-xl border border-transparent bg-white dark:bg-slate-900 p-3 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 transition-all"
-                                >
+                            {usersArray.length > 0 && !isLoading && (
+                                usersArray.map((user) => (
+                                    <label
+                                        key={user.id}
+                                        className="flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-xl border border-transparent bg-white p-3 transition-colors hover:border-blue-400 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-700"
+                                    >
+                                        <div className="flex min-w-0 items-center gap-3">
 
-                                    <div className="flex items-center gap-3">
+                                            <img
+                                                src={
+                                                    user.photo
+                                                        ? `${providers.ImageUrl}/${user.photo}`
+                                                        : "/images/clientProfile.png"
+                                                }
+                                                alt={`${user.firstname} ${user.lastname}`}
+                                                className="h-10 w-10 shrink-0 rounded-full border-2 border-slate-200 object-cover sm:h-12 sm:w-12"
+                                            />
+
+                                            <div className="min-w-0">
+                                                <h3 className="break-words text-sm font-semibold text-slate-700 dark:text-white sm:text-base">
+                                                    {user.firstname} {user.lastname}
+                                                </h3>
+
+                                                <p className="text-xs text-slate-500">
+                                                    Collaborateur
+                                                </p>
+                                            </div>
+                                        </div>
 
                                         <input
                                             type="checkbox"
@@ -156,62 +200,64 @@ export default function AddPresenceModal() {
                                             onChange={() =>
                                                 onCheckBtnEvent(
                                                     user.id,
-                                                    user.EnterpriseId,
                                                     user.SalaryId,
-                                                    user.PlanningId
+                                                    user.PlanningId,
+                                                    user.EnterpriseId
                                                 )
                                             }
-                                            className="h-5 w-5 accent-blue-600"
+                                            className="h-5 w-5 shrink-0 cursor-pointer accent-blue-600"
                                         />
+                                    </label>
+                                ))
+                            )}
 
-                                        <img
-                                            src={
-                                                user.photo
-                                                    ? `${providers.ImageUrl}/${user.photo}`
-                                                    : "/images/clientProfile.png"
-                                            }
-                                            className="h-12 w-12 rounded-full object-cover border-2 border-slate-200"
-                                        />
+                            {usersArray.length === 0 && isLoading && (
+                                <div className="flex min-h-[150px] items-center justify-center">
+                                    <FontAwesomeIcon
+                                        icon={faSpinner}
+                                        className="animate-spin text-3xl text-orange-400"
+                                    />
+                                </div>
+                            )}
 
-                                        <div>
+                            {usersArray.length === 0 && !isLoading && (
+                                <div className="flex min-h-[150px] flex-col items-center justify-center gap-3 text-center">
+                                    <FontAwesomeIcon
+                                        icon={faFolderOpen}
+                                        className="text-3xl text-orange-400"
+                                    />
 
-                                            <h3 className="font-semibold text-slate-700 dark:text-white">
-                                                {user.firstname} {user.lastname}
-                                            </h3>
-
-                                            <p className="text-sm text-slate-500">
-                                                Collaborateur
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                </label>
-                            ))}
+                                    <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                        Aucune donnée trouvée
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {/* Footer */}
-                    <div className="my-4 flex justify-end">
-
-                        <button
-                            type="button" disabled={isLoading}
-                            onClick={handleSubmit}
-                            className={`rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105 ${isLoading ? "opacity-50" : "opacity-100"}`}
-                        >
-                            {isLoading ? (
-                                <p>
-                                    <FontAwesomeIcon icon={faSpinner} className="text-white animate-spin" />
-                                    <span className="left-1 relative">Traitement...</span>
-                                </p>
-                            ) : (
-                                "Soumettre"
-                            )}
-                        </button>
-                    </div>
                 </form>
+
+                {/* FOOTER FIXE */}
+                <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-7 sm:py-4 dark:border-slate-700 dark:bg-slate-900">
+                    <button
+                        type="button"
+                        disabled={isLoadingBtn}
+                        onClick={handleSubmit}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:from-blue-800 hover:to-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto sm:w-auto sm:min-w-[160px]"
+                    >
+                        {isLoadingBtn ? (
+                            <>
+                                <FontAwesomeIcon
+                                    icon={faSpinner}
+                                    className="animate-spin"
+                                />
+                                Traitement...
+                            </>
+                        ) : (
+                            "Soumettre"
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
-    )
+    );
 }

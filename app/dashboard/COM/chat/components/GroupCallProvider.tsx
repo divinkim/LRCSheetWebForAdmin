@@ -223,6 +223,30 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     } catch { /* ignoré */ }
   };
 
+  /* ---------------- Push d'appel de groupe (FCM data-only) ---------------- */
+  // senderId = TOUJOURS l'organisateur : le mobile identifie et annule la sonnerie par senderId.
+  // `content` est omis volontairement : le serveur utilise alors le nom de l'organisateur.
+  // On pousse TOUT LE MONDE (pas seulement les "hors ligne") : une app tuée garde son socket
+  // ouvert côté serveur pendant ~45 s. Au premier plan, le mobile ignore 'call' (pas de double sonnerie).
+  const sendGroupPush = async (
+    ids: number[], roomId: string, type: RoomType, hostId: number, cancel = false,
+  ) => {
+    const targets = Array.from(new Set(ids.map(Number)))
+      .filter((id) => id && id !== userIdRef.current);
+    if (!targets.length) return;
+    await Promise.allSettled(targets.map((id) =>
+      providers.API.post(CHAT_SERVER_URL, 'notification-push', null, {
+        title: `Visioconférence ${type === 'video' ? 'vidéo' : 'audio'}`,
+        senderId: String(hostId),
+        receiverId: String(id),
+        messagingType: cancel ? 'call_cancel' : 'call',
+        isGroup: 'true',
+        callType: type,
+        roomId,
+        path: '/',
+      })));
+  };
+
   /* ---------------- Annuaire ---------------- */
   useEffect(() => {
     if (!currentUserId) return;
@@ -515,6 +539,14 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     Array.from(peersRef.current.keys()).forEach(removePeer);
     if (r && iAmHost) logGroupCall(r); // enregistrement en base de l'appel terminé
 
+    // Organisateur : coupe la sonnerie (push call_cancel) des invités qui n'ont jamais rejoint.
+    // Couvre : raccrochage, fin par timeout (onEnded -> leaveRoom(false)), perte de connexion.
+    // DOIT rester avant invitedRef/statsRef.clear().
+    if (r && iAmHost) {
+      const stillRinging = Array.from(invitedRef.current).filter((id) => !statsRef.current.has(id));
+      sendGroupPush(stillRinging, r.id, r.type, r.hostId, true);
+    }
+
     peersRef.current.clear(); membersRef.current.clear();
     peerStreams.current.clear(); peerMedia.current.clear(); profiles.current.clear();
     invitedRef.current.clear(); statsRef.current.clear();
@@ -664,24 +696,6 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
 
   useEffect(() => () => { if (roomRef.current) leaveRoom(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ---------------- Push pour les invités hors ligne ---------------- */
-  const sendGroupPush = async (ids: number[], roomId: string, type: RoomType) => {
-    const offline = ids.filter((id) => !onlineRef.current.includes(id));
-    if (!offline.length) return;
-    const name = `${myProfileRef.current.firstname} ${myProfileRef.current.lastname || ''}`.trim();
-    await Promise.allSettled(offline.map((id) =>
-      providers.API.post(CHAT_SERVER_URL, 'notification-push', null, {
-        title: `Visioconférence ${type === 'video' ? 'vidéo' : 'audio'}`,
-        content: `${name} vous invite à rejoindre`,
-        senderId: String(userIdRef.current),
-        receiverId: String(id),
-        messagingType: 'group_call',
-        callType: type,
-        roomId,
-        path: '/',
-      })));
-  };
-
   const markPending = (ids: number[]) => {
     setPendingIds((p) => Array.from(new Set([...p, ...ids])));
     setTimeout(() => setPendingIds((p) => p.filter((x) => !ids.includes(x))), PENDING_TTL_MS);
@@ -748,7 +762,8 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
         durationMs: ms || null,
       });
 
-      try { await sendGroupPush(invitees, roomId, type); }
+      // Push FCM data-only à TOUS les invités (sonnerie même app fermée)
+      try { await sendGroupPush(invitees, roomId, type, userIdRef.current); }
       catch (pushError) { console.warn('Erreur notification push :', pushError); }
     } catch (error) {
       console.error('Erreur lancement visioconférence :', error);
@@ -766,7 +781,8 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     socketRef.current?.emit('groupCall:addInvitees', { roomId: r.id, from: userIdRef.current, invitees });
     invitees.forEach((id) => invitedRef.current.add(id));
     markPending(invitees);
-    sendGroupPush(invitees, r.id, r.type);
+    // senderId = organisateur (r.hostId), même si c'est un autre participant qui invite
+    sendGroupPush(invitees, r.id, r.type, r.hostId);
     setPicker(null);
   };
 
@@ -775,6 +791,8 @@ export default function GroupCallProvider({ children }: { children: React.ReactN
     const r = roomRef.current;
     if (!r || r.hostId !== userIdRef.current) return;
     socketRef.current?.emit('groupCall:kick', { roomId: r.id, from: userIdRef.current, target: id });
+    // coupe la sonnerie du téléphone de la personne retirée
+    sendGroupPush([id], r.id, r.type, r.hostId, true);
     setPendingIds((p) => p.filter((x) => x !== id));
     if (peersRef.current.has(id)) removePeer(id);
   };

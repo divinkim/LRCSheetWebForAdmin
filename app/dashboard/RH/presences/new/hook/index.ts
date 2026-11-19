@@ -28,8 +28,8 @@ export default function useAddPresenceModal() {
         salariesId: [],
         date: ""
     });
-    const { setPresencesListCloned, presencesListCloned, setPresencesList } = PresencesListHookModal()
-    const [isLoading, setIsLoading] = useState(false);
+    const { setPresencesListCloned, presencesListCloned, setPresencesList, isLoading } = PresencesListHookModal()
+    const [isLoadingBtn, setIsLoadingBtn] = useState(false);
     const toast = useToast();
     const { data: session } = useSession();
     useEffect(() => {
@@ -111,7 +111,7 @@ export default function useAddPresenceModal() {
                 )
                 return;
             }
-            setIsLoading(true);
+            setIsLoadingBtn(true);
             const res = await providers.API.post<AttendancesListDto>(providers.APIUrl,
                 "attendances/from-admin",
                 null,
@@ -141,7 +141,7 @@ export default function useAddPresenceModal() {
             );
 
         } finally {
-            setIsLoading(false)
+            setIsLoadingBtn(false)
         }
     }
 
@@ -153,6 +153,7 @@ export default function useAddPresenceModal() {
         onCheckBtnEvent,
         handleSubmit,
         isLoading,
+        isLoadingBtn,
         setInputs,
         inputs,
         selectAllProfile,

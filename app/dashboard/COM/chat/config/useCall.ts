@@ -1,9 +1,15 @@
 /**
- * useCall.ts (admin web) : appels audio/vidéo WebRTC, même logique que le CallProvider du client
- * (file d'attente ICE, occupé, timeout de sonnerie, journalisation, réduire l'appel).
+ * useCall.ts (admin web) : appels audio/vidéo WebRTC (file d'attente ICE, occupé,
+ * timeout de sonnerie, journalisation, réduire l'appel).
+ *
+ * CORRECTIF : envoi du push FCM data-only ('call' / 'call_cancel') pour que le téléphone
+ * du destinataire sonne même app fermée. Le push est envoyé même si le destinataire
+ * paraît "en ligne" (un socket d'app tuée reste ouvert côté serveur ~45 s).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
+import { providers } from '@/index';
+import { CHAT_SERVER_URL } from '@/app/dashboard/COM/chat/components/ChatSocketProvider';
 
 const ICE_SERVERS: RTCConfiguration = {
   iceServers: [
@@ -25,6 +31,25 @@ export interface CallEndedInfo {
   partnerId: number; duration: number; type: 'audio' | 'video';
   isIncoming: boolean; wasConnected: boolean;
 }
+
+/** Push FCM data-only. senderId = l'APPELANT (le mobile annule la sonnerie par senderId). */
+const sendCallPush = async (
+  callerId: number, receiverId: number, type: 'audio' | 'video', cancel = false,
+) => {
+  try {
+    await providers.API.post(CHAT_SERVER_URL, 'notification-push', null, {
+      title: `Appel ${type === 'video' ? 'vidéo' : 'audio'} entrant`,
+      senderId: String(callerId),
+      receiverId: String(receiverId),
+      messagingType: cancel ? 'call_cancel' : 'call',
+      isGroup: 'false',
+      callType: type,
+      path: '/',
+    });
+  } catch (e) {
+    console.warn('Push appel impossible', e);
+  }
+};
 
 export const useCall = (opts: {
   socket: Socket | null;
@@ -181,8 +206,11 @@ export const useCall = (opts: {
 
   // Nettoyage si la page est quittée pendant un appel
   useEffect(() => () => {
-    if (callRef.current && socket) {
-      socket.emit('endCall', { to: callRef.current.partner.id, from: currentUserId });
+    const c = callRef.current;
+    if (c && socket) {
+      socket.emit('endCall', { to: c.partner.id, from: currentUserId });
+      // l'appelant quitte pendant que ça sonne : coupe la sonnerie du téléphone
+      if (c.status === 'calling') sendCallPush(currentUserId, c.partner.id, c.type, true);
     }
     localRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
@@ -208,9 +236,13 @@ export const useCall = (opts: {
     await pc.setLocalDescription(offer);
     socket.emit('callUser', { to: partner.id, from: currentUserId, type, offer, callerProfile: myProfile });
 
+    // Push FCM : fait sonner le téléphone même app fermée (même si "en ligne" côté socket)
+    sendCallPush(currentUserId, partner.id, type);
+
     ringTimer.current = setTimeout(() => {
       if (callRef.current?.status === 'calling') {
         socket.emit('endCall', { to: partner.id, from: currentUserId });
+        sendCallPush(currentUserId, partner.id, type, true); // coupe la sonnerie
         notifyRef.current?.('Appel', 'Pas de réponse');
         endLocal();
       }
@@ -219,7 +251,11 @@ export const useCall = (opts: {
 
   const hangUp = () => {
     const c = callRef.current;
-    if (c) socket?.emit(c.status === 'incoming' ? 'rejectCall' : 'endCall', { to: c.partner.id, from: currentUserId });
+    if (c) {
+      socket?.emit(c.status === 'incoming' ? 'rejectCall' : 'endCall', { to: c.partner.id, from: currentUserId });
+      // l'appelant annule avant réponse : coupe la sonnerie du téléphone du destinataire
+      if (c.status === 'calling') sendCallPush(currentUserId, c.partner.id, c.type, true);
+    }
     endLocal();
   };
 

@@ -1,143 +1,262 @@
+
 "use client";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
+import {
+    faSearch,
+    faSpinner,
+    faUsers,
+    faFolderOpen,
+    faClock,
+    faCalendarAlt,
+} from "@fortawesome/free-solid-svg-icons";
+
 import { PresencesListHookModal } from "../hook";
 import { providers } from "@/index";
-import { ClipLoader } from "react-spinners";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/components/toast";
-import { AttendanceListDto, AttendancesListDto } from "@/types/global";
+import { AttendancesListDto } from "@/types/global";
+
 type UpdatePresence = {
-    usersId: number[],
-    arrivalTime: string | null,
-    departureTime: string | null,
-    resumeTime: string | null,
-    breakStartTime: string | null,
-    enterprisesId: any[],
-    salariesId: any[],
-    planningsId: any[],
-    date: string,
-}
+    usersId: number[];
+    arrivalTime: string | null;
+    departureTime: string | null;
+    resumeTime: string | null;
+    breakStartTime: string | null;
+    enterprisesId: number[];
+    salariesId: number[];
+    planningsId: number[];
+    date: string;
+};
+
+const INITIAL_INPUTS: UpdatePresence = {
+    usersId: [],
+    arrivalTime: null,
+    breakStartTime: null,
+    resumeTime: null,
+    departureTime: null,
+    salariesId: [],
+    enterprisesId: [],
+    planningsId: [],
+    date: "",
+};
+
 export default function UpdatePresenceModal() {
-    const { onSelectAllUser, users, usersCloned, setUsersCloned, setPresencesListCloned, setPresencesList, presencesListCloned } = PresencesListHookModal();
-    const [isLoading, setIsLoading] = useState(false);
+    const {
+        onSelectAllUser,
+        users,
+        usersCloned,
+        setUsersCloned,
+        setPresencesListCloned,
+        setPresencesList,
+        isLoading,
+    } = PresencesListHookModal();
+
+    const [loadingBtn, setIsLoadingBtn] = useState(false);
+    const [inputs, setInputs] = useState<UpdatePresence>(INITIAL_INPUTS);
+
     const toast = useToast();
-    const [inputs, setInputs] = useState<UpdatePresence>({
-        usersId: [],
-        arrivalTime: null,
-        breakStartTime: null,
-        resumeTime: null,
-        departureTime: null,
-        salariesId: [],
-        enterprisesId: [],
-        planningsId: [],
-        date: "",
-    });
 
-    function includesValue(array: number[], value: number) {
-        const result = array.includes(value) ? array.filter(item => item !== value) : [...array, value];
-        return result;
+    // STYLE DES CHAMPS
+    const inputClass =
+        "w-full min-w-0 rounded-xl border border-slate-300 bg-slate-50 px-3 sm:px-4 py-3 text-sm sm:text-base text-slate-800 outline-none transition-all focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white";
+
+    // MODIFICATION D'UN CHAMP
+    const updateInput = (
+        field: keyof UpdatePresence,
+        value: string | null
+    ) => {
+        setInputs((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
+    };
+
+    // SÉLECTION / DÉSÉLECTION D'UN COLLABORATEUR
+    function onSelect(
+        UserId: number,
+        SalaryId: number,
+        PlanningId: number,
+        EnterpriseId: number
+    ) {
+        setInputs((prev) => {
+            const index = prev.usersId.indexOf(UserId);
+
+            // Si le collaborateur est déjà sélectionné,
+            // retirer également ses identifiants associés.
+            if (index !== -1) {
+                return {
+                    ...prev,
+                    usersId: prev.usersId.filter((_, i) => i !== index),
+                    salariesId: prev.salariesId.filter((_, i) => i !== index),
+                    planningsId: prev.planningsId.filter((_, i) => i !== index),
+                    enterprisesId: prev.enterprisesId.filter((_, i) => i !== index),
+                };
+            }
+
+            // Sinon ajouter le collaborateur et ses identifiants.
+            return {
+                ...prev,
+                usersId: [...prev.usersId, UserId],
+                salariesId: [...prev.salariesId, SalaryId],
+                planningsId: [...prev.planningsId, PlanningId],
+                enterprisesId: [...prev.enterprisesId, EnterpriseId],
+            };
+        });
     }
 
-    function onSelect(UserId: number, SalaryId: number, PlanningId: number, EnterpriseId: number) {
-        setInputs({
-            ...inputs,
-            usersId: includesValue(inputs.usersId, UserId),
-            salariesId: [...inputs.salariesId, SalaryId],
-            planningsId: [...inputs.planningsId, PlanningId],
-            enterprisesId: [...inputs.enterprisesId, EnterpriseId],
-        })
-    }
-
+    // SÉLECTIONNER TOUS LES COLLABORATEURS
     function selectAllUser() {
-        setInputs({
-            ...inputs,
-            usersId: onSelectAllUser().getUsersId,
-            salariesId: onSelectAllUser().getSalariesId,
-            planningsId: onSelectAllUser().getPlanningId,
-            enterprisesId: onSelectAllUser().getEnterprisesId
-        })
+        const selectedUsers = onSelectAllUser();
+
+        setInputs((prev) => ({
+            ...prev,
+            usersId: selectedUsers.getUsersId,
+            salariesId: selectedUsers.getSalariesId,
+            planningsId: selectedUsers.getPlanningId,
+            enterprisesId: selectedUsers.getEnterprisesId,
+        }));
     }
 
+    // DÉSÉLECTIONNER TOUS LES COLLABORATEURS
     function deselectAllUser() {
-        setInputs({
-            ...inputs,
+        setInputs((prev) => ({
+            ...prev,
             usersId: [],
             salariesId: [],
             planningsId: [],
-            enterprisesId: []
-        })
+            enterprisesId: [],
+        }));
     }
 
+    // RECHERCHER UN COLLABORATEUR
+    function onSearch(value: string) {
+        const searchValue = value.trim().toLowerCase();
 
-    function onSearch(e: string) {
-        const newUsersArray = users.filter(item => item?.lastname?.toLowerCase().includes(e.toLowerCase()) || item?.firstname?.toLowerCase().includes(e.toLowerCase()));
-        setUsersCloned(newUsersArray);
+        const filteredUsers = users.filter((item) =>
+            `${item?.firstname ?? ""} ${item?.lastname ?? ""}`
+                .toLowerCase()
+                .includes(searchValue)
+        );
+
+        setUsersCloned(filteredUsers);
     }
 
+    // SOUMISSION
     const handleSubmit = async () => {
-        try {
-            if (!inputs.date) return toast.error("Champs invalides",
+        if (!inputs.date) {
+            return toast.error(
+                "Champs invalides",
                 "Veuillez renseigner la date à modifier"
-            )
-
-            setIsLoading(true);
-            const res = await providers.API.post<AttendancesListDto>(providers.APIUrl,
-                "attendances/from-admin",
-                null,
-                inputs,
             );
-            const title = "Bravo";
-            const message = "Horaires modifiées avec succès";
-            toast.success(title, message);
-            setInputs({
-                usersId: [],
-                arrivalTime: "",
-                breakStartTime: "",
-                resumeTime: "",
-                departureTime: "",
-                salariesId: [],
-                enterprisesId: [],
-                planningsId: [],
-                date: "",
-            });
-
-            localStorage.setItem("presencesData", JSON.stringify(res.data.filter(item =>
-                item.mounth === new Date().getMonth()))
-            )
-        } catch (error) {
-            console.log(error)
-            toast.error("Erreur",
-                error instanceof Error
-                    ? error.message :
-                    "Erreur inconnue"
-            )
-        } finally {
-            setIsLoading(false)
         }
 
-    }
+        if (inputs.usersId.length === 0) {
+            return toast.error(
+                "Aucun collaborateur",
+                "Veuillez sélectionner au moins un collaborateur."
+            );
+        }
+
+        try {
+            setIsLoadingBtn(true);
+
+            const res = await providers.API.post<AttendancesListDto>(
+                providers.APIUrl,
+                "attendances/from-admin",
+                null,
+                inputs
+            );
+
+            toast.success(
+                "Bravo",
+                "Horaires modifiées avec succès"
+            );
+
+            const parsedRes = res.data.filter(
+                (item) => item.mounth === new Date().getMonth()
+            );
+
+            localStorage.setItem(
+                "presencesData",
+                JSON.stringify(parsedRes)
+            );
+
+            // Actualisation des listes locales
+            setPresencesListCloned(parsedRes);
+            setPresencesList(parsedRes);
+
+            setInputs({
+                ...INITIAL_INPUTS,
+            });
+
+        } catch (error) {
+            console.error(error);
+
+            toast.error(
+                "Erreur",
+                error instanceof Error
+                    ? error.message
+                    : "Une erreur inconnue est survenue."
+            );
+
+        } finally {
+            setIsLoadingBtn(false);
+        }
+    };
 
     return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm p-4">
-            <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-                {/* Header */}
-                <div className="px-8 my-5">
+        <div className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden bg-slate-950/60 p-2 backdrop-blur-sm sm:p-4">
 
-                    <h2 className="text-2xl font-bold text-slate-700 dark:text-white">
-                        Modifier une présence
-                    </h2>
+            <div className="flex max-h-[96dvh] w-full max-w-3xl min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl dark:border-slate-700 dark:bg-slate-900">
+
+                {/* HEADER */}
+                <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-7 sm:py-5 dark:border-slate-700">
+
+                    <div className="flex min-w-0 items-center gap-3">
+
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 sm:h-12 sm:w-12">
+                            <FontAwesomeIcon
+                                icon={faClock}
+                                className="text-lg sm:text-xl"
+                            />
+                        </div>
+
+                        <div className="min-w-0">
+                            <h2 className="text-lg font-bold text-slate-700 sm:text-2xl dark:text-white">
+                                Modifier une présence
+                            </h2>
+
+                            <p className="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+                                Modifiez les horaires des collaborateurs.
+                            </p>
+                        </div>
+
+                    </div>
+
                 </div>
 
-                <form className="px-8">
-                    {/* Recherche */}
-                    <div className="mb-6">
+                {/* CONTENU SCROLLABLE */}
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-7 sm:py-5">
+
+                    <p className="mb-4 text-xs font-medium text-orange-500 sm:text-sm">
+                        * Champs obligatoires
+                    </p>
+
+                    {/* RECHERCHE */}
+                    <div className="mb-5">
+
+                        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                            Rechercher un collaborateur
+                        </label>
+
                         <div className="relative">
+
                             <input
                                 type="text"
                                 placeholder="Recherchez un collaborateur..."
                                 onChange={(e) => onSearch(e.target.value)}
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 pr-12 outline-none transition-all focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                className={`${inputClass} pr-11`}
                             />
 
                             <FontAwesomeIcon
@@ -149,210 +268,336 @@ export default function UpdatePresenceModal() {
 
                     </div>
 
-                    {/* Horaires */}
+                    {/* HORAIRES */}
+                    <div className="mb-5">
 
-                    <div className="grid gap-5 md:grid-cols-3">
-
-                        <div>
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
-                                Arrivée
-                            </label>
-
-                            <input
-                                type="time"
-                                value={inputs.arrivalTime ?? ""}
-                                onChange={(e) =>
-                                    setInputs({
-                                        ...inputs,
-                                        arrivalTime: e.target.value,
-                                    })
-                                }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                        <div className="mb-3 flex items-center gap-2">
+                            <FontAwesomeIcon
+                                icon={faClock}
+                                className="text-sm text-orange-500"
                             />
+
+                            <h3 className="text-sm font-semibold text-slate-700 dark:text-white">
+                                Horaires de présence
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+                            {/* ARRIVÉE */}
+                            <div className="min-w-0">
+
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    Arrivée
+                                </label>
+
+                                <input
+                                    type="time"
+                                    value={inputs.arrivalTime ?? ""}
+                                    onChange={(e) =>
+                                        updateInput(
+                                            "arrivalTime",
+                                            e.target.value
+                                        )
+                                    }
+                                    className={inputClass}
+                                />
+
+                            </div>
+
+                            {/* PAUSE */}
+                            <div className="min-w-0">
+
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    Pause
+                                </label>
+
+                                <input
+                                    type="time"
+                                    value={inputs.breakStartTime ?? ""}
+                                    onChange={(e) =>
+                                        updateInput(
+                                            "breakStartTime",
+                                            e.target.value
+                                        )
+                                    }
+                                    className={inputClass}
+                                />
+
+                            </div>
+
+                            {/* REPRISE */}
+                            <div className="min-w-0">
+
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    Reprise
+                                </label>
+
+                                <input
+                                    type="time"
+                                    value={inputs.resumeTime ?? ""}
+                                    onChange={(e) =>
+                                        updateInput(
+                                            "resumeTime",
+                                            e.target.value
+                                        )
+                                    }
+                                    className={inputClass}
+                                />
+
+                            </div>
+
+                            {/* DÉPART */}
+                            <div className="min-w-0">
+
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    Départ
+                                </label>
+
+                                <input
+                                    type="time"
+                                    value={inputs.departureTime ?? ""}
+                                    onChange={(e) =>
+                                        updateInput(
+                                            "departureTime",
+                                            e.target.value
+                                        )
+                                    }
+                                    className={inputClass}
+                                />
+
+                            </div>
+
+                            {/* DATE */}
+                            <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+
+                                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+
+                                    <FontAwesomeIcon
+                                        icon={faCalendarAlt}
+                                        className="text-orange-500"
+                                    />
+
+                                    Date
+                                </label>
+
+                                <input
+                                    type="date"
+                                    value={inputs.date}
+                                    onChange={(e) =>
+                                        updateInput(
+                                            "date",
+                                            e.target.value
+                                        )
+                                    }
+                                    className={inputClass}
+                                />
+
+                            </div>
 
                         </div>
 
-                        <div>
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
-                                Pause
-                            </label>
-
-                            <input
-                                type="time"
-                                value={inputs.breakStartTime ?? ""}
-                                onChange={(e) =>
-                                    setInputs({
-                                        ...inputs,
-                                        breakStartTime: e.target.value,
-                                    })
-                                }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
-                                Reprise
-                            </label>
-
-                            <input
-                                type="time"
-                                value={inputs.resumeTime ?? ""}
-                                onChange={(e) =>
-                                    setInputs({
-                                        ...inputs,
-                                        resumeTime: e.target.value,
-                                    })
-                                }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
-                                Départ
-                            </label>
-
-                            <input
-                                type="time"
-                                value={inputs.departureTime ?? ""}
-                                onChange={(e) =>
-                                    setInputs({
-                                        ...inputs,
-                                        departureTime: e.target.value,
-                                    })
-                                }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                            />
-
-                        </div>
-                        <div className="">
-
-                            <label className="mb-2 block font-medium text-slate-700 dark:text-slate-200">
-                                Date
-                            </label>
-
-                            <input
-                                type="date"
-                                value={inputs.date ?? ""}
-                                onChange={(e) =>
-                                    setInputs({
-                                        ...inputs,
-                                        date: e.target.value,
-                                    })
-                                }
-                                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                            />
-
-                        </div>
                     </div>
 
-                    {/* Boutons */}
+                    {/* SÉLECTION DES COLLABORATEURS */}
+                    <div className="mb-4">
 
-                    <div className="mt-8 flex flex-wrap gap-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
 
-                        <button
-                            type="button"
-                            onClick={selectAllUser}
-                            className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-blue-700"
-                        >
-                            Tout sélectionner
-                        </button>
+                            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
 
-                        <button
-                            type="button"
-                            onClick={deselectAllUser}
-                            className="rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-orange-600"
-                        >
-                            Tout désélectionner
-                        </button>
+                                <FontAwesomeIcon
+                                    icon={faUsers}
+                                    className="text-orange-500"
+                                />
 
-                    </div>
+                                Collaborateurs
+                            </h3>
 
-                    {/* Liste collaborateurs */}
+                            <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                {inputs.usersId.length} sélectionné(s)
+                            </span>
 
-                    <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+                        </div>
 
-                        <div className="h-[150px] space-y-3 overflow-y-auto pr-2">
+                        {/* BOUTONS */}
+                        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
 
-                            {usersCloned.map((user) => (
+                            <button
+                                type="button"
+                                onClick={selectAllUser}
+                                disabled={isLoading || usersCloned.length === 0}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <FontAwesomeIcon icon={faUsers} />
+                                Tout sélectionner
+                            </button>
 
-                                <label
-                                    key={user.id}
-                                    className="flex cursor-pointer items-center justify-between rounded-xl border border-transparent bg-white p-3 transition-all hover:border-blue-500 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-700"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <img
-                                            src={
-                                                user.photo
-                                                    ? `${providers.ImageUrl}/${user.photo}`
-                                                    : "/images/clientProfile.png"
-                                            }
-                                            className="h-12 w-12 rounded-full border-2 border-slate-200 object-cover"
-                                        />
-                                        <div>
-                                            <h3 className="font-semibold text-slate-700 dark:text-white">
-                                                {providers.reduceLengthOfText(
-                                                    String(user.firstname),
-                                                    10
-                                                )}{" "}
-                                                {user.lastname}
-                                            </h3>
+                            <button
+                                type="button"
+                                onClick={deselectAllUser}
+                                disabled={inputs.usersId.length === 0}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <FontAwesomeIcon icon={faFolderOpen} />
+                                Tout désélectionner
+                            </button>
 
-                                            <p className="text-sm text-slate-500">
-                                                Collaborateur
+                        </div>
+
+                        {/* LISTE */}
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:p-3 dark:border-slate-700 dark:bg-slate-800">
+
+                            <div className="max-h-[32vh] min-h-[160px] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[280px]">
+
+                                {/* COLLABORATEURS */}
+                                {usersCloned.length > 0 && !isLoading && (
+                                    usersCloned.map((user) => {
+
+                                        const selected = inputs.usersId.includes(user.id);
+
+                                        return (
+                                            <label
+                                                key={user.id}
+                                                className={`flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all ${
+                                                    selected
+                                                        ? "border-blue-400 bg-blue-50 dark:border-blue-500/50 dark:bg-blue-500/10"
+                                                        : "border-transparent bg-white hover:border-blue-300 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-700"
+                                                }`}
+                                            >
+
+                                                <div className="flex min-w-0 items-center gap-3">
+
+                                                    <img
+                                                        src={
+                                                            user.photo
+                                                                ? `${providers.ImageUrl}/${user.photo}`
+                                                                : "/images/clientProfile.png"
+                                                        }
+                                                        alt={`${user.firstname} ${user.lastname}`}
+                                                        className="h-10 w-10 shrink-0 rounded-full border-2 border-slate-200 object-cover sm:h-12 sm:w-12"
+                                                    />
+
+                                                    <div className="min-w-0">
+
+                                                        <h4 className="break-words text-sm font-semibold text-slate-700 sm:text-base dark:text-white">
+                                                            {user.firstname} {user.lastname}
+                                                        </h4>
+
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                            Collaborateur
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selected}
+                                                    onChange={() =>
+                                                        onSelect(
+                                                            user.id,
+                                                            user.SalaryId,
+                                                            user.PlanningId,
+                                                            user.EnterpriseId
+                                                        )
+                                                    }
+                                                    className="h-5 w-5 shrink-0 cursor-pointer accent-blue-600"
+                                                />
+
+                                            </label>
+                                        );
+                                    })
+                                )}
+
+                                {/* CHARGEMENT */}
+                                {usersCloned.length === 0 && isLoading && (
+                                    <div className="flex min-h-[160px] items-center justify-center">
+
+                                        <div className="flex flex-col items-center gap-3">
+
+                                            <FontAwesomeIcon
+                                                icon={faSpinner}
+                                                className="animate-spin text-3xl text-orange-400"
+                                            />
+
+                                            <p className="text-xs text-slate-500">
+                                                Chargement des collaborateurs...
                                             </p>
 
                                         </div>
 
                                     </div>
+                                )}
 
-                                    <input
-                                        type="checkbox"
-                                        checked={inputs.usersId.includes(user.id)}
-                                        onChange={() =>
-                                            onSelect(
-                                                user.id,
-                                                user.SalaryId,
-                                                user.PlanningId,
-                                                user.EnterpriseId
-                                            )
-                                        }
-                                        className="h-5 w-5 accent-blue-600"
-                                    />
+                                {/* AUCUN RÉSULTAT */}
+                                {usersCloned.length === 0 && !isLoading && (
+                                    <div className="flex min-h-[160px] flex-col items-center justify-center gap-3 text-center">
 
-                                </label>
+                                        <FontAwesomeIcon
+                                            icon={faFolderOpen}
+                                            className="text-3xl text-orange-400"
+                                        />
 
-                            ))}
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                                Aucun collaborateur trouvé
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-slate-400">
+                                                Essayez une autre recherche.
+                                            </p>
+                                        </div>
+
+                                    </div>
+                                )}
+
+                            </div>
 
                         </div>
 
                     </div>
-                    {/* Footer */}
-                    <div className="my-4 flex justify-end">
+
+                </div>
+
+                {/* FOOTER FIXE */}
+                <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-7 sm:py-4 dark:border-slate-700 dark:bg-slate-900">
+
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                        <p className="text-center text-xs text-slate-400 sm:text-left">
+                            {inputs.usersId.length} collaborateur(s) sélectionné(s)
+                        </p>
+
                         <button
-                            type="button" disabled={isLoading}
+                            type="button"
+                            disabled={loadingBtn}
                             onClick={handleSubmit}
-                            className={`rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 px-8 py-3 font-semibold text-white shadow-xl transition-all hover:scale-105 ${isLoading ? "opacity-50" : "opacity-100"}`}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 px-7 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:from-blue-800 hover:to-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[170px]"
                         >
-                            {isLoading ? (
-                                <p>
-                                    <FontAwesomeIcon icon={faSpinner} className="text-white animate-spin" />
-                                    <span className="left-1 relative">Traitement...</span>
-                                </p>
+
+                            {loadingBtn ? (
+                                <>
+                                    <FontAwesomeIcon
+                                        icon={faSpinner}
+                                        className="animate-spin"
+                                    />
+
+                                    Traitement...
+                                </>
                             ) : (
-                                "Soumettre"
+                                "Soumettre les modifications"
                             )}
+
                         </button>
+
                     </div>
-                </form>
+
+                </div>
+
             </div>
+
         </div>
-    )
+    );
 }
