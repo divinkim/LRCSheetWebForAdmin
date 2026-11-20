@@ -59,52 +59,132 @@ const configuration: RTCConfiguration = {
  * si le navigateur bloque la lecture (pas d'interaction préalable avec la page).
  * Exportée : réutilisée par GroupCallProvider pour les invitations de groupe.
  */
-export const useRingtone = (active: boolean) => {
+
+type ToneCfg = {
+  url: string; volume: number; periodMs: number; vibrate?: number[];
+  synth: (ctx: AudioContext) => void;
+};
+
+const RINGTONE_CFG: ToneCfg = {
+  url: RINGTONE_URL, volume: 1, periodMs: 1500, vibrate: [500, 300, 500, 300, 500],
+  synth: (ctx) => {
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.frequency.value = 440; g.gain.value = 0.08;
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.4);
+  },
+};
+const RINGBACK_CFG: ToneCfg = {
+  url: RINGBACK_URL, volume: 0.8, periodMs: 4000,
+  synth: (ctx) => {
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 425;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+    g.gain.setValueAtTime(0.12, t + 0.95);
+    g.gain.linearRampToValueAtTime(0, t + 1.0);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 1.05);
+  },
+};
+
+const useLoopingTone = (active: boolean, cfg: ToneCfg) => {
   useEffect(() => {
     if (!active) return;
+    let cancelled = false;
     let audio: HTMLAudioElement | null = null;
     let ctx: AudioContext | null = null;
-    let timer: any;
+    let timer: ReturnType<typeof setInterval> | undefined;
 
-    const startBeeps = () => {
+    const startSynth = () => {
+      if (cancelled || ctx) return;            // ← ignore les rappels tardifs
       try {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
-        ctx = new AC();
-        ctx.resume?.().catch(() => { });
-        const beep = () => {
-          if (!ctx) return;
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.frequency.value = 440; g.gain.value = 0.08;
-          o.connect(g); g.connect(ctx.destination);
-          o.start(); o.stop(ctx.currentTime + 0.4);
-        };
-        beep();
-        timer = setInterval(beep, 1500);
-      } catch { /* pas de sonnerie */ }
+        const c = new AC(); ctx = c;
+        c.resume?.().catch(() => { });
+        const play = () => { if (!cancelled && c.state !== 'closed') cfg.synth(c); };
+        play();
+        timer = setInterval(play, cfg.periodMs);
+      } catch { /* pas de tonalité */ }
     };
 
     try {
-      audio = new Audio(RINGTONE_URL);
+      audio = new Audio(cfg.url);
       audio.loop = true;
-      audio.volume = 1;
-      audio.play().catch(startBeeps);
-      audio.onerror = () => { if (!ctx) startBeeps(); };
-    } catch {
-      startBeeps();
-    }
+      audio.volume = cfg.volume;
+      audio.onerror = startSynth;
+      audio.play().catch(startSynth);
+    } catch { startSynth(); }
 
-    // vibration sur mobile
-    try { navigator.vibrate?.([500, 300, 500, 300, 500]); } catch { /* ignoré */ }
+    if (cfg.vibrate) { try { navigator.vibrate?.(cfg.vibrate); } catch { /* ignoré */ } }
 
     return () => {
+      cancelled = true;                         // ← avant tout le reste
       clearInterval(timer);
-      ctx?.close().catch(() => { });
-      if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
-      try { navigator.vibrate?.(0); } catch { /* ignoré */ }
+      if (audio) {
+        audio.onerror = null;
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        audio = null;
+      }
+      ctx?.close().catch(() => { }); ctx = null;
+      if (cfg.vibrate) { try { navigator.vibrate?.(0); } catch { /* ignoré */ } }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 };
+
+export const useRingtone = (active: boolean) => useLoopingTone(active, RINGTONE_CFG);
+const useRingback = (active: boolean) => useLoopingTone(active, RINGBACK_CFG);
+
+// export const useRingtone = (active: boolean) => {
+//   useEffect(() => {
+//     if (!active) return;
+//     let audio: HTMLAudioElement | null = null;
+//     let ctx: AudioContext | null = null;
+//     let timer: any;
+
+//     const startBeeps = () => {
+//       try {
+//         const AC = window.AudioContext || (window as any).webkitAudioContext;
+//         ctx = new AC();
+//         ctx.resume?.().catch(() => { });
+//         const beep = () => {
+//           if (!ctx) return;
+//           const o = ctx.createOscillator();
+//           const g = ctx.createGain();
+//           o.frequency.value = 440; g.gain.value = 0.08;
+//           o.connect(g); g.connect(ctx.destination);
+//           o.start(); o.stop(ctx.currentTime + 0.4);
+//         };
+//         beep();
+//         timer = setInterval(beep, 1500);
+//       } catch { /* pas de sonnerie */ }
+//     };
+
+//     try {
+//       audio = new Audio(RINGTONE_URL);
+//       audio.loop = true;
+//       audio.volume = 1;
+//       audio.play().catch(startBeeps);
+//       audio.onerror = () => { if (!ctx) startBeeps(); };
+//     } catch {
+//       startBeeps();
+//     }
+
+//     // vibration sur mobile
+//     try { navigator.vibrate?.([500, 300, 500, 300, 500]); } catch { /* ignoré */ }
+
+//     return () => {
+//       clearInterval(timer);
+//       ctx?.close().catch(() => { });
+//       if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+//       try { navigator.vibrate?.(0); } catch { /* ignoré */ }
+//     };
+//   }, [active]);
+// };
 
 /**
  * Tonalité d'attente de l'APPELANT ("tuuut... tuuut...") tant que le destinataire
@@ -115,58 +195,58 @@ export const useRingtone = (active: boolean) => {
  * WhatsApp). Sinon, repli sur une tonalité synthétique 425 Hz : 1 s de son / 3 s de silence.
  * Aucune vibration (c'est l'appelant).
  */
-const useRingback = (active: boolean) => {
-  useEffect(() => {
-    if (!active) return;
-    let audio: HTMLAudioElement | null = null;
-    let ctx: AudioContext | null = null;
-    let timer: any;
-    let synthStarted = false;
+// const useRingback = (active: boolean) => {
+//   useEffect(() => {
+//     if (!active) return;
+//     let audio: HTMLAudioElement | null = null;
+//     let ctx: AudioContext | null = null;
+//     let timer: any;
+//     let synthStarted = false;
 
-    const startSynth = () => {
-      if (synthStarted) return;
-      synthStarted = true;
-      try {
-        const AC = window.AudioContext || (window as any).webkitAudioContext;
-        ctx = new AC();
-        ctx.resume?.().catch(() => { });
-        const tone = () => {
-          if (!ctx) return;
-          const t = ctx.currentTime;
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sine';
-          o.frequency.value = 425;
-          // enveloppe douce pour éviter les "clics"
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(0.12, t + 0.05);
-          g.gain.setValueAtTime(0.12, t + 0.95);
-          g.gain.linearRampToValueAtTime(0, t + 1.0);
-          o.connect(g); g.connect(ctx.destination);
-          o.start(t); o.stop(t + 1.05);
-        };
-        tone();
-        timer = setInterval(tone, 4000);
-      } catch { /* pas de tonalité */ }
-    };
+//     const startSynth = () => {
+//       if (synthStarted) return;
+//       synthStarted = true;
+//       try {
+//         const AC = window.AudioContext || (window as any).webkitAudioContext;
+//         ctx = new AC();
+//         ctx.resume?.().catch(() => { });
+//         const tone = () => {
+//           if (!ctx) return;
+//           const t = ctx.currentTime;
+//           const o = ctx.createOscillator();
+//           const g = ctx.createGain();
+//           o.type = 'sine';
+//           o.frequency.value = 425;
+//           // enveloppe douce pour éviter les "clics"
+//           g.gain.setValueAtTime(0, t);
+//           g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+//           g.gain.setValueAtTime(0.12, t + 0.95);
+//           g.gain.linearRampToValueAtTime(0, t + 1.0);
+//           o.connect(g); g.connect(ctx.destination);
+//           o.start(t); o.stop(t + 1.05);
+//         };
+//         tone();
+//         timer = setInterval(tone, 4000);
+//       } catch { /* pas de tonalité */ }
+//     };
 
-    try {
-      audio = new Audio(RINGBACK_URL);
-      audio.loop = true;
-      audio.volume = 0.8;
-      audio.onerror = startSynth; // fichier absent => tonalité synthétique
-      audio.play().catch(startSynth);
-    } catch {
-      startSynth();
-    }
+//     try {
+//       audio = new Audio(RINGBACK_URL);
+//       audio.loop = true;
+//       audio.volume = 0.8;
+//       audio.onerror = startSynth; // fichier absent => tonalité synthétique
+//       audio.play().catch(startSynth);
+//     } catch {
+//       startSynth();
+//     }
 
-    return () => {
-      clearInterval(timer);
-      ctx?.close().catch(() => { });
-      if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
-    };
-  }, [active]);
-};
+//     return () => {
+//       clearInterval(timer);
+//       ctx?.close().catch(() => { });
+//       if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+//     };
+//   }, [active]);
+// };
 
 /* ------------------------------------------------------------------ */
 /* Provider (logique uniquement : l'UI est dans <CallModal />, monté   */
@@ -469,32 +549,32 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     if (typeof RTCPeerConnection === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       return toast.info('Appel', 'Appels non supportés (HTTPS requis)');
     }
-    setMinimized(false);
+        setMinimized(false);
     setCall(() => ({ type, isIncoming: false, status: 'calling', partner }));
 
     const stream = await getMedia(type === 'video');
+    if (!callRef.current) {                       // annulé pendant la demande micro/caméra
+      stream?.getTracks().forEach((t) => t.stop());
+      localRef.current = null; setLocalStream(null);
+      return;
+    }
     if (!stream) { toast.info('Appel', 'Permission micro/caméra refusée'); endLocal(true); return; }
+
     const pc = createPC(partner.id);
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+    } catch { return; }                           // pc fermé : appel annulé entre-temps
+    if (!callRef.current) return;
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socket.emit('callUser', { to: partner.id, from: currentUserId, type, offer, callerProfile: myProfile });
+    socket.emit('callUser', { to: partner.id, from: currentUserId, type, offer: pc.localDescription, callerProfile: myProfile });
 
-    // Destinataire hors ligne (app fermée) : push FCM => sonnerie par défaut du système.
-    // Le serveur garde l'appel en attente et le rejoue à sa connexion (cf. socket.gateway.ts).
-    if (!(Array.isArray(onlineUserIds) && onlineUserIds.includes(partner.id))) {
-      pushedRef.current = { partner, type };
-      sendCallPush('call', partner, type);
-    }
+    // TOUJOURS pousser (un socket d'app tuée/en veille reste "en ligne" un moment)
+    pushedRef.current = { partner, type };
+    sendCallPush('call', partner, type);
 
-    ringTimer.current = setTimeout(() => {
-      if (callRef.current?.status === 'calling') {
-        socket.emit('endCall', { to: partner.id, from: currentUserId });
-        toast.info('Appel', 'Pas de réponse');
-        endLocal();
-      }
-    }, RING_TIMEOUT_MS);
+    ringTimer.current = setTimeout(() => { /* inchangé */ }, RING_TIMEOUT_MS);
   };
 
   const hangUp = () => {
