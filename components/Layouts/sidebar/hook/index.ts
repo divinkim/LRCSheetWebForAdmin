@@ -189,7 +189,9 @@ export function useNotifications() {
   }, []);
 
   useEffect(() => {
-    const userId = localStorage.getItem("UserId");
+    if (!session?.user) return;
+
+    const userId = Number(session.user.id);
 
     const handleChatData = (data: AppNotification) => {
       if (String(data.receiverId) === String(userId)) {
@@ -214,7 +216,7 @@ export function useNotifications() {
       socket.off("getChatData", handleChatData);
       socket.off("removeNotificationsCount", handleRemoveNotifications);
     };
-  }, []);
+  }, [session]);
 
   const getSectionCount = useCallback(
     (sectionIndex: number) =>

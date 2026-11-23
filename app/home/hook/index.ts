@@ -88,6 +88,7 @@ export default function HomeComponent() {
 
   useEffect(() => {
     (async () => {
+      console.log(session)
       const adminEnterpriseId = Number((session?.user as any)?.EnterpriseId);
       const userId = Number(session?.user.id);
       const MainEnterpriseId = Number((session?.user as any)?.MainEnterpriseId);
