@@ -170,6 +170,7 @@ export function useNotifications() {
 
   useEffect(() => {
     const messaging = getFirebaseMessaging();
+    console.log(messaging)
     if (!messaging) return;
 
     const unsubscribe = onMessage(messaging, (remoteMessage) => {
@@ -189,9 +190,7 @@ export function useNotifications() {
   }, []);
 
   useEffect(() => {
-    if (!session?.user) return;
-
-    const userId = Number(session.user.id);
+    const userId = Number(session?.user?.id);
 
     const handleChatData = (data: AppNotification) => {
       if (String(data.receiverId) === String(userId)) {

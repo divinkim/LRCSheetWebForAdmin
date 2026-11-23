@@ -8,8 +8,8 @@ const firebaseConfig = {
   projectId: "lrcsheetmobile",
   storageBucket: "lrcsheetmobile.firebasestorage.app",
   messagingSenderId: "239069891450",
-  appId: "1:239069891450:web:ee8abf82c22a2b56b824c3",
-  measurementId: "G-P1ZQL9MLWE"
+  appId: "1:239069891450:web:533039010fc1189bb824c3",
+  measurementId: "G-PNS4WDS2XK"
 };
 
 
