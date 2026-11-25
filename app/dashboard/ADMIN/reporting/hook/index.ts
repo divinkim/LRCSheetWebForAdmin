@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { providers } from "@/index";
+import { APIUrl, providers } from "@/index";
 import HookComponentModal from "@/components/ComponentModal";
 import { SidebarHook } from "@/components/Layouts/sidebar/hook";
 import { Report, ReportResponseDto, ReportsResponseDto } from "@/types/global";
@@ -69,6 +69,7 @@ export function RepportsListHook() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [adminReportCommentArray, setAdminReportCommentArray] = useState<Report[]>([]);
   const [loader, setLoader] = useState<boolean>(true);
+  const [adminId, setAdminId] = useState<number | null>(null);
   const toast = useToast()
   // --- API HANDLERS ---
   const getAdminResponse = useCallback(async () => {
@@ -86,35 +87,35 @@ export function RepportsListHook() {
 
   // --- EFFECTS ---
 
-  // 1. Synchronisation de la session (EnterpriseId) et chargement initial des rapports
   useEffect(() => {
-    if (sessionStatus === "authenticated" && session?.user) {
-      // Récupération depuis la session au lieu du localStorage
-      //
-      const user = session.user as typeof session.user & { EnterpriseId?: number | string | null };
+    (async () => {
+      try {
+        if (!session?.user) return;
 
-      const userEnterpriseId = user.EnterpriseId
-        ? String(user.EnterpriseId)
-        : null;
+        const user = session.user as typeof session.user & { EnterpriseId?: number | string | null };
+        const adminEnterpriseId = user.EnterpriseId
+          ? String(user.EnterpriseId)
+          : null;
+        const adminId = Number(user.id)
+        const res = (await providers.API.getAll<ReportsResponseDto>(APIUrl, "reports", null)).data;
+        console.log(res)
+        const filteredReportsByEnterpriseId = res.filter(r => r.Enterprise?.MainEnterpriseId === Number(adminEnterpriseId))
 
-      setEnterpriseId(userEnterpriseId);
-    }
+        setRepportsArray(filteredReportsByEnterpriseId);
+        setRepportsArrayCloned(filteredReportsByEnterpriseId);
+        setEnterpriseId(adminEnterpriseId);
+        setAdminId(adminId);
+        getAdminResponse();
+      } catch (error) {
+        console.log(error)
+      }
+      finally {
+        setLoader(false)
+      }
 
-    const modalData = ComponentModal?.at(0)?.Repport?.repportsArray ?? [];
-    setRepportsArray(modalData);
-    setRepportsArrayCloned(modalData);
+    })();
 
-    getAdminResponse();
-  }, [session, sessionStatus, ComponentModal, getAdminResponse]);
-
-  // 2. Gestion du Loader d'attente
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoader(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [repportsArray]);
+  }, [session, getAdminResponse]);
 
   // --- FILTERS & NAVIGATION ---
   const navigateBetweenMonths = useCallback(
@@ -188,7 +189,6 @@ export function RepportsListHook() {
     session,
     sessionUserId: session?.user?.id ?? null,
     EnterpriseId: enterpriseId,
-
     // Component States
     itemIndex,
     setItemIndex,
@@ -203,15 +203,12 @@ export function RepportsListHook() {
     isLoading,
     setIsLoading,
     loader,
-
-    // Data & Collections
+    adminId,
     RepportsArray: repportsArray,
     repportsArrayCloned,
     adminReportCommentArray,
     monthsOfYear: MONTHS_OF_YEAR,
     ComponentModal,
-
-    // Methods
     filterRepportsByUsersNames,
     navigateBetweenMonths,
     adminReportComment,

@@ -305,7 +305,7 @@ export default function GetUserProfile() {
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                {/* <div className="pt-3 border-t border-slate-100 dark:border-slate-800/60">
                   <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Planning hebdomadaire
                   </p>
@@ -318,7 +318,7 @@ export default function GetUserProfile() {
                       {user.PlanningType.description}
                     </p>
                   )}
-                </div>
+                </div> */}
               </div>
             </div>
 

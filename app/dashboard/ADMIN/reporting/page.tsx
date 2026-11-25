@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -8,8 +9,9 @@ import {
   faChevronUp,
   faSearch,
   faPaperclip,
-  faCommentDots
+  faCommentDots,
 } from "@fortawesome/free-solid-svg-icons";
+
 import { providers } from "@/index";
 import { RepportsListHook } from "./hook";
 import { ClipLoader } from "react-spinners";
@@ -39,55 +41,47 @@ export default function Repports() {
     setIsLoading,
     adminReportCommentArray,
     loader,
-    getAdminResponse
+    getAdminResponse,
+    adminId
   } = RepportsListHook();
 
   const handleSendResponse = async (repport: any) => {
     try {
-      setIsLoading(true);
-      const adminId = localStorage.getItem("UserId") || "0";
+      if (!adminResponse.trim()) return;
 
-      const res = await adminReportComment(
+      setIsLoading(true);
+
+      await adminReportComment(
         adminResponse,
         repport.id,
         repport.User.email,
         repport.UserId
       );
 
-      socket.emit("onSendChatData", {
-        path: "/Dashboard/NOTIF/chat",
-        adminSectionIndex: "0",
-        adminPageIndex: "0",
-        receiverId: [repport.UserId],
-        senderId: String(adminId)
-      });
-
-      // await providers.API.post(providers.APIUrl, "mail/send", null, {
-      //   senderEmail: "lrcsheet@gmail.com",
-      //   subject: "Notification entrante",
-      //   content: "Veuillez consulter votre messagerie",
-      //   emails: [repport.User.email]
+      // socket.emit("onSendChatData", {
+      //   path: "/Dashboard/NOTIF/chat",
+      //   adminSectionIndex: "0",
+      //   adminPageIndex: "0",
+      //   receiverId: [repport.UserId],
+      //   senderId: String(adminId),
       // });
 
-      await providers.API.post(providers.APIUrl, "notification-push", null, {
-        path: "/dashboard/NOTIF/chat",
-        EnterpriseId: String(repport.EnterpriseId ?? EnterpriseId),
-        adminSectionIndex: "0",
-        adminPageIndex: "0",
-        senderId: String(adminId),
-        receiverId: String(repport.UserId)
-      });
+      await providers.API.post(
+        providers.APIUrl,
+        "notification-push",
+        null,
+        {
+          title: "Retour suite à votre rapport",
+          content: `Vous avez reçu un commentaire de la part de votre administrateur suite à votre rapport. </br> <<${adminResponse}>>`,
+          EnterpriseId: String(repport.EnterpriseId ?? EnterpriseId),
+          adminSectionIndex: "0",
+          adminPageIndex: "0",
+          senderId: String(adminId),
+          receiverId: String(repport.UserId),
+        }
+      );
 
-      // await providers.API.post(providers.APIUrl, "chats", null, {
-      //   content: adminResponse,
-      //   receiverId: repport.UserId,
-      //   senderId: parseInt(adminId),
-      //   EnterpriseId: parseInt(EnterpriseId ?? "1"),
-      //   file: "",
-      //   role: "Super-Admin"
-      // });
-
-      getAdminResponse();
+      await getAdminResponse();
       setAdminResponse("");
     } catch (error) {
       console.error("Erreur lors de l'envoi de la réponse:", error);
@@ -96,274 +90,720 @@ export default function Repports() {
     }
   };
 
-  // Filtrage des rapports correspondants au mois en cours
+  const currentYear = new Date().getFullYear();
+
   const currentMonthReports = repportsArrayCloned.filter(
-    (repport) => repport.monthIndice === monthIndice
+    (report) =>
+      report.monthIndice === monthIndice &&
+      new Date(report.createdAt).getFullYear() === currentYear
   );
 
+  const toggleReport = (index: number) => {
+    const isCurrentlyExpanded = itemIndex === index && isVisible;
+
+    setItemIndex(index);
+    setIsVisible(!isCurrentlyExpanded);
+  };
+
+  const navigateMonth = (direction: number) => {
+    const nextMonth = monthIndice + direction;
+
+    if (nextMonth < 0 || nextMonth >= monthsOfYear.length) return;
+
+    setMonthIndice(nextMonth);
+
+    navigateBetweenMonths(
+      RepportsArray,
+      nextMonth,
+      parseInt(EnterpriseId ?? "0")
+    );
+
+    setIsVisible(false);
+    setItemIndex(-1);
+  };
+
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <main className="min-h-screen bg-[#F4F6F9] dark:bg-[#111827] text-[#374151] dark:text-gray-100 px-3 py-5 sm:px-5 lg:px-8 lg:py-8">
 
-        {/* En-tête Pro */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-5 border-b border-slate-200 dark:border-slate-800 gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {ComponentModal?.[0]?.Repport?.titlePage || "Rapports d'activités"}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Consultez et gérez les soumissions de vos collaborateurs
-            </p>
-          </div>
-        </header>
+      <div className="max-w-7xl mx-auto space-y-7">
 
-        {/* Barre d'outils et de filtres */}
-        <div className="bg-white dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+        {/* =====================================================
+            EN-TÊTE
+        ====================================================== */}
 
-          {/* Champ de Recherche */}
-          <div className="relative w-full md:w-80">
-            <input
-              onChange={(e) => filterRepportsByUsersNames(e.target.value, monthIndice)}
-              type="text"
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition-all"
-              placeholder="Rechercher un collaborateur..."
-            />
-            <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-          </div>
+        <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-sm">
 
-          {/* Mois Actuel */}
-          <div className="text-center">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-              {monthsOfYear[monthIndice]} <span className="text-slate-500 dark:text-slate-400 font-normal">{new Date().getFullYear()}</span>
-            </h2>
-          </div>
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-[#FFAB02]" />
 
-          {/* Actions de Navigation */}
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button
-              type="button"
-              onClick={() => {
-                const decrementMonthIndex = monthIndice - 1;
-                setMonthIndice(decrementMonthIndex);
-                navigateBetweenMonths(RepportsArray, decrementMonthIndex, parseInt(EnterpriseId ?? "0"));
-              }}
-              className="flex-1 md:flex-none inline-flex items-center justify-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-medium text-sm rounded-lg shadow-sm hover:shadow transition-all duration-200 active:scale-95"
-            >
-              <FontAwesomeIcon icon={faChevronLeft} className="mr-2 text-sm" />
-              Précédent
-            </button>
+          <div className="absolute -right-12 -top-20 w-64 h-64 rounded-full bg-[#359ADE]/5 blur-3xl pointer-events-none" />
 
-            <button
-              type="button"
-              onClick={() => {
-                const incrementedMonthIndex = monthIndice + 1;
-                setMonthIndice(incrementedMonthIndex);
-                navigateBetweenMonths(RepportsArray, incrementedMonthIndex, parseInt(EnterpriseId ?? "0"));
-              }}
-              className="flex-1 md:flex-none inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm hover:shadow transition-all duration-200 active:scale-95"
-            >
-              Suivant
-              <FontAwesomeIcon icon={faChevronRight} className="ml-2 text-sm" />
-            </button>
-          </div>
-        </div>
+          <div className="relative p-5 sm:p-7 lg:p-8">
 
-        {/* Liste des Rapports / Skeleton / Empty State */}
-        <div className="space-y-4">
-          {loader ? (
-            /* Skeleton Loading State */
-            Array.from({ length: 3 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl shadow-sm overflow-hidden animate-pulse p-5 space-y-4"
-              >
-                {/* Skeleton Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700/40">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                    <div className="space-y-2">
-                      <div className="w-36 h-4 bg-slate-200 dark:bg-slate-700 rounded" />
-                      <div className="w-24 h-3 bg-slate-200 dark:bg-slate-700 rounded" />
-                    </div>
-                  </div>
-                  <div className="w-20 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+
+              <div className="space-y-3">
+
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFAB02]/10 text-[#D99000] dark:text-[#FFAB02] text-xs font-bold tracking-wide">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FFAB02]" />
+                  ESPACE ADMINISTRATION
                 </div>
 
-                {/* Skeleton Body */}
-                <div className="space-y-3 pt-2">
-                  <div className="w-16 h-3 bg-slate-200 dark:bg-slate-700 rounded" />
-                  <div className="w-1/2 h-5 bg-slate-200 dark:bg-slate-700 rounded" />
-                  <div className="space-y-2 pt-2">
-                    <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded" />
-                    <div className="w-5/6 h-3 bg-slate-200 dark:bg-slate-700 rounded" />
-                    <div className="w-4/6 h-3 bg-slate-200 dark:bg-slate-700 rounded" />
-                  </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                    {ComponentModal?.[0]?.Repport?.titlePage ||
+                      "Rapports d'activités"}
+                  </h1>
+
+                  <p className="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-xl leading-relaxed">
+                    Centralisez les activités de vos collaborateurs,
+                    consultez leurs rapports et partagez vos observations
+                    directement depuis votre espace de gestion.
+                  </p>
                 </div>
+
               </div>
-            ))
-          ) : currentMonthReports.length > 0 ? (
-            currentMonthReports.filter(item => new Date(item.createdAt).getFullYear() === new Date().getFullYear()).map((repport, index) => {
-              const isExpanded = itemIndex === index && isVisible;
 
-              return (
-                <article
-                  key={repport.id ?? index}
-                  className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-[#F4F8FC] dark:bg-gray-900/60 border border-[#359ADE]/10 min-w-fit">
+
+                <div className="w-11 h-11 rounded-xl bg-[#359ADE]/10 flex items-center justify-center text-[#359ADE]">
+                  <span className="text-xl font-bold">R</span>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Période consultée
+                  </p>
+
+                  <p className="text-base font-bold text-gray-900 dark:text-white capitalize">
+                    {monthsOfYear[monthIndice]} {currentYear}
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Indicateurs */}
+
+            <div className="mt-7 pt-6 border-t border-gray-100 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="flex items-center gap-3">
+
+                <div className="w-10 h-10 rounded-xl bg-[#359ADE]/10 flex items-center justify-center">
+                  <span className="text-[#359ADE] font-bold text-lg">
+                    #
+                  </span>
+                </div>
+
+                <div>
+                  <p className="text-xl font-extrabold text-gray-900 dark:text-white tabular-nums">
+                    {loader ? "..." : currentMonthReports.length}
+                  </p>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Rapports pour cette période
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="flex items-center gap-3 sm:border-l sm:border-gray-200 sm:dark:border-gray-700 sm:pl-6">
+
+                <div className="w-10 h-10 rounded-xl bg-[#FFAB02]/10 flex items-center justify-center">
+                  <span className="text-[#D99000] dark:text-[#FFAB02] font-bold text-lg">
+                    {monthIndice + 1}
+                  </span>
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                    {monthsOfYear[monthIndice]}
+                  </p>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Mois actuellement sélectionné
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        {/* =====================================================
+            RECHERCHE ET NAVIGATION
+        ====================================================== */}
+
+        <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-5">
+
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+
+            {/* Recherche */}
+
+            <div className="w-full xl:max-w-md">
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                Rechercher un collaborateur
+              </label>
+
+              <div className="relative">
+
+                <FontAwesomeIcon
+                  icon={faSearch}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+
+                <input
+                  type="text"
+                  onChange={(e) =>
+                    filterRepportsByUsersNames(
+                      e.target.value,
+                      monthIndice
+                    )
+                  }
+                  placeholder="Nom, prénom du collaborateur..."
+                  className="w-full h-12 pl-11 pr-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder:text-gray-400 outline-none transition-all focus:border-[#359ADE] focus:ring-4 focus:ring-[#359ADE]/10"
+                />
+
+              </div>
+
+            </div>
+
+            {/* Navigation mensuelle */}
+
+            <div className="w-full xl:w-auto">
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 xl:text-center">
+                Navigation temporelle
+              </label>
+
+              <div className="flex items-center gap-2">
+
+                <button
+                  type="button"
+                  disabled={monthIndice <= 0}
+                  onClick={() => navigateMonth(-1)}
+                  className="w-12 h-12 shrink-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="Mois précédent"
                 >
-                  {/* Header de la carte */}
-                  <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700/40">
-                    <div className="flex items-center gap-3.5">
-                      <img
-                        src={
-                          repport.User?.photo
-                            ? `${providers.ImageUrl}/${repport.User.photo}`
-                            : "/images/clientProfile.png"
-                        }
-                        alt="Photo utilisateur"
-                        className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
-                      />
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white text-base">
-                          {repport.User?.lastname} {repport.User?.firstname}
-                        </h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          {new Date(repport.createdAt).toLocaleDateString("fr-FR", {
-                            day: "2-digit",
-                            month: "long",
-                            year: "numeric",
-                            weekday: "short"
-                          })} à {new Date(repport.createdAt).toLocaleTimeString([], {
-                            minute: "2-digit",
-                            hour: "2-digit"
-                          })}
-                        </p>
-                      </div>
-                    </div>
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                </button>
 
-                    <button
-                      onClick={() => {
-                        setItemIndex(index);
-                        setIsVisible(!isVisible);
-                      }}
-                      className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors"
-                    >
-                      <span>{isExpanded ? "Réduire" : "Déplier"}</span>
-                      <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="text-sm" />
-                    </button>
+                <div className="flex-1 min-w-0 sm:min-w-[180px] h-12 px-4 rounded-xl bg-[#359ADE]/5 border border-[#359ADE]/15 flex items-center justify-center">
+
+                  <div className="text-center min-w-0">
+                    <p className="text-sm font-extrabold text-[#287FB5] dark:text-[#55B8F0] capitalize truncate">
+                      {monthsOfYear[monthIndice]}
+                    </p>
+
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                      {currentYear}
+                    </p>
                   </div>
 
-                  {/* Corps du rapport */}
-                  <div className="p-5 space-y-4">
-                    <div>
-                      <span className="text-sm font-bold uppercase tracking-wider text-amber-500 dark:text-amber-400">
-                        Objet
-                      </span>
-                      <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
-                        {repport.title}
-                      </h4>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={monthIndice >= monthsOfYear.length - 1}
+                  onClick={() => navigateMonth(1)}
+                  className="w-12 h-12 shrink-0 rounded-xl bg-[#359ADE] hover:bg-[#2787C1] text-white transition-all shadow-sm shadow-[#359ADE]/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="Mois suivant"
+                >
+                  <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* =====================================================
+            LISTE DES RAPPORTS
+        ====================================================== */}
+
+        <section className="space-y-5">
+
+          <div className="flex items-center justify-between gap-3">
+
+            <div>
+              <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
+                Rapports soumis
+              </h2>
+
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Consultez les différentes soumissions de vos équipes.
+              </p>
+            </div>
+
+            {!loader && (
+              <span className="shrink-0 px-3 py-1.5 rounded-full bg-[#359ADE]/10 text-[#2787C1] dark:text-[#55B8F0] text-xs font-bold">
+                {currentMonthReports.length} rapport(s)
+              </span>
+            )}
+
+          </div>
+
+          {/* CHARGEMENT */}
+
+          {loader ? (
+
+            <div className="space-y-4">
+
+              {Array.from({ length: 3 }).map((_, index) => (
+
+                <div
+                  key={index}
+                  className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 sm:p-6 animate-pulse"
+                >
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700" />
+
+                    <div className="space-y-2 flex-1">
+                      <div className="w-40 h-4 rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="w-28 h-3 rounded bg-gray-200 dark:bg-gray-700" />
                     </div>
+                  </div>
 
-                    <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed border-t border-slate-100 dark:border-slate-700/50 pt-4">
-                      <p
-                        dangerouslySetInnerHTML={{
-                          __html: isExpanded
-                            ? repport.content ?? ""
-                            : providers.reduceLengthOfText(repport.content, 255) ?? ""
-                        }}
-                        className="[&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_li]:mb-1 [&_p]:mb-3"
-                      />
-                    </div>
+                  <div className="mt-6 space-y-3">
+                    <div className="w-20 h-3 rounded bg-gray-200 dark:bg-gray-700" />
+                    <div className="w-2/3 h-5 rounded bg-gray-200 dark:bg-gray-700" />
+                    <div className="w-full h-3 rounded bg-gray-200 dark:bg-gray-700" />
+                    <div className="w-5/6 h-3 rounded bg-gray-200 dark:bg-gray-700" />
+                  </div>
 
-                    {/* Zone interactive (Dépliée) */}
-                    {isExpanded && (
-                      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 space-y-4">
+                </div>
 
-                        {/* Commentaires existants */}
-                        {adminReportCommentArray.length > 0 &&
-                          adminReportCommentArray.map(
-                            item => (
-                              <div key={item.id}>
-                                {item.id === repport.UserId && (
-                                  <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-sm flex gap-3">
-                                    <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 text-amber-500" />
-                                    <div>
-                                      <p className="font-semibold text-sm text-amber-800 dark:text-amber-400 uppercase tracking-wide">
-                                        Commentaire Administrateur
-                                      </p>
-                                      <p className="mt-1">{item.content}</p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          )}
+              ))}
 
-                        {/* Saisie de réponse */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Répondre au rapport
-                          </label>
-                          <textarea
-                            value={itemIndexOnWriting === index ? adminResponse : ""}
-                            onChange={(e) => {
-                              setAdminResponse(e.target.value);
-                              setItemIndexOnWriting(index);
-                            }}
-                            placeholder="Rédigez une observation ou un retour..."
-                            className="w-full p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition-all resize-none"
-                            rows={3}
+            </div>
+
+          ) : currentMonthReports.length > 0 ? (
+
+            <div className="space-y-4">
+
+              {currentMonthReports.map((repport: any, index: number) => {
+
+                const isExpanded =
+                  itemIndex === index && isVisible;
+
+                const userName =
+                  `${repport.User?.lastname ?? ""} ${repport.User?.firstname ?? ""}`.trim();
+
+                return (
+
+                  <article
+                    key={repport.id ?? index}
+                    className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border transition-all duration-300 ${isExpanded
+                        ? "border-[#359ADE]/50 shadow-lg shadow-[#359ADE]/5"
+                        : "border-gray-200 dark:border-gray-700 shadow-sm hover:border-[#359ADE]/30 hover:shadow-md"
+                      }`}
+                  >
+
+                    {/* Barre latérale */}
+
+                    <div
+                      className={`absolute top-0 left-0 w-1 h-full transition-colors ${isExpanded
+                          ? "bg-[#359ADE]"
+                          : "bg-[#FFAB02]"
+                        }`}
+                    />
+
+                    <div className="pl-4 sm:pl-6">
+
+                      {/* EN-TÊTE DU RAPPORT */}
+
+                      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+                        <div className="flex items-center gap-3 min-w-0">
+
+                          <div className="relative shrink-0">
+
+                            <img
+                              src={
+                                repport.User?.photo
+                                  ? `${providers.ImageUrl}/${repport.User.photo}`
+                                  : "/images/clientProfile.png"
+                              }
+                              alt="Photo du collaborateur"
+                              className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover border border-gray-200 dark:border-gray-700"
+                            />
+
+                            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#FFAB02] border-2 border-white dark:border-gray-800" />
+
+                          </div>
+
+                          <div className="min-w-0">
+
+                            <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                              {userName || "Collaborateur"}
+                            </h3>
+
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {new Date(repport.createdAt).toLocaleDateString(
+                                "fr-FR",
+                                {
+                                  weekday: "long",
+                                  day: "2-digit",
+                                  month: "long",
+                                  year: "numeric",
+                                }
+                              )}
+                            </p>
+
+                            <p className="text-[11px] text-[#359ADE] font-semibold mt-1">
+                              Soumis à{" "}
+                              {new Date(repport.createdAt).toLocaleTimeString(
+                                "fr-FR",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleReport(index)}
+                          className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${isExpanded
+                              ? "bg-[#359ADE] text-white shadow-md shadow-[#359ADE]/20"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-[#359ADE]/10 hover:text-[#359ADE]"
+                            }`}
+                        >
+                          {isExpanded ? "Réduire" : "Consulter"}
+
+                          <FontAwesomeIcon
+                            icon={
+                              isExpanded
+                                ? faChevronUp
+                                : faChevronDown
+                            }
                           />
 
-                          <button
-                            onClick={() => handleSendResponse(repport)}
-                            type="button"
-                            disabled={isLoading}
-                            className="inline-flex items-center justify-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-all duration-200 disabled:opacity-50"
-                          >
-                            {isLoading ? <ClipLoader size={16} color="#fff" /> : "Envoyer le retour"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                        </button>
 
-                    {/* Pièces jointes */}
-                    {repport.files && (
-                      <div className="pt-2">
-                        <a
-                          href={`${providers.ImageUrl}/${repport.files}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium transition-colors border border-slate-200 dark:border-slate-600"
-                        >
-                          <FontAwesomeIcon icon={faPaperclip} className="text-slate-500" />
-                          <span>Consulter la pièce jointe</span>
-                        </a>
                       </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            /* Empty State */
-            <div className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/60 p-12 text-center">
-              <div className="max-w-xs mx-auto space-y-3">
-                <img
-                  src="/images/folder.png"
-                  className="w-24 h-24 mx-auto opacity-70 dark:opacity-50 grayscale"
-                  alt="Aucune donnée"
-                />
-                <h3 className="font-semibold text-slate-800 dark:text-slate-200">
-                  Aucun rapport trouvé
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Il n'y a aucune donnée disponible pour la période ou les filtres sélectionnés.
-                </p>
-              </div>
+
+                      {/* SÉPARATEUR */}
+
+                      <div className="h-px bg-gray-100 dark:bg-gray-700/70 mx-4 sm:mx-5" />
+
+                      {/* CONTENU DU RAPPORT */}
+
+                      <div className="p-4 sm:p-5">
+
+                        <div className="flex flex-col gap-2">
+
+                          <div className="flex items-center gap-2">
+
+                            <span className="w-7 h-7 rounded-lg bg-[#FFAB02]/10 flex items-center justify-center text-[#D99000] dark:text-[#FFAB02] text-xs font-bold">
+                              01
+                            </span>
+
+                            <span className="text-[10px] sm:text-xs uppercase tracking-widest font-extrabold text-gray-400 dark:text-gray-500">
+                              Objet du rapport
+                            </span>
+
+                          </div>
+
+                          <h4 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white leading-snug">
+                            {repport.title || "Rapport sans titre"}
+                          </h4>
+
+                        </div>
+
+                        <div className="mt-4 p-4 sm:p-5 rounded-xl bg-[#F7F9FC] dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700/70">
+
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-[#359ADE] mb-3">
+                            Contenu du rapport
+                          </p>
+
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: isExpanded
+                                ? repport.content ?? ""
+                                : providers.reduceLengthOfText(
+                                  repport.content,
+                                  255
+                                ) ?? "",
+                            }}
+                            className="text-sm text-gray-600 dark:text-gray-300 leading-7 break-words [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:ml-5 [&_li]:mb-1 [&_p]:mb-3 [&_strong]:font-bold [&_strong]:text-gray-800 [&_strong]:dark:text-white [&_a]:text-[#359ADE] [&_a]:underline"
+                          />
+
+                          {!isExpanded &&
+                            repport.content?.length > 255 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleReport(index)}
+                                className="mt-2 text-xs font-bold text-[#359ADE] hover:underline"
+                              >
+                                Lire la suite
+                              </button>
+                            )}
+
+                        </div>
+
+                        {/* PIÈCES JOINTES */}
+
+                        {repport.files && (
+
+                          <div className="mt-4">
+
+                            <a
+                              href={`${providers.ImageUrl}/${repport.files}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-3 p-3 rounded-xl border border-[#359ADE]/20 bg-[#359ADE]/5 hover:bg-[#359ADE]/10 transition-all group/file"
+                            >
+
+                              <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center text-[#359ADE] shadow-sm">
+                                <FontAwesomeIcon
+                                  icon={faPaperclip}
+                                  className="text-base"
+                                />
+                              </div>
+
+                              <div>
+                                <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
+                                  Pièce jointe disponible
+                                </p>
+
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                  Cliquer pour consulter le document
+                                </p>
+                              </div>
+
+                              <FontAwesomeIcon
+                                icon={faChevronRight}
+                                className="ml-2 text-xs text-[#359ADE] group-hover/file:translate-x-1 transition-transform"
+                              />
+
+                            </a>
+
+                          </div>
+
+                        )}
+
+                        {/* =================================================
+                            ESPACE ADMINISTRATEUR
+                        ================================================== */}
+
+                        {isExpanded && (
+
+                          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 space-y-5">
+
+                            {/* COMMENTAIRES EXISTANTS */}
+
+                            {adminReportCommentArray
+                              .filter((item: any) =>
+                                item.id === repport.UserId
+                              )
+                              .map((item: any) => (
+
+                                <div
+                                  key={item.id}
+                                  className="rounded-xl border border-[#FFAB02]/30 bg-[#FFAB02]/5 p-4"
+                                >
+
+                                  <div className="flex items-start gap-3">
+
+                                    <div className="w-9 h-9 shrink-0 rounded-xl bg-[#FFAB02]/15 flex items-center justify-center text-[#D99000] dark:text-[#FFAB02]">
+                                      <FontAwesomeIcon icon={faCommentDots} />
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+
+                                      <p className="text-xs font-extrabold uppercase tracking-wider text-[#C58A12] dark:text-[#FFAB02]">
+                                        Retour de l'administration
+                                      </p>
+
+                                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 leading-relaxed break-words">
+                                        {item.content}
+                                      </p>
+
+                                    </div>
+
+                                  </div>
+
+                                </div>
+
+                              ))}
+
+                            {/* FORMULAIRE DE RÉPONSE */}
+
+                            <div className="rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+
+                              <div className="flex items-center gap-3 mb-4">
+
+                                <div className="w-10 h-10 rounded-xl bg-[#359ADE]/10 flex items-center justify-center text-[#359ADE]">
+                                  <FontAwesomeIcon
+                                    icon={faCommentDots}
+                                    className="text-lg"
+                                  />
+                                </div>
+
+                                <div>
+                                  <h5 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                                    Répondre au collaborateur
+                                  </h5>
+
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Votre retour sera transmis au collaborateur.
+                                  </p>
+                                </div>
+
+                              </div>
+
+                              <textarea
+                                value={
+                                  itemIndexOnWriting === index
+                                    ? adminResponse
+                                    : ""
+                                }
+                                onChange={(e) => {
+                                  setAdminResponse(e.target.value);
+                                  setItemIndexOnWriting(index);
+                                }}
+                                placeholder="Rédigez une observation, une appréciation ou une demande de complément..."
+                                rows={4}
+                                className="w-full p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder:text-gray-400 outline-none resize-y min-h-[110px] focus:border-[#359ADE] focus:ring-4 focus:ring-[#359ADE]/10 transition-all"
+                              />
+
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
+
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                  Assurez-vous de vérifier votre réponse avant l'envoi.
+                                </p>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendResponse(repport)}
+                                  disabled={
+                                    isLoading ||
+                                    !(
+                                      itemIndexOnWriting === index &&
+                                      adminResponse.trim()
+                                    )
+                                  }
+                                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#359ADE] hover:bg-[#2787C1] text-white text-sm font-bold shadow-md shadow-[#359ADE]/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+
+                                  {isLoading ? (
+                                    <>
+                                      <ClipLoader
+                                        size={16}
+                                        color="#fff"
+                                      />
+                                      Envoi en cours...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FontAwesomeIcon
+                                        icon={faCommentDots}
+                                      />
+                                      Envoyer le retour
+                                    </>
+                                  )}
+
+                                </button>
+
+                              </div>
+
+                            </div>
+
+                          </div>
+
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </article>
+
+                );
+
+              })}
+
             </div>
+
+          ) : (
+
+            /* =====================================================
+                AUCUN RAPPORT
+            ====================================================== */
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-5 py-14 sm:py-20 text-center">
+
+              <div className="max-w-md mx-auto">
+
+                <div className="relative w-24 h-24 mx-auto mb-6">
+
+                  <div className="absolute inset-0 rounded-3xl bg-[#359ADE]/10 rotate-6" />
+
+                  <div className="relative w-full h-full rounded-3xl bg-[#359ADE]/10 flex items-center justify-center">
+
+                    <img
+                      src="/images/folder.png"
+                      alt="Aucun rapport"
+                      className="w-16 h-16 object-contain opacity-70"
+                    />
+
+                  </div>
+
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
+                  Aucun rapport disponible
+                </h3>
+
+                <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Aucun rapport d'activité n'a été trouvé pour cette période.
+                  Les nouvelles soumissions de vos collaborateurs apparaîtront
+                  automatiquement dans cet espace.
+                </p>
+
+                <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FFAB02]/10 text-[#C58A12] dark:text-[#FFAB02] text-xs font-bold">
+                  <span className="w-2 h-2 rounded-full bg-[#FFAB02]" />
+                  {monthsOfYear[monthIndice]} {currentYear}
+                </div>
+
+              </div>
+
+            </div>
+
           )}
+
+        </section>
+
+        {/* =====================================================
+            PIED DE PAGE
+        ====================================================== */}
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            LRCSheet · Gestion des rapports d'activités
+          </p>
+
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            Espace de gestion administrative
+          </p>
+
         </div>
+
       </div>
+
     </main>
   );
 }

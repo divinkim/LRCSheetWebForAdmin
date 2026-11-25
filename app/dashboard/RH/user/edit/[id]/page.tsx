@@ -139,7 +139,7 @@ export default function UpdateUser() {
                             if (file) {
                               const response = await providers.API.post<UploadFileResponseDto>(
                                 providers.APIUrl,
-                                "/media/upload-single",
+                                "media/upload-single",
                                 null,
                                 { file }
                               );

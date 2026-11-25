@@ -224,7 +224,7 @@ export default function UpdatePresenceModal() {
 
                         <div className="min-w-0">
                             <h2 className="text-lg font-bold text-slate-700 sm:text-2xl dark:text-white">
-                                Modifier une présence
+                               Ajouter ou modifier une présence
                             </h2>
 
                             <p className="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">

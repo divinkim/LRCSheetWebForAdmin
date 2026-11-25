@@ -32,14 +32,14 @@ export const tablesModal = [
             pageTitle: "Liste de présence enregistrée",
             path: "Dashboard/RH/Liste de présence",
             links: [
+                // {
+                //     title: "Ajouter une présence",
+                //     href: "",
+                //     icon: faCalendarPlus,
+                //     modal: "addPresenceModal"
+                // },
                 {
-                    title: "Ajouter une présence",
-                    href: "",
-                    icon: faCalendarPlus,
-                    modal: "addPresenceModal"
-                },
-                {
-                    title: "Modifier une présence",
+                    title: "Ajoute ou modifier une présence",
                     href: "",
                     icon: faPen,
                     modal: "updatePresenceModal"
