@@ -48,14 +48,18 @@ export function Header() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    const adminRole = String((session?.user as any)?.adminRole)
-    const image = session?.user.image || null
-    console.log(session)
-    setUserInfo({
-      image,
-      fullName: getAdminRole(adminRole),
-    });
-    setGreeting(getGreeting());
+    (() => {
+      if (!session?.user) return;
+      const adminRole = String((session?.user as any)?.adminRole)
+      const image = session?.user.image || null
+      console.log(session)
+      setUserInfo({
+        image,
+        fullName: getAdminRole(adminRole),
+      });
+      setGreeting(getGreeting());
+    })()
+
   }, [session]);
 
   const showPhoto = userInfo.image && !imageFailed;

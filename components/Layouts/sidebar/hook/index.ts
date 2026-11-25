@@ -113,7 +113,6 @@ export function useNotifications() {
     return local ? JSON.parse(local) : [];
   });
   const { data: session } = useSession();
-  const enterpriseId = Number((session?.user as any)?.EnterpriseId || "");
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
