@@ -15,7 +15,7 @@ type Data = {
     emails: string[]
 }
 
-export default function useNotifications() {
+export default function useNotification() {
     const [isLoading, setIsLoading] = useState(false)
     const [inputs, setInputs] = useState<Data>({
         title: "",

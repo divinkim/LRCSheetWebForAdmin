@@ -408,7 +408,7 @@ function ChatPageContent() {
   // Nettoie les notifications locales de la sidebar globale pour ce collaborateur
   const removeNotificationCount = (userId: number) => {
     const next = storedNotificationsArray.filter(
-      (i) => !(Number(i.senderId) === userId && i.messagingType === 'chat'));
+      (i) => !(Number(i.senderId) === userId));
     setStoredNotificationsArray(next);
     localStorage.setItem('storedNotificationsArray', JSON.stringify(next));
   };
